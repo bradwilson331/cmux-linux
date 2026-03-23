@@ -7,6 +7,7 @@ links = "ghostty"
 [dependencies]
 gtk4 = "0.10"
 glib = "0.20"
+tokio = { version = "1", features = ["full"] }
 
 [build-dependencies]
 bindgen = "0.72"
