@@ -35,8 +35,8 @@ Plans:
 - [x] 01-02-PLAN.md — Ghostty fork extension: GHOSTTY_PLATFORM_GTK4 in ghostty.h, embedded.zig, OpenGL.zig
 - [x] 01-03-PLAN.md — Surface embedding: GtkGLArea lifecycle, wakeup_cb, DPI scaling, clipboard callbacks
 - [x] 01-04-PLAN.md — Input routing: GDK keycode mapping, keyboard/mouse/scroll controllers, human verification checkpoint
-- [ ] 01-05-PLAN.md — Fix linking: Correct build.rs linkage, add missing stubs (gap closure)
-- [ ] 01-06-PLAN.md — Add tokio runtime: Initialize tokio, bridge to GLib (gap closure)
+- [x] 01-05-PLAN.md — Fix linking: Correct build.rs linkage, add missing stubs (gap closure)
+- [x] 01-06-PLAN.md — Add tokio runtime: Initialize tokio, bridge to GLib (gap closure)
 **UI hint**: yes
 
 ### Phase 2: Workspaces + Pane Splits
