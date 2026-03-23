@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-03-23T18:44:18.113Z",
+  "phase": "01",
+  "phase_name": "ghostty-foundation",
+  "phase_dir": ".planning/phases/01-ghostty-foundation",
+  "plan": 7,
+  "task": 0,
+  "total_tasks": 3,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "01-01: Rust project scaffold", "status": "done", "commit": "multiple"},
+    {"id": 2, "name": "01-02: Ghostty fork extension", "status": "done", "commit": "multiple"},
+    {"id": 3, "name": "01-03: Surface embedding", "status": "done", "commit": "multiple"},
+    {"id": 4, "name": "01-04: Input routing", "status": "done", "commit": "multiple"},
+    {"id": 5, "name": "01-05: Fix linking errors", "status": "done", "commit": "e993ed62"},
+    {"id": 6, "name": "01-06: Add tokio runtime", "status": "done", "commit": "fce8457c"}
+  ],
+  "remaining_tasks": [
+    {"id": 7, "name": "01-07: Fix app crash on startup", "status": "not_started"},
+    {"id": 8, "name": "01-08: Fix rendering pipeline", "status": "not_started"},
+    {"id": 9, "name": "01-09: Verify all Phase 1 requirements", "status": "not_started"}
+  ],
+  "blockers": [
+    {"description": "App crashes with segfault on startup", "type": "technical", "workaround": "Plans 01-07 through 01-09 created to fix"},
+    {"description": "Cannot verify terminal functionality until crash is fixed", "type": "technical", "workaround": "Sequential fix planned"}
+  ],
+  "human_actions_pending": [],
+  "decisions": [
+    {"decision": "Use gtk4 0.10 instead of 0.11", "rationale": "rustc 1.91.1 compatibility", "phase": "01"},
+    {"decision": "Create stub implementations for missing functions", "rationale": "Allow compilation while full implementation pending", "phase": "01"},
+    {"decision": "Add tokio runtime with GLib bridge", "rationale": "Success criteria requires both async runtimes", "phase": "01"}
+  ],
+  "uncommitted_files": [
+    ".planning/config.json",
+    ".planning/phases/01-ghostty-foundation/01-VERIFICATION.md",
+    ".planning/phases/01-ghostty-foundation/01-VERIFICATION-2.md"
+  ],
+  "next_action": "Execute plan 01-07 to debug and fix the segmentation fault preventing app startup",
+  "context_notes": "Phase 01 has 6 completed plans but verification found runtime crash. Created 3 additional gap-closure plans (07-09) to fix crash, implement rendering, and verify all requirements. The app builds successfully but crashes immediately on startup - likely due to Ghostty surface initialization timing or missing GL context setup."
+}
