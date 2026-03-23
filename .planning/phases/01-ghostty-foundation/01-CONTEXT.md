@@ -20,7 +20,7 @@ Embed a single Ghostty terminal surface into a GTK4 window with correct input ro
 - **D-02:** A bare `GtkApplicationWindow` containing a single `GtkGLArea` hosting the Ghostty surface. No sidebar, no tab bar, no header bar chrome — just a working terminal window. Phase 2 adds the multiplexer UI structure on top of this foundation.
 
 ### Ghostty Fork Extension Strategy
-- **D-03:** Add `GHOSTTY_PLATFORM_GTK4` to `ghostty.h` as a **thin embedded variant**: extend the existing `embedded.zig` platform struct mechanism with a new `ghostty_platform_gtk4_s` struct that holds `GtkWidget *gl_area` (the GtkGLArea), `GdkGLContext *gl_ctx`, and the `wakeup_cb` + userdata callback pair. Minimal fork diff; reuses existing `apprt/embedded.zig` infrastructure. Researcher must read `ghostty/src/apprt/embedded.zig` to confirm exact extension points and any GTK4-specific init sequencing requirements.
+- **D-03:** Add `GHOSTTY_PLATFORM_GTK4` to `ghostty.h` as a **thin embedded variant**: extend the existing `embedded.zig` platform struct mechanism with a new `ghostty_platform_gtk4_s` struct that holds only `GtkWidget *gl_area` (as `void*`, to avoid GTK4 headers in ghostty.h — consistent with the macOS `void* nsview` pattern). `GdkGLContext` is NOT passed in this struct; GTK4 manages it internally when the GtkGLArea is realized, and the Rust layer calls `gl_area.make_current()` in the realize signal handler. The `wakeup_cb` and `userdata` callback pair are registered globally via `ghostty_runtime_config_s`, not per-surface via `ghostty_platform_gtk4_s`. Minimal fork diff; reuses existing `apprt/embedded.zig` infrastructure. (Note: initial sketch of D-03 mentioned GdkGLContext and per-platform wakeup fields — revised after research confirmed the simpler approach is correct and consistent with how the embedded API works.)
 - **D-04:** `wakeup_cb` dispatches to GLib main loop via `glib::idle_add_once()` — never calls any `ghostty_*` API inline from Ghostty's thread (per GHOST-07).
 
 ### libghostty Linkage
@@ -36,7 +36,7 @@ Embed a single Ghostty terminal surface into a GTK4 window with correct input ro
 - **D-08:** Clipboard callbacks from Ghostty (GHOST-05) bridge to GTK4 via `gdk4::Clipboard::read_text_future()` / `set_text()`, invoked from `glib::spawn_future_local`. GDK handles X11/Wayland divergence transparently — no manual protocol branching needed in Phase 1.
 
 ### Error Handling
-- **D-09:** If Ghostty surface initialization fails (GL context failure, PTY spawn error, bad config): print a clear diagnostic to stderr and exit with code 1. No GUI error dialog in Phase 1. Phase 1 targets developers, not end-users.
+- **D-09:** If Ghostty surface initialization fails (GL context failure, PTY spawn error, bad config): print a clear diagnostic to stderr and exit with code 1. No GUI error dialog in Phase 1. Phase 1 targets developers, not end-users. `close_surface_cb` also uses `std::process::exit(0)` — the `gtk4::Application::default()` API does not exist in gtk4-rs 0.11 in a form suitable for quitting the app from a C callback context.
 
 ### Socket API Architectural Constraint (Non-Functional)
 - **D-10:** **The Phase 1 architecture must not block Phase 3 socket integration.** The socket API for agent automation is a core project value prop (alongside the in-terminal browser). Phase 1 code organization should make it straightforward to add a tokio-based socket server in Phase 3 — avoid tightly coupling app state to GLib in a way that makes off-main-thread command dispatch impossible.
