@@ -152,6 +152,150 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
         }
     });
 
+    // ── Key input (GHOST-03) ─────────────────────────────────────────────────────
+    // EventControllerKey fires key-pressed and key-released events.
+    // CRITICAL: no allocations in this path — per CLAUDE.md typing-latency-sensitive paths.
+    let key_controller = gtk4::EventControllerKey::new();
+    key_controller.connect_key_pressed({
+        let surface = ghostty_surface;
+        move |_ctrl, keyval, keycode, state| {
+            use crate::ghostty::ffi;
+            use crate::ghostty::input::{map_keycode_to_ghostty, map_mods};
+
+            // text field: UTF-8 from the keyval (what the key produces with modifiers applied).
+            // Must be a C string. Use a stack-allocated buffer to avoid heap allocation.
+            let unicode = keyval.to_unicode();
+            let mut text_buf = [0u8; 8]; // UTF-8: max 4 bytes + null
+            let text_ptr = if let Some(ch) = unicode {
+                let mut s = [0u8; 5];
+                let encoded = ch.encode_utf8(&mut s[..4]);
+                let len = encoded.len();
+                text_buf[..len].copy_from_slice(encoded.as_bytes());
+                text_buf[len] = 0;
+                text_buf.as_ptr() as *const i8
+            } else {
+                std::ptr::null()
+            };
+
+            let mut input = unsafe { std::mem::zeroed::<ffi::ghostty_input_key_s>() };
+            input.keycode = map_keycode_to_ghostty(keycode);
+            input.mods = map_mods(state);
+            input.action = ffi::ghostty_input_action_e_GHOSTTY_ACTION_PRESS;
+            input.text = text_ptr;
+            input.consumed_mods = 0; // Not used in Phase 1
+
+            unsafe {
+                ffi::ghostty_surface_key(surface, input);
+            }
+            gtk4::glib::Propagation::Stop // Inhibit: prevent GTK from handling the key
+        }
+    });
+    key_controller.connect_key_released({
+        let surface = ghostty_surface;
+        move |_ctrl, _keyval, keycode, state| {
+            use crate::ghostty::ffi;
+            use crate::ghostty::input::{map_keycode_to_ghostty, map_mods};
+            let mut input = unsafe { std::mem::zeroed::<ffi::ghostty_input_key_s>() };
+            input.keycode = map_keycode_to_ghostty(keycode);
+            input.mods = map_mods(state);
+            input.action = ffi::ghostty_input_action_e_GHOSTTY_ACTION_RELEASE;
+            input.text = std::ptr::null();
+            input.consumed_mods = 0; // Not used in Phase 1
+            unsafe {
+                ffi::ghostty_surface_key(surface, input);
+            }
+        }
+    });
+    gl_area.add_controller(key_controller);
+
+    // ── Mouse button input (GHOST-04) ────────────────────────────────────────────
+    let click_gesture = gtk4::GestureClick::new();
+    click_gesture.set_button(0); // 0 = listen to all mouse buttons
+    click_gesture.connect_pressed({
+        let surface = ghostty_surface;
+        move |gesture, _n_press, _x, _y| {
+            use crate::ghostty::ffi;
+            let button = match gesture.current_button() {
+                1 => ffi::ghostty_input_mouse_button_e_GHOSTTY_MOUSE_LEFT,
+                2 => ffi::ghostty_input_mouse_button_e_GHOSTTY_MOUSE_MIDDLE,
+                3 => ffi::ghostty_input_mouse_button_e_GHOSTTY_MOUSE_RIGHT,
+                _ => return,
+            };
+            let mods = crate::ghostty::input::map_mods(gesture.current_event_state());
+            unsafe {
+                ffi::ghostty_surface_mouse_button(
+                    surface,
+                    ffi::ghostty_input_mouse_state_e_GHOSTTY_MOUSE_PRESS,
+                    button,
+                    mods,
+                );
+            }
+        }
+    });
+    click_gesture.connect_released({
+        let surface = ghostty_surface;
+        move |gesture, _n_press, _x, _y| {
+            use crate::ghostty::ffi;
+            let button = match gesture.current_button() {
+                1 => ffi::ghostty_input_mouse_button_e_GHOSTTY_MOUSE_LEFT,
+                2 => ffi::ghostty_input_mouse_button_e_GHOSTTY_MOUSE_MIDDLE,
+                3 => ffi::ghostty_input_mouse_button_e_GHOSTTY_MOUSE_RIGHT,
+                _ => return,
+            };
+            let mods = crate::ghostty::input::map_mods(gesture.current_event_state());
+            unsafe {
+                ffi::ghostty_surface_mouse_button(
+                    surface,
+                    ffi::ghostty_input_mouse_state_e_GHOSTTY_MOUSE_RELEASE,
+                    button,
+                    mods,
+                );
+            }
+        }
+    });
+    gl_area.add_controller(click_gesture);
+
+    // ── Mouse motion ─────────────────────────────────────────────────────────────
+    let motion_controller = gtk4::EventControllerMotion::new();
+    motion_controller.connect_motion({
+        let surface = ghostty_surface;
+        move |ctrl, x, y| {
+            let mods = crate::ghostty::input::map_mods(ctrl.current_event_state());
+            unsafe {
+                crate::ghostty::ffi::ghostty_surface_mouse_pos(surface, x, y, mods);
+            }
+        }
+    });
+    gl_area.add_controller(motion_controller);
+
+    // ── Scroll input ─────────────────────────────────────────────────────────────
+    let scroll_controller = gtk4::EventControllerScroll::new(
+        gtk4::EventControllerScrollFlags::BOTH_AXES | gtk4::EventControllerScrollFlags::DISCRETE,
+    );
+    scroll_controller.connect_scroll({
+        let surface = ghostty_surface;
+        move |ctrl, dx, dy| {
+            use crate::ghostty::ffi;
+            // Detect if this is pixel-precise (touchpad) or discrete (mouse wheel)
+            let is_pixel = ctrl
+                .current_event()
+                .and_then(|e| e.downcast::<gtk4::gdk::ScrollEvent>().ok())
+                .map(|se| se.direction() == gtk4::gdk::ScrollDirection::Smooth)
+                .unwrap_or(false);
+
+            // ghostty_input_scroll_mods_t is a bitmask:
+            // bit 0: scroll_is_pixel (1 if touchpad, 0 if mouse wheel)
+            // bit 1: momentum (1 if momentum scrolling)
+            let scroll_mods = if is_pixel { 1 } else { 0 };
+
+            unsafe {
+                ffi::ghostty_surface_mouse_scroll(surface, dx, dy, scroll_mods);
+            }
+            gtk4::glib::Propagation::Stop
+        }
+    });
+    gl_area.add_controller(scroll_controller);
+
     gl_area
 }
 
