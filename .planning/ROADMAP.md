@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 4 plans
 Plans:
 - [ ] 01-01-PLAN.md — Rust project scaffold: Cargo.toml, build.rs (bindgen), src/main.rs skeleton, scripts/setup-linux.sh
-- [ ] 01-02-PLAN.md — Ghostty fork extension: GHOSTTY_PLATFORM_GTK4 in ghostty.h, embedded.zig, OpenGL.zig
+- [x] 01-02-PLAN.md — Ghostty fork extension: GHOSTTY_PLATFORM_GTK4 in ghostty.h, embedded.zig, OpenGL.zig
 - [ ] 01-03-PLAN.md — Surface embedding: GtkGLArea lifecycle, wakeup_cb, DPI scaling, clipboard callbacks
 - [ ] 01-04-PLAN.md — Input routing: GDK keycode mapping, keyboard/mouse/scroll controllers, human verification checkpoint
 **UI hint**: yes
@@ -90,7 +90,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Ghostty Foundation | 0/4 | Not started | - |
+| 1. Ghostty Foundation | 1/4 | In Progress|  |
 | 2. Workspaces + Pane Splits | 0/? | Not started | - |
 | 3. Socket API + Session Persistence | 0/? | Not started | - |
 | 4. Notifications + HiDPI + SSH | 0/? | Not started | - |

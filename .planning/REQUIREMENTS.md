@@ -7,7 +7,7 @@
 
 ### Ghostty Embedding
 
-- [ ] **GHOST-01**: manaflow-ai/ghostty fork extended with `GHOSTTY_PLATFORM_GTK4` Linux platform variant (prerequisite for all terminal rendering)
+- [x] **GHOST-01**: manaflow-ai/ghostty fork extended with `GHOSTTY_PLATFORM_GTK4` Linux platform variant (prerequisite for all terminal rendering)
 - [ ] **GHOST-02**: Single Ghostty terminal surface renders in a GTK4 `GtkGLArea` widget from Rust
 - [ ] **GHOST-03**: Keyboard input routes to active terminal surface with < 10ms keystroke-to-render latency
 - [ ] **GHOST-04**: Mouse input (selection, scroll, click) routed to correct terminal surface
@@ -121,14 +121,13 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GHOST-01 | Phase 1 | Pending |
+| GHOST-01 | Phase 1 | Complete |
 | GHOST-02 | Phase 1 | Pending |
 | GHOST-03 | Phase 1 | Pending |
 | GHOST-04 | Phase 1 | Pending |
 | GHOST-05 | Phase 1 | Pending |
 | GHOST-06 | Phase 1 | Pending |
 | GHOST-07 | Phase 1 | Pending |
-| CFG-04 | Phase 1 | Pending |
 | WS-01 | Phase 2 | Pending |
 | WS-02 | Phase 2 | Pending |
 | WS-03 | Phase 2 | Pending |
@@ -148,32 +147,33 @@
 | SOCK-04 | Phase 3 | Pending |
 | SOCK-05 | Phase 3 | Pending |
 | SOCK-06 | Phase 3 | Pending |
-| SESS-01 | Phase 4 | Pending |
-| SESS-02 | Phase 4 | Pending |
-| SESS-03 | Phase 4 | Pending |
-| SESS-04 | Phase 4 | Pending |
-| CFG-01 | Phase 1 | Pending |
-| CFG-02 | Phase 1 | Pending |
-| CFG-03 | Phase 1 | Pending |
-| NOTF-01 | Phase 5 | Pending |
-| NOTF-02 | Phase 5 | Pending |
-| NOTF-03 | Phase 5 | Pending |
-| HDPI-01 | Phase 5 | Pending |
-| HDPI-02 | Phase 5 | Pending |
-| SSH-01 | Phase 5 | Pending |
-| SSH-02 | Phase 5 | Pending |
-| SSH-03 | Phase 5 | Pending |
-| SSH-04 | Phase 5 | Pending |
-| DIST-01 | Phase 6 | Pending |
-| DIST-02 | Phase 6 | Pending |
-| DIST-03 | Phase 6 | Pending |
-| DIST-04 | Phase 6 | Pending |
+| SESS-01 | Phase 3 | Pending |
+| SESS-02 | Phase 3 | Pending |
+| SESS-03 | Phase 3 | Pending |
+| SESS-04 | Phase 3 | Pending |
+| NOTF-01 | Phase 4 | Pending |
+| NOTF-02 | Phase 4 | Pending |
+| NOTF-03 | Phase 4 | Pending |
+| HDPI-01 | Phase 4 | Pending |
+| HDPI-02 | Phase 4 | Pending |
+| SSH-01 | Phase 4 | Pending |
+| SSH-02 | Phase 4 | Pending |
+| SSH-03 | Phase 4 | Pending |
+| SSH-04 | Phase 4 | Pending |
+| CFG-01 | Phase 5 | Pending |
+| CFG-02 | Phase 5 | Pending |
+| CFG-03 | Phase 5 | Pending |
+| CFG-04 | Phase 5 | Pending |
+| DIST-01 | Phase 5 | Pending |
+| DIST-02 | Phase 5 | Pending |
+| DIST-03 | Phase 5 | Pending |
+| DIST-04 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 46 total
-- Mapped to phases: 46
+- v1 requirements: 47 total
+- Mapped to phases: 47
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-23*
-*Last updated: 2026-03-23 after initial definition*
+*Last updated: 2026-03-23 — traceability updated to match 5-phase roadmap*
