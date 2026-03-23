@@ -7,6 +7,8 @@ fn main() {
     println!("cargo:rustc-link-lib=static=ghostty");
     // libghostty.a requires OpenGL at link time
     println!("cargo:rustc-link-lib=dylib=GL");
+    // libghostty.a embeds C++ objects (vt.cpp etc.) — link the C++ runtime for exception support
+    println!("cargo:rustc-link-lib=dylib=stdc++");
 
     // Use pkg-config for GTK4/GLib system libraries that libghostty.a needs
     // at link time if they are not fully bundled in the static archive.
@@ -17,6 +19,29 @@ fn main() {
         .map(|s| s.success())
         .unwrap_or(false)
     {
+        // Emit link-search dirs from the .pc file location (handles extracted dev packages).
+        // pkg-config --variable=pcfiledir emits the directory containing the .pc file; the
+        // sibling directory (../lib or the pkgconfig parent) contains the .so linker stubs.
+        for pkg in &["gtk4", "graphene-gobject-1.0"] {
+            let pcdir_out = std::process::Command::new("pkg-config")
+                .args(["--variable=pcfiledir", pkg])
+                .output();
+            if let Ok(out) = pcdir_out {
+                let pcdir = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                if !pcdir.is_empty() {
+                    // pkgconfig dir is typically .../lib/x86_64-linux-gnu/pkgconfig;
+                    // the parent contains the .so symlinks.
+                    let libdir = std::path::Path::new(&pcdir)
+                        .parent()
+                        .map(|p| p.to_string_lossy().to_string())
+                        .unwrap_or_default();
+                    if !libdir.is_empty() {
+                        println!("cargo:rustc-link-search=native={libdir}");
+                    }
+                }
+            }
+        }
+
         let gtk4_libs = std::process::Command::new("pkg-config")
             .args(["--libs", "gtk4"])
             .output()
@@ -25,6 +50,8 @@ fn main() {
         for flag in flags.split_whitespace() {
             if let Some(lib) = flag.strip_prefix("-l") {
                 println!("cargo:rustc-link-lib=dylib={lib}");
+            } else if let Some(path) = flag.strip_prefix("-L") {
+                println!("cargo:rustc-link-search=native={path}");
             }
         }
     }
