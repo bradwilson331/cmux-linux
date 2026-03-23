@@ -33,7 +33,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 - [x] 01-01-PLAN.md — Rust project scaffold: Cargo.toml, build.rs (bindgen), src/main.rs skeleton, scripts/setup-linux.sh
 - [x] 01-02-PLAN.md — Ghostty fork extension: GHOSTTY_PLATFORM_GTK4 in ghostty.h, embedded.zig, OpenGL.zig
-- [ ] 01-03-PLAN.md — Surface embedding: GtkGLArea lifecycle, wakeup_cb, DPI scaling, clipboard callbacks
+- [x] 01-03-PLAN.md — Surface embedding: GtkGLArea lifecycle, wakeup_cb, DPI scaling, clipboard callbacks
 - [ ] 01-04-PLAN.md — Input routing: GDK keycode mapping, keyboard/mouse/scroll controllers, human verification checkpoint
 **UI hint**: yes
 
