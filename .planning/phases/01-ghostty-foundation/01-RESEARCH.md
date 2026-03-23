@@ -15,7 +15,7 @@
 
 **D-02 — Phase 1 window scope:** A bare `GtkApplicationWindow` containing a single `GtkGLArea` hosting the Ghostty surface. No sidebar, no tab bar, no header bar chrome — just a working terminal window. Phase 2 adds the multiplexer UI structure on top of this foundation.
 
-**D-03 — Ghostty fork extension strategy:** Add `GHOSTTY_PLATFORM_GTK4` to `ghostty.h` as a thin embedded variant: extend the existing `embedded.zig` platform struct mechanism with a new `ghostty_platform_gtk4_s` struct that holds `GtkWidget *gl_area` (the GtkGLArea), `GdkGLContext *gl_ctx`, and the `wakeup_cb` + userdata callback pair. Minimal fork diff; reuses existing `apprt/embedded.zig` infrastructure.
+**D-03 — Ghostty fork extension strategy:** ~~Add `GHOSTTY_PLATFORM_GTK4` to `ghostty.h` with `ghostty_platform_gtk4_s` holding `GtkWidget *gl_area`, `GdkGLContext *gl_ctx`, and per-surface wakeup fields.~~ **REVISED (see CONTEXT.md D-03):** `ghostty_platform_gtk4_s` holds only `void* gl_area` (consistent with macOS `void* nsview` pattern). `GdkGLContext` is NOT passed — GTK4 manages it internally. `wakeup_cb` and `userdata` are registered globally via `ghostty_runtime_config_s`, not per-surface. Minimal fork diff; reuses existing `apprt/embedded.zig` infrastructure.
 
 **D-04 — Wakeup callback dispatch:** `wakeup_cb` dispatches to GLib main loop via `glib::idle_add_once()` — never calls any `ghostty_*` API inline from Ghostty's thread (per GHOST-07).
 
