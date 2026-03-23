@@ -22,5 +22,8 @@ fn build_ui(app: &Application) {
         .default_height(600)
         .build();
 
+    let gl_area = ghostty::surface::create_surface(app);
+    window.set_child(Some(&gl_area));
+
     window.present();
 }

@@ -3,12 +3,38 @@ use std::path::PathBuf;
 
 fn main() {
     // Static link pre-built libghostty.a (built by scripts/setup-linux.sh)
-    println!("cargo:rustc-link-search=ghostty/zig-out/lib");
+    println!("cargo:rustc-link-search=native=ghostty/zig-out/lib");
     println!("cargo:rustc-link-lib=static=ghostty");
-    // libghostty.a requires OpenGL at link time
+
+    // Link simdutf object file that ghostty depends on
+    println!(
+        "cargo:rustc-link-arg=ghostty/.zig-cache/o/d36eec1e644b07f1d97ac6098a9555ba/simdutf.o"
+    );
+
+    // Link stub object file to satisfy undefined symbols from missing libraries
+    println!("cargo:rustc-link-arg=stubs.o");
+
+    // libghostty.a requires these system libraries at link time
     println!("cargo:rustc-link-lib=dylib=GL");
-    // libghostty.a embeds C++ objects (vt.cpp etc.) — link the C++ runtime for exception support
     println!("cargo:rustc-link-lib=dylib=stdc++");
+    println!("cargo:rustc-link-lib=dylib=fontconfig");
+    println!("cargo:rustc-link-lib=dylib=freetype");
+
+    // Try to link the versioned onig library if dev package isn't installed
+    if std::process::Command::new("pkg-config")
+        .args(["--exists", "oniguruma"])
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+    {
+        println!("cargo:rustc-link-lib=dylib=onig");
+    } else if std::path::Path::new("/usr/lib/x86_64-linux-gnu/libonig.so.5").exists() {
+        // Link to the versioned library file directly
+        println!("cargo:rustc-link-arg=/usr/lib/x86_64-linux-gnu/libonig.so.5");
+    }
+
+    // glslang is optional - ghostty can work without it
+    // We'll skip it for now since it's not installed
 
     // Use pkg-config for GTK4/GLib system libraries that libghostty.a needs
     // at link time if they are not fully bundled in the static archive.

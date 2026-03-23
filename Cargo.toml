@@ -2,6 +2,7 @@
 name = "cmux-linux"
 version = "0.1.0"
 edition = "2021"
+links = "ghostty"
 
 [dependencies]
 gtk4 = "0.10"

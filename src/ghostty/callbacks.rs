@@ -1,5 +1,5 @@
-use std::sync::atomic::{AtomicBool, Ordering};
 use gtk4::prelude::{GLAreaExt, WidgetExt};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Coalesces burst wakeup calls into a single GLib idle dispatch.
 /// GLib's idle_add does not deduplicate — this flag prevents queueing N
@@ -8,8 +8,7 @@ pub static WAKEUP_PENDING: AtomicBool = AtomicBool::new(false);
 
 /// The GhosttyApp handle — stored as usize to be Send across the idle closure.
 /// Safety: ghostty_app_t is opaque void* and only called from the GLib main thread.
-pub static APP_PTR: std::sync::atomic::AtomicUsize =
-    std::sync::atomic::AtomicUsize::new(0);
+pub static APP_PTR: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
 /// Called by Ghostty from its renderer thread. Must not call any ghostty_* API inline.
 /// Instead, schedules ghostty_app_tick() on the GLib main loop (per D-04, GHOST-07).
@@ -42,10 +41,7 @@ pub unsafe extern "C" fn wakeup_cb(_userdata: *mut std::ffi::c_void) {
 /// Runs on the GLib main thread (called during ghostty_app_tick).
 /// Per D-09: no GUI dialog — exit the process.
 /// The bool argument indicates whether the process was still active when closed.
-pub unsafe extern "C" fn close_surface_cb(
-    _userdata: *mut std::ffi::c_void,
-    _process_alive: bool,
-) {
+pub unsafe extern "C" fn close_surface_cb(_userdata: *mut std::ffi::c_void, _process_alive: bool) {
     // Phase 1: single surface. Exit the process — per D-09 (no GUI error dialog).
     std::process::exit(0);
 }
