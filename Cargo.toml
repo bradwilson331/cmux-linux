@@ -4,12 +4,6 @@ version = "0.1.0"
 edition = "2021"
 links = "ghostty"
 
-[lib]
-name = "cmux_linux"
-
-[[bin]]
-name = "cmux-linux"
-
 [dependencies]
 gtk4 = "0.10"
 glib = "0.20"

@@ -2,21 +2,28 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
+    // Get the absolute path to the project directory
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    let ghostty_lib_path = format!("{}/ghostty/zig-out/lib", manifest_dir);
+
     // Static link pre-built libghostty.a (built by scripts/setup-linux.sh)
-    println!("cargo:rustc-link-search=native=ghostty/zig-out/lib");
+    // Use absolute path to ensure it's found
+    println!("cargo:rustc-link-search=native={}", ghostty_lib_path);
     println!("cargo:rustc-link-lib=static=ghostty");
 
-    // Link simdutf object file that ghostty depends on
+    // Link simdutf object file that ghostty depends on (use absolute path)
     println!(
-        "cargo:rustc-link-arg=ghostty/.zig-cache/o/d36eec1e644b07f1d97ac6098a9555ba/simdutf.o"
+        "cargo:rustc-link-arg={}/ghostty/.zig-cache/o/d36eec1e644b07f1d97ac6098a9555ba/simdutf.o",
+        manifest_dir
     );
 
-    // Link stub object file to satisfy undefined symbols from missing libraries
-    println!("cargo:rustc-link-arg=stubs.o");
+    // Link stub object file to satisfy undefined symbols from missing libraries (use absolute path)
+    println!("cargo:rustc-link-arg={}/stubs.o", manifest_dir);
 
     // libghostty.a requires these system libraries at link time
     println!("cargo:rustc-link-lib=dylib=GL");
     println!("cargo:rustc-link-lib=dylib=stdc++");
+    println!("cargo:rustc-link-lib=dylib=gcc_s"); // For __gxx_personality_v0
     println!("cargo:rustc-link-lib=dylib=fontconfig");
     println!("cargo:rustc-link-lib=dylib=freetype");
 
