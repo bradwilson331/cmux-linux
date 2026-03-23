@@ -29,7 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can copy text from the terminal and paste it into another application (and vice versa) on both X11 and Wayland
   3. Terminal renders at correct pixel density on HiDPI displays without blurriness or incorrect scale
   4. App scaffold compiles and runs: tokio runtime started, GLib main loop runs, glib::MainContext::channel bridges the two
-**Plans**: 6 plans
+**Plans**: 9 plans
 Plans:
 - [x] 01-01-PLAN.md — Rust project scaffold: Cargo.toml, build.rs (bindgen), src/main.rs skeleton, scripts/setup-linux.sh
 - [x] 01-02-PLAN.md — Ghostty fork extension: GHOSTTY_PLATFORM_GTK4 in ghostty.h, embedded.zig, OpenGL.zig
@@ -37,6 +37,9 @@ Plans:
 - [x] 01-04-PLAN.md — Input routing: GDK keycode mapping, keyboard/mouse/scroll controllers, human verification checkpoint
 - [x] 01-05-PLAN.md — Fix linking: Correct build.rs linkage, add missing stubs (gap closure)
 - [x] 01-06-PLAN.md — Add tokio runtime: Initialize tokio, bridge to GLib (gap closure)
+- [ ] 01-07-PLAN.md — Fix initialization crash: Proper Ghostty lifecycle, defensive checks (gap closure)
+- [ ] 01-08-PLAN.md — Fix rendering: Missing function stubs, GL context debugging (gap closure)
+- [ ] 01-09-PLAN.md — Verify functionality: Test input/output/clipboard, achieve Phase 1 goals (gap closure)
 **UI hint**: yes
 
 ### Phase 2: Workspaces + Pane Splits
