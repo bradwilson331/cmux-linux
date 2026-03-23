@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 01-ghostty-foundation 01-02-PLAN.md
-last_updated: "2026-03-23T16:48:03.232Z"
+stopped_at: Completed 01-ghostty-foundation 01-01-PLAN.md
+last_updated: "2026-03-23T16:55:01.698Z"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 01 (ghostty-foundation) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Plan: 2 of 4
 
 *Updated after each plan completion*
 | Phase 01-ghostty-foundation P02 | 8 | 2 tasks | 4 files |
+| Phase 01-ghostty-foundation P01 | 3 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -60,6 +61,8 @@ Recent decisions affecting current work:
 - [Init]: ghostty.h has no Linux platform variant — Phase 1 must extend manaflow-ai/ghostty fork with GHOSTTY_PLATFORM_GTK4 before any surface embedding
 - [Phase 01-ghostty-foundation]: void* gl_area pattern in ghostty_platform_gtk4_s avoids GTK4 headers in public C ABI — matches nsview/uiview convention
 - [Phase 01-ghostty-foundation]: GTK4 Zig type is conditional (void on non-Linux) so fork compiles cross-platform
+- [Phase 01-ghostty-foundation]: gtk4 crate pinned to 0.10 (not 0.11) for rustc 1.91.1 compatibility; APIs identical for Phase 1 usage
+- [Phase 01-ghostty-foundation]: setup-linux.sh installs libgtk-4-dev + libclang-dev system deps (apt/dnf/pacman) before building libghostty.a
 
 ### Pending Todos
 
@@ -72,6 +75,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T16:48:03.230Z
-Stopped at: Completed 01-ghostty-foundation 01-02-PLAN.md
+Last session: 2026-03-23T16:55:01.695Z
+Stopped at: Completed 01-ghostty-foundation 01-01-PLAN.md
 Resume file: None
