@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-gtk4 = "0.11"
-glib = "0.22"
+gtk4 = "0.10"
+glib = "0.20"
 
 [build-dependencies]
 bindgen = "0.72"
