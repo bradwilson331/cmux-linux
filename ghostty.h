@@ -38,6 +38,7 @@ typedef enum {
   GHOSTTY_PLATFORM_INVALID,
   GHOSTTY_PLATFORM_MACOS,
   GHOSTTY_PLATFORM_IOS,
+  GHOSTTY_PLATFORM_GTK4 = 3,  // Linux GTK4 embedded variant
 } ghostty_platform_e;
 
 typedef enum {
@@ -426,9 +427,19 @@ typedef struct {
   void* uiview;
 } ghostty_platform_ios_s;
 
+typedef struct {
+  // The GtkGLArea widget that Ghostty renders into.
+  // Uses void* (not GtkWidget*) to avoid requiring GTK4 headers in ghostty.h —
+  // consistent with the macos (void* nsview) and ios (void* uiview) pattern.
+  // GdkGLContext is managed by GTK4 internally; wakeup_cb and userdata are
+  // registered via ghostty_runtime_config_s, not per-platform struct.
+  void* gl_area;  // GtkWidget* (GtkGLArea)
+} ghostty_platform_gtk4_s;
+
 typedef union {
   ghostty_platform_macos_s macos;
   ghostty_platform_ios_s ios;
+  ghostty_platform_gtk4_s gtk4;
 } ghostty_platform_u;
 
 typedef enum {
