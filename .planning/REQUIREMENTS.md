@@ -9,9 +9,9 @@
 
 - [x] **GHOST-01**: manaflow-ai/ghostty fork extended with `GHOSTTY_PLATFORM_GTK4` Linux platform variant (prerequisite for all terminal rendering)
 - [x] **GHOST-02**: Single Ghostty terminal surface renders in a GTK4 `GtkGLArea` widget from Rust
-- [ ] **GHOST-03**: Keyboard input routes to active terminal surface with < 10ms keystroke-to-render latency
-- [ ] **GHOST-04**: Mouse input (selection, scroll, click) routed to correct terminal surface
-- [ ] **GHOST-05**: Clipboard integration works on X11 and Wayland (copy/paste to/from terminal)
+- [x] **GHOST-03**: Keyboard input routes to active terminal surface with < 10ms keystroke-to-render latency
+- [x] **GHOST-04**: Mouse input (selection, scroll, click) routed to correct terminal surface
+- [x] **GHOST-05**: Clipboard integration works on X11 and Wayland (copy/paste to/from terminal)
 - [x] **GHOST-06**: Terminal renders at correct DPI (content scale driven from `gtk4::Widget::scale_factor()`)
 - [x] **GHOST-07**: `wakeup_cb` dispatches to GLib main loop, never calls `ghostty_*` inline from Ghostty's thread
 
@@ -123,9 +123,9 @@
 |-------------|-------|--------|
 | GHOST-01 | Phase 1 | Complete |
 | GHOST-02 | Phase 1 | Complete |
-| GHOST-03 | Phase 1 | Pending |
-| GHOST-04 | Phase 1 | Pending |
-| GHOST-05 | Phase 1 | Pending |
+| GHOST-03 | Phase 1 | Complete |
+| GHOST-04 | Phase 1 | Complete |
+| GHOST-05 | Phase 1 | Complete |
 | GHOST-06 | Phase 1 | Complete |
 | GHOST-07 | Phase 1 | Complete |
 | WS-01 | Phase 2 | Pending |

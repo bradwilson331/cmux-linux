@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 01-ghostty-foundation 01-03-PLAN.md
-last_updated: "2026-03-23T18:05:01.361Z"
+status: Phase complete — ready for verification
+stopped_at: Completed phase 01-ghostty-foundation plan 04
+last_updated: "2026-03-23T18:17:44.006Z"
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -49,6 +49,7 @@ Plan: 4 of 4
 | Phase 01-ghostty-foundation P02 | 8 | 2 tasks | 4 files |
 | Phase 01-ghostty-foundation P01 | 3 | 2 tasks | 6 files |
 | Phase 01-ghostty-foundation P03 | 76 | 2 tasks | 8 files |
+| Phase 01-ghostty-foundation P04 | 640 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,8 @@ Recent decisions affecting current work:
 - [Phase 01-ghostty-foundation]: setup-linux.sh installs libgtk-4-dev + libclang-dev system deps (apt/dnf/pacman) before building libghostty.a
 - [Phase 01-ghostty-foundation]: Use RefCell for GL_AREA_FOR_RENDER since gtk4::GLArea is not Copy
 - [Phase 01-ghostty-foundation]: Remove lib.rs and apply build.rs directly to binary crate
+- [Phase 01-ghostty-foundation]: Use stack-allocated text buffer to avoid heap allocations in typing hot path
+- [Phase 01-ghostty-foundation]: Map X11 hardware keycodes directly to ghostty_input_key_e for layout-independent input
 
 ### Pending Todos
 
@@ -79,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T18:05:01.359Z
-Stopped at: Completed 01-ghostty-foundation 01-03-PLAN.md
+Last session: 2026-03-23T18:17:44.003Z
+Stopped at: Completed phase 01-ghostty-foundation plan 04
 Resume file: None
