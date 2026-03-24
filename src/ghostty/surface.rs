@@ -1,6 +1,15 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+/// Call glGetError() via FFI to check for GL errors after ghostty calls.
+/// Returns 0 if no error, or the GL error code otherwise.
+fn gl_get_error() -> u32 {
+    extern "C" {
+        fn glGetError() -> u32;
+    }
+    unsafe { glGetError() }
+}
+
 /// Thread-local storage for the GLArea — allows wakeup_cb (via idle_add_once)
 /// to call queue_render() on the main thread without passing it through C callbacks.
 /// RefCell is required because gtk4::GLArea is not Copy.
@@ -94,6 +103,13 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
             eprintln!("cmux: GL area size at realize: {}x{}", area.width(), area.height());
             eprintln!("cmux: GL scale factor at realize: {}", area.scale_factor());
 
+            // Log GL version and renderer info for diagnostics.
+            if let Some(ctx) = area.context() {
+                let (major, minor) = ctx.version();
+                eprintln!("cmux: GL context version: {major}.{minor}");
+                eprintln!("cmux: GL context is_legacy: {}", ctx.is_legacy());
+            }
+
             // Create the ghostty surface now that GL context is current.
             let surface = unsafe {
                 let gl_area_ptr = area.as_ptr() as *mut std::ffi::c_void;
@@ -117,6 +133,13 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
                     std::process::exit(1);
                 }
                 eprintln!("cmux: ghostty_surface_new succeeded: {:p}", s);
+                // Check GL error state after surface creation.
+                let gl_err = gl_get_error();
+                if gl_err != 0 {
+                    eprintln!("cmux: GL error after ghostty_surface_new: 0x{gl_err:x}");
+                } else {
+                    eprintln!("cmux: GL error state after ghostty_surface_new: OK");
+                }
                 s
             };
 
@@ -151,10 +174,15 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     gl_area.connect_render({
         let cell = surface_cell.clone();
         move |_area, _ctx| {
+            eprintln!("cmux: render callback fired");
             if let Some(surface) = *cell.borrow() {
+                eprintln!("cmux: calling ghostty_surface_draw({:p})", surface);
                 unsafe {
                     ffi::ghostty_surface_draw(surface);
                 }
+                eprintln!("cmux: ghostty_surface_draw complete");
+            } else {
+                eprintln!("cmux: render callback — surface not yet initialized, skipping draw");
             }
             gtk4::glib::Propagation::Stop // suppress GTK default render
         }

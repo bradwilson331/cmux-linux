@@ -1,5 +1,5 @@
 use gtk4::prelude::*;
-use gtk4::{Application, ApplicationWindow};
+use gtk4::{Application, ApplicationWindow, gio};
 use std::sync::Arc;
 use std::thread;
 use std::sync::mpsc;
@@ -56,18 +56,25 @@ fn main() {
         println!("Tokio task completed - message sent to GLib main thread");
     });
 
+    // NON_UNIQUE bypasses DBus singleton check — required in environments where
+    // cross-namespace DBus EXTERNAL auth deadlocks (e.g. NX/container sessions).
     let app = Application::builder()
         .application_id(APP_ID)
+        .flags(gio::ApplicationFlags::NON_UNIQUE)
         .build();
 
+    eprintln!("cmux: GtkApplication created, connecting activate signal");
     app.connect_activate(build_ui);
-    app.run();
+    eprintln!("cmux: calling app.run()");
+    let exit_code = app.run();
+    eprintln!("cmux: app.run() returned");
     
     // Shutdown the runtime when the app exits
     // Note: In production, we'd want a more graceful shutdown mechanism
 }
 
 fn build_ui(app: &Application) {
+    eprintln!("cmux: build_ui called — creating window");
     let window = ApplicationWindow::builder()
         .application(app)
         .title("cmux")
@@ -75,8 +82,10 @@ fn build_ui(app: &Application) {
         .default_height(600)
         .build();
 
+    eprintln!("cmux: ApplicationWindow created, creating GLArea surface");
     let gl_area = ghostty::surface::create_surface(app);
     window.set_child(Some(&gl_area));
-
+    eprintln!("cmux: window.present() about to be called");
     window.present();
+    eprintln!("cmux: window.present() returned");
 }
