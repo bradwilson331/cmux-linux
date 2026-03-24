@@ -209,6 +209,13 @@ impl SplitEngine {
         // Find the active leaf's surface for inherited config.
         let inherited_surface = self.find_surface(active_id)?;
 
+        // Unfocus the old surface before the split — Ghostty routes input by focus state,
+        // so without this the old pane continues receiving keystrokes after the new pane
+        // is created (SPLIT-07).
+        unsafe {
+            ffi::ghostty_surface_set_focus(inherited_surface, false);
+        }
+
         // Get inherited config from the active surface (for CWD inheritance per D-08).
         // Pass by value (ghostty_surface_config_s is Copy) — avoids dangling pointer
         // in the GLArea realize callback, which fires asynchronously after this returns.
@@ -273,20 +280,35 @@ impl SplitEngine {
             remove_widget_from_parent(&old_widget);
 
             let paned = gtk4::Paned::new(orientation_cap);
+            // Both children must be allowed to resize — GTK4 default for resize_end_child
+            // is TRUE but be explicit to ensure drag works in both directions.
+            paned.set_resize_start_child(true);
+            paned.set_resize_end_child(true);
+            // Prevent children from collapsing to 0px when dragging to an extreme.
+            paned.set_shrink_start_child(false);
+            paned.set_shrink_end_child(false);
+            // Wide handle makes the divider grabable (default is ~5px, hard to click).
+            paned.set_wide_handle(true);
+
             paned.set_start_child(Some(&old_widget));
             paned.set_end_child(Some(&new_widget));
 
-            // Set 50/50 position after realize (per D-09 and RESEARCH Pitfall 2).
-            paned.connect_realize(move |p| {
-                let size = if orientation_cap == gtk4::Orientation::Horizontal {
-                    p.width()
-                } else {
-                    p.height()
-                };
-                if size > 0 {
-                    p.set_position(size / 2);
-                }
-            });
+            // Set 50/50 position after the first layout pass (per D-09 and RESEARCH Pitfall 2).
+            // connect_realize fires before GTK allocates sizes, so p.width() is 0 there.
+            // idle_add_local_once defers to the next main-loop idle, after layout completes.
+            {
+                let paned_ref = paned.clone();
+                gtk4::glib::idle_add_local_once(move || {
+                    let size = if orientation_cap == gtk4::Orientation::Horizontal {
+                        paned_ref.width()
+                    } else {
+                        paned_ref.height()
+                    };
+                    if size > 0 {
+                        paned_ref.set_position(size / 2);
+                    }
+                });
+            }
 
             SplitNode::Split {
                 orientation: orientation_cap,

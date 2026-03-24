@@ -27,6 +27,10 @@ window { background-color: #1a1a1a; }
 .workspace-list row.active-workspace label { color: #ffffff; font-weight: 600; }
 .active-pane { border: 1px solid #5b8dd9; }
 .rename-entry { font-size: 14px; padding: 2px 4px; }
+/* GtkPaned separator styling — makes divider visible on dark backgrounds.
+   wide-handle is set programmatically; separator gets min-width/height for draggability. */
+paned > separator { background-color: #3a3a3a; min-width: 4px; min-height: 4px; }
+paned > separator:hover { background-color: #5b8dd9; }
 ";
 
 fn main() {

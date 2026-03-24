@@ -36,6 +36,10 @@ pub fn create_surface(
     gl_area.set_focusable(true);
     // Grab keyboard focus when the user clicks inside the terminal.
     gl_area.set_focus_on_click(true);
+    // Expand to fill available space — required for GtkPaned to distribute space evenly.
+    // Without this, GLArea has natural size 0 and the Paned gives all space to end child.
+    gl_area.set_hexpand(true);
+    gl_area.set_vexpand(true);
 
     // Shared cell for the surface pointer — created in realize (after GL context exists),
     // then used in render, resize, input, and scale-factor callbacks.
@@ -171,21 +175,34 @@ pub fn create_surface(
 
     // ── GtkGLArea::resize ────────────────────────────────────────────────────
     // GTK provides logical (CSS) pixels. Ghostty needs physical pixels (Pitfall 5).
-    gl_area.connect_resize({
+    // ghostty_surface_set_size calls sizeCallback which reflowes the terminal buffer —
+    // expensive when called on every pixel during a GtkPaned drag. Debounce: record the
+    // latest size and defer the actual call to the next idle, coalescing burst resizes.
+    {
         let cell = surface_cell.clone();
-        move |area, logical_w, logical_h| {
-            if let Some(surface) = *cell.borrow() {
-                let scale = area.scale_factor();
-                unsafe {
-                    ffi::ghostty_surface_set_size(
-                        surface,
-                        (logical_w * scale) as u32,
-                        (logical_h * scale) as u32,
-                    );
-                }
+        let pending = std::rc::Rc::new(std::cell::Cell::new(false));
+        let last_size = std::rc::Rc::new(std::cell::Cell::new((0u32, 0u32)));
+        gl_area.connect_resize(move |area, logical_w, logical_h| {
+            let scale = area.scale_factor();
+            last_size.set(((logical_w * scale) as u32, (logical_h * scale) as u32));
+            if pending.get() {
+                return; // idle already queued; it will use latest last_size
             }
-        }
-    });
+            pending.set(true);
+            let cell = cell.clone();
+            let pending = pending.clone();
+            let last_size = last_size.clone();
+            gtk4::glib::idle_add_local_once(move || {
+                pending.set(false);
+                let (w, h) = last_size.get();
+                if let Some(surface) = *cell.borrow() {
+                    unsafe {
+                        ffi::ghostty_surface_set_size(surface, w, h);
+                    }
+                }
+            });
+        });
+    }
 
     // ── notify::scale-factor (GHOST-06) ─────────────────────────────────────
     // Fires when the window moves to a monitor with a different DPI.
