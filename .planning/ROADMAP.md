@@ -37,7 +37,7 @@ Plans:
 - [x] 01-04-PLAN.md — Input routing: GDK keycode mapping, keyboard/mouse/scroll controllers, human verification checkpoint
 - [x] 01-05-PLAN.md — Fix linking: Correct build.rs linkage, add missing stubs (gap closure)
 - [x] 01-06-PLAN.md — Add tokio runtime: Initialize tokio, bridge to GLib (gap closure)
-- [ ] 01-07-PLAN.md — Fix initialization crash: Proper Ghostty lifecycle, defensive checks (gap closure)
+- [x] 01-07-PLAN.md — Fix initialization crash: Proper Ghostty lifecycle, defensive checks (gap closure)
 - [ ] 01-08-PLAN.md — Fix rendering: Missing function stubs, GL context debugging (gap closure)
 - [ ] 01-09-PLAN.md — Verify functionality: Test input/output/clipboard, achieve Phase 1 goals (gap closure)
 **UI hint**: yes

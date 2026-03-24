@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase complete — ready for verification
-stopped_at: Completed phase 01-ghostty-foundation all plans
-last_updated: "2026-03-23T18:35:16.088Z"
+status: Ready to execute
+stopped_at: Completed 01-ghostty-foundation plan 07 - startup crash fixed
+last_updated: "2026-03-24T02:03:38.579Z"
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
+  completed_phases: 0
+  total_plans: 9
+  completed_plans: 7
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 01 (ghostty-foundation) — EXECUTING
-Plan: 4 of 4
+Plan: 2 of 9
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Plan: 4 of 4
 | Phase 01-ghostty-foundation P04 | 640 | 3 tasks | 6 files |
 | Phase 01-ghostty-foundation P05 | 207 | 3 tasks | 4 files |
 | Phase 01-ghostty-foundation P06 | 152 | 3 tasks | 3 files |
+| Phase 01-ghostty-foundation P07 | 45 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,9 @@ Recent decisions affecting current work:
 - [Phase 01-ghostty-foundation]: Remove lib.rs and apply build.rs directly to binary crate
 - [Phase 01-ghostty-foundation]: Use stack-allocated text buffer to avoid heap allocations in typing hot path
 - [Phase 01-ghostty-foundation]: Map X11 hardware keycodes directly to ghostty_input_key_e for layout-independent input
+- [Phase 01-ghostty-foundation]: Defer ghostty_surface_new to GLArea realize callback — GL context must be current before surface creation
+- [Phase 01-ghostty-foundation]: must_draw_from_app_thread=true in embedded.zig routes renderer draws through action_cb on main thread — avoids GLAD threadlocal crash
+- [Phase 01-ghostty-foundation]: Replace gladLoaderLoadGLContext stub with real GLAD loader from vendor/glad/src/gl.c — stub returned version 0 causing OpenGL version check failure
 
 ### Pending Todos
 
@@ -84,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T18:35:16.087Z
-Stopped at: Completed phase 01-ghostty-foundation all plans
+Last session: 2026-03-24T02:03:38.577Z
+Stopped at: Completed 01-ghostty-foundation plan 07 - startup crash fixed
 Resume file: None
