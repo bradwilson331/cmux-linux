@@ -200,6 +200,29 @@ pub fn create_surface(
                         ffi::ghostty_surface_set_size(surface, w, h);
                     }
                 }
+                // After resize: drive the render loop directly rather than waiting
+                // for wakeup_cb — wakeup idles can be starved during rapid resize events
+                // (sustained mouse drag floods the GLib main loop with motion events at
+                // DEFAULT priority, delaying DEFAULT_IDLE wakeup idles). Calling app_tick
+                // + queue_render here ensures the terminal reflows and re-renders even
+                // during a sustained resize drag.
+                let app_ptr = crate::ghostty::callbacks::APP_PTR
+                    .load(std::sync::atomic::Ordering::SeqCst);
+                if app_ptr != 0 {
+                    unsafe {
+                        let app = app_ptr as ffi::ghostty_app_t;
+                        ffi::ghostty_app_tick(app);
+                    }
+                }
+                if let Ok(areas) = crate::ghostty::callbacks::GL_AREA_REGISTRY.lock() {
+                    for area_ptr in areas.iter() {
+                        let area: glib::translate::Borrowed<gtk4::GLArea> =
+                            unsafe { glib::translate::from_glib_borrow(area_ptr.0) };
+                        if area.is_realized() {
+                            area.queue_render();
+                        }
+                    }
+                }
             });
         });
     }
