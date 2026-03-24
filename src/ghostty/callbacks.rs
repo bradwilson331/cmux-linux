@@ -47,13 +47,28 @@ pub unsafe extern "C" fn close_surface_cb(_userdata: *mut std::ffi::c_void, _pro
 }
 
 /// Action callback — Ghostty fires actions (e.g. new tab, font size changes).
-/// Phase 1 ignores all actions. Phase 2 will route workspace/split actions.
-/// Returns false to indicate the action was not handled.
+/// Handles the `.render` action to trigger a GtkGLArea redraw on the main thread.
+/// This is required because must_draw_from_app_thread=true in embedded.zig means
+/// the renderer thread sends redraw_surface → App.redrawSurface → action_cb(.render).
+/// Returns true if handled, false otherwise.
 pub unsafe extern "C" fn action_cb(
     _app: crate::ghostty::ffi::ghostty_app_t,
     _target: crate::ghostty::ffi::ghostty_target_s,
-    _action: crate::ghostty::ffi::ghostty_action_s,
+    action: crate::ghostty::ffi::ghostty_action_s,
 ) -> bool {
-    // No-op in Phase 1 — return false (unhandled)
+    use crate::ghostty::ffi;
+    if action.tag == ffi::ghostty_action_tag_e_GHOSTTY_ACTION_RENDER {
+        // Trigger a render on the GLArea — will call ghostty_surface_draw on main thread.
+        crate::ghostty::surface::GL_AREA_FOR_RENDER.with(|cell| {
+            if let Some(area) = cell.borrow().as_ref() {
+                use gtk4::prelude::{GLAreaExt, WidgetExt};
+                if area.is_realized() {
+                    area.queue_render();
+                }
+            }
+        });
+        return true;
+    }
+    // Phase 1 ignores all other actions — return false (unhandled)
     false
 }

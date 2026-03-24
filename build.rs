@@ -20,6 +20,14 @@ fn main() {
     // Link stub object file to satisfy undefined symbols from missing libraries (use absolute path)
     println!("cargo:rustc-link-arg={}/stubs.o", manifest_dir);
 
+    // Link the GLAD loader object file — provides gladLoaderLoadGLContext and
+    // gladLoaderUnloadGLContext which are needed by ghostty's OpenGL renderer.
+    println!("cargo:rustc-link-arg={}/glad.o", manifest_dir);
+
+    // Rebuild if the glad source changes
+    println!("cargo:rerun-if-changed=ghostty/vendor/glad/src/gl.c");
+    println!("cargo:rerun-if-changed=ghostty/vendor/glad/include/glad/gl.h");
+
     // libghostty.a requires these system libraries at link time
     println!("cargo:rustc-link-lib=dylib=GL");
     println!("cargo:rustc-link-lib=dylib=stdc++");

@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::rc::Rc;
 
 /// Thread-local storage for the GLArea — allows wakeup_cb (via idle_add_once)
 /// to call queue_render() on the main thread without passing it through C callbacks.
@@ -8,8 +9,8 @@ thread_local! {
 }
 
 /// Creates and returns a GtkGLArea with a Ghostty terminal surface wired up.
-/// Initializes ghostty_app_t, creates ghostty_surface_t with GTK4 platform,
-/// and connects all GtkGLArea signals (realize, render, resize, scale-factor).
+/// Initializes ghostty_app_t, then defers ghostty_surface_t creation to the
+/// GtkGLArea realize signal — when the GL context is guaranteed to exist.
 pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     use gtk4::prelude::*;
     use std::ffi::CString;
@@ -26,15 +27,18 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     gl_area.set_auto_render(false);
 
     // Initialize ghostty app (one-time, before surface creation).
+    // ghostty_init + ghostty_app_new do NOT require a GL context.
     // Safety: called once on the main thread before any surface is created.
     let ghostty_app = unsafe {
         let argv: Vec<CString> = std::env::args().map(|a| CString::new(a).unwrap()).collect();
         let mut ptrs: Vec<*mut i8> = argv.iter().map(|a| a.as_ptr() as *mut i8).collect();
         ffi::ghostty_init(ptrs.len(), ptrs.as_mut_ptr());
+        eprintln!("cmux: ghostty_init complete");
 
         let config = ffi::ghostty_config_new();
         ffi::ghostty_config_load_default_files(config);
         ffi::ghostty_config_finalize(config); // CRITICAL: finalize before ghostty_app_new
+        eprintln!("cmux: ghostty_config finalized");
 
         // Runtime config: register all C callbacks.
         let runtime_config = ffi::ghostty_runtime_config_s {
@@ -51,32 +55,23 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
         let ghostty_app = ffi::ghostty_app_new(&runtime_config, config);
         ffi::ghostty_config_free(config);
 
+        if ghostty_app.is_null() {
+            eprintln!("cmux: FATAL — ghostty_app_new returned null");
+            std::process::exit(1);
+        }
+        eprintln!("cmux: ghostty_app_new succeeded: {:p}", ghostty_app);
+
         // Store app pointer globally for wakeup_cb to use.
         APP_PTR.store(ghostty_app as usize, Ordering::SeqCst);
 
         ghostty_app
     };
 
-    // Create the ghostty surface config pointing at this GtkGLArea.
-    // Surface creation happens before realize — the PTY starts immediately.
-    // Rendering is deferred until realize (is_realized guard in wakeup path).
-    let ghostty_surface = unsafe {
-        let gl_area_ptr = gl_area.as_ptr() as *mut std::ffi::c_void;
-
-        let platform = ffi::ghostty_platform_u {
-            gtk4: ffi::ghostty_platform_gtk4_s {
-                gl_area: gl_area_ptr,
-            },
-        };
-
-        let mut surface_config = ffi::ghostty_surface_config_new();
-        surface_config.platform_tag = ffi::ghostty_platform_e_GHOSTTY_PLATFORM_GTK4;
-        surface_config.platform = platform;
-        surface_config.userdata = std::ptr::null_mut();
-        surface_config.scale_factor = 1.0; // updated in realize signal
-
-        ffi::ghostty_surface_new(ghostty_app, &surface_config)
-    };
+    // Shared cell for the surface pointer — created in realize (after GL context exists),
+    // then used in render, resize, input, and scale-factor callbacks.
+    // Rc<RefCell<...>> is safe here: all callbacks run on the GLib main thread.
+    let surface_cell: Rc<RefCell<Option<ffi::ghostty_surface_t>>> =
+        Rc::new(RefCell::new(None));
 
     // Store gl_area in thread-local for wakeup_cb to call queue_render on.
     GL_AREA_FOR_RENDER.with(|cell| {
@@ -84,15 +79,48 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     });
 
     // ── GtkGLArea::realize ───────────────────────────────────────────────────
-    // GL context is now valid. Set size, scale, and focus.
+    // GL context is now valid. Create the surface HERE so ghostty can access
+    // the GL context immediately after creation (fixes segfault in set_content_scale).
     gl_area.connect_realize({
-        let surface = ghostty_surface;
+        let cell = surface_cell.clone();
         move |area| {
+            eprintln!("cmux: GLArea realize — making GL context current");
             area.make_current();
             if let Some(err) = area.error() {
                 eprintln!("cmux: GLArea realize error: {err}");
                 std::process::exit(1); // Per D-09: no GUI error dialog in Phase 1
             }
+            eprintln!("cmux: GL context made current, no error");
+            eprintln!("cmux: GL area size at realize: {}x{}", area.width(), area.height());
+            eprintln!("cmux: GL scale factor at realize: {}", area.scale_factor());
+
+            // Create the ghostty surface now that GL context is current.
+            let surface = unsafe {
+                let gl_area_ptr = area.as_ptr() as *mut std::ffi::c_void;
+
+                let platform = ffi::ghostty_platform_u {
+                    gtk4: ffi::ghostty_platform_gtk4_s {
+                        gl_area: gl_area_ptr,
+                    },
+                };
+
+                let mut surface_config = ffi::ghostty_surface_config_new();
+                surface_config.platform_tag = ffi::ghostty_platform_e_GHOSTTY_PLATFORM_GTK4;
+                surface_config.platform = platform;
+                surface_config.userdata = std::ptr::null_mut();
+                surface_config.scale_factor = area.scale_factor() as f64;
+
+                eprintln!("cmux: calling ghostty_surface_new");
+                let s = ffi::ghostty_surface_new(ghostty_app, &surface_config);
+                if s.is_null() {
+                    eprintln!("cmux: FATAL — ghostty_surface_new returned null");
+                    std::process::exit(1);
+                }
+                eprintln!("cmux: ghostty_surface_new succeeded: {:p}", s);
+                s
+            };
+
+            // Set initial size and scale after surface creation.
             let scale = area.scale_factor() as f64;
             let w = area.width();
             let h = area.height();
@@ -103,19 +131,30 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
                     (w as f64 * scale) as u32,
                     (h as f64 * scale) as u32,
                 );
+                eprintln!("cmux: ghostty_surface_set_size({}, {})", w, h);
                 ffi::ghostty_surface_set_content_scale(surface, scale, scale);
+                eprintln!("cmux: ghostty_surface_set_content_scale({scale})");
                 ffi::ghostty_surface_set_focus(surface, true);
+                eprintln!("cmux: ghostty_surface_set_focus(true)");
             }
+
+            // Store the surface pointer for other callbacks.
+            *cell.borrow_mut() = Some(surface);
+
+            // Request first render.
+            area.queue_render();
         }
     });
 
     // ── GtkGLArea::render ────────────────────────────────────────────────────
     // Called by GTK frame clock when queue_render() was requested.
     gl_area.connect_render({
-        let surface = ghostty_surface;
+        let cell = surface_cell.clone();
         move |_area, _ctx| {
-            unsafe {
-                ffi::ghostty_surface_draw(surface);
+            if let Some(surface) = *cell.borrow() {
+                unsafe {
+                    ffi::ghostty_surface_draw(surface);
+                }
             }
             gtk4::glib::Propagation::Stop // suppress GTK default render
         }
@@ -124,15 +163,17 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     // ── GtkGLArea::resize ────────────────────────────────────────────────────
     // GTK provides logical (CSS) pixels. Ghostty needs physical pixels (Pitfall 5).
     gl_area.connect_resize({
-        let surface = ghostty_surface;
+        let cell = surface_cell.clone();
         move |area, logical_w, logical_h| {
-            let scale = area.scale_factor();
-            unsafe {
-                ffi::ghostty_surface_set_size(
-                    surface,
-                    (logical_w * scale) as u32,
-                    (logical_h * scale) as u32,
-                );
+            if let Some(surface) = *cell.borrow() {
+                let scale = area.scale_factor();
+                unsafe {
+                    ffi::ghostty_surface_set_size(
+                        surface,
+                        (logical_w * scale) as u32,
+                        (logical_h * scale) as u32,
+                    );
+                }
             }
         }
     });
@@ -142,12 +183,14 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     // Must use connect_notify_local: ghostty_surface_t is *mut c_void (not Send+Sync).
     // connect_notify_local only requires 'static, and runs on the GLib main thread.
     gl_area.connect_notify_local(Some("scale-factor"), {
-        let surface = ghostty_surface;
+        let cell = surface_cell.clone();
         move |widget, _| {
-            let scale = widget.scale_factor() as f64;
-            unsafe {
-                ffi::ghostty_surface_set_content_scale(surface, scale, scale);
-                ffi::ghostty_surface_refresh(surface); // trigger redraw at new scale
+            if let Some(surface) = *cell.borrow() {
+                let scale = widget.scale_factor() as f64;
+                unsafe {
+                    ffi::ghostty_surface_set_content_scale(surface, scale, scale);
+                    ffi::ghostty_surface_refresh(surface); // trigger redraw at new scale
+                }
             }
         }
     });
@@ -157,10 +200,15 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     // CRITICAL: no allocations in this path — per CLAUDE.md typing-latency-sensitive paths.
     let key_controller = gtk4::EventControllerKey::new();
     key_controller.connect_key_pressed({
-        let surface = ghostty_surface;
+        let cell = surface_cell.clone();
         move |_ctrl, keyval, keycode, state| {
             use crate::ghostty::ffi;
             use crate::ghostty::input::{map_keycode_to_ghostty, map_mods};
+
+            let surface = match *cell.borrow() {
+                Some(s) => s,
+                None => return gtk4::glib::Propagation::Proceed,
+            };
 
             // text field: UTF-8 from the keyval (what the key produces with modifiers applied).
             // Must be a C string. Use a stack-allocated buffer to avoid heap allocation.
@@ -191,10 +239,16 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
         }
     });
     key_controller.connect_key_released({
-        let surface = ghostty_surface;
+        let cell = surface_cell.clone();
         move |_ctrl, _keyval, keycode, state| {
             use crate::ghostty::ffi;
             use crate::ghostty::input::{map_keycode_to_ghostty, map_mods};
+
+            let surface = match *cell.borrow() {
+                Some(s) => s,
+                None => return,
+            };
+
             let mut input = unsafe { std::mem::zeroed::<ffi::ghostty_input_key_s>() };
             input.keycode = map_keycode_to_ghostty(keycode);
             input.mods = map_mods(state);
@@ -212,9 +266,13 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     let click_gesture = gtk4::GestureClick::new();
     click_gesture.set_button(0); // 0 = listen to all mouse buttons
     click_gesture.connect_pressed({
-        let surface = ghostty_surface;
+        let cell = surface_cell.clone();
         move |gesture, _n_press, _x, _y| {
             use crate::ghostty::ffi;
+            let surface = match *cell.borrow() {
+                Some(s) => s,
+                None => return,
+            };
             let button = match gesture.current_button() {
                 1 => ffi::ghostty_input_mouse_button_e_GHOSTTY_MOUSE_LEFT,
                 2 => ffi::ghostty_input_mouse_button_e_GHOSTTY_MOUSE_MIDDLE,
@@ -233,9 +291,13 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
         }
     });
     click_gesture.connect_released({
-        let surface = ghostty_surface;
+        let cell = surface_cell.clone();
         move |gesture, _n_press, _x, _y| {
             use crate::ghostty::ffi;
+            let surface = match *cell.borrow() {
+                Some(s) => s,
+                None => return,
+            };
             let button = match gesture.current_button() {
                 1 => ffi::ghostty_input_mouse_button_e_GHOSTTY_MOUSE_LEFT,
                 2 => ffi::ghostty_input_mouse_button_e_GHOSTTY_MOUSE_MIDDLE,
@@ -258,8 +320,12 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     // ── Mouse motion ─────────────────────────────────────────────────────────────
     let motion_controller = gtk4::EventControllerMotion::new();
     motion_controller.connect_motion({
-        let surface = ghostty_surface;
+        let cell = surface_cell.clone();
         move |ctrl, x, y| {
+            let surface = match *cell.borrow() {
+                Some(s) => s,
+                None => return,
+            };
             let mods = crate::ghostty::input::map_mods(ctrl.current_event_state());
             unsafe {
                 crate::ghostty::ffi::ghostty_surface_mouse_pos(surface, x, y, mods);
@@ -273,9 +339,13 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
         gtk4::EventControllerScrollFlags::BOTH_AXES | gtk4::EventControllerScrollFlags::DISCRETE,
     );
     scroll_controller.connect_scroll({
-        let surface = ghostty_surface;
+        let cell = surface_cell.clone();
         move |ctrl, dx, dy| {
             use crate::ghostty::ffi;
+            let surface = match *cell.borrow() {
+                Some(s) => s,
+                None => return gtk4::glib::Propagation::Proceed,
+            };
             // Detect if this is pixel-precise (touchpad) or discrete (mouse wheel)
             let is_pixel = ctrl
                 .current_event()

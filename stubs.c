@@ -134,6 +134,5 @@ void ImGuiIO_AddFocusEvent(ImGuiIO* self, int focused) {}
 typedef struct ImGuiTextFilter ImGuiTextFilter;
 int ImGuiTextFilter_PassFilter(ImGuiTextFilter* self, const char* text, const char* text_end) { return 1; }
 
-// GLAD loader stubs for OpenGL context loading
-int gladLoaderLoadGLContext(void* context) { return 1; }  // Return 1 for success
-void gladLoaderUnloadGLContext(void* context) {}
+// Note: gladLoaderLoadGLContext and gladLoaderUnloadGLContext are provided
+// by glad.o (compiled from ghostty/vendor/glad/src/gl.c), not stubbed here.
