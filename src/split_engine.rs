@@ -162,6 +162,14 @@ impl SplitEngine {
         self.root.widget()
     }
 
+    /// Grab GTK keyboard focus for the active pane's GLArea.
+    /// Called after workspace switch so key events route to Ghostty, not the sidebar.
+    pub fn grab_active_focus(&self) {
+        if let Some(gl_area) = self.find_gl_area(self.active_pane_id) {
+            gl_area.grab_focus();
+        }
+    }
+
     /// Split the active pane to the right (Ctrl+D per D-10).
     /// Replaces the active Leaf with a Split(Horizontal) containing the old leaf + new leaf.
     /// Per D-08: new surface inherits CWD via ghostty_surface_inherited_config.
@@ -338,7 +346,17 @@ impl SplitEngine {
     }
 
     fn find_surface(&self, pane_id: u64) -> Option<ffi::ghostty_surface_t> {
-        find_surface_in_tree(&self.root, pane_id)
+        find_surface_in_tree(&self.root, pane_id).or_else(|| {
+            // Fallback: look up in global SURFACE_REGISTRY by scanning for pane_id.
+            // SURFACE_REGISTRY maps surface_ptr (usize) → pane_id; need reverse lookup.
+            if let Ok(reg) = crate::ghostty::callbacks::SURFACE_REGISTRY.lock() {
+                reg.iter()
+                    .find(|(_, &pid)| pid == pane_id)
+                    .map(|(&ptr, _)| ptr as ffi::ghostty_surface_t)
+            } else {
+                None
+            }
+        })
     }
 
     fn find_gl_area(&self, pane_id: u64) -> Option<gtk4::GLArea> {

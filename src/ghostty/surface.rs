@@ -129,6 +129,10 @@ pub fn create_surface(
                 eprintln!("cmux: ghostty_surface_set_focus(true)");
             }
 
+            // Grab GTK keyboard focus so the terminal receives key events immediately
+            // without requiring a mouse click (belt-and-suspenders with switch_to_index).
+            area.grab_focus();
+
             // Store the surface pointer for other callbacks.
             *cell.borrow_mut() = Some(surface);
             // Also store in global for read_clipboard_cb (which has no surface arg).

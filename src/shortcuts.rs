@@ -217,15 +217,40 @@ fn handle_close_workspace(state: &Rc<RefCell<AppState>>, app: &gtk4::Application
 
 /// Split the active pane. `vertical=false` → split right (Ctrl+D), `vertical=true` → split down.
 fn handle_split(state: &Rc<RefCell<AppState>>, vertical: bool) {
-    eprintln!("SplitEngine integration in progress: split");
+    let mut s = state.borrow_mut();
+    if let Some(engine) = s.active_split_engine_mut() {
+        let _new_pane_id = if vertical {
+            engine.split_down()
+        } else {
+            engine.split_right()
+        };
+        // The new GLArea is already added to the widget tree inside SplitEngine.
+        // CSS active-pane class is updated inside SplitEngine.
+    }
 }
 
 /// Close the active pane (Ctrl+Shift+X).
 fn handle_close_pane(state: &Rc<RefCell<AppState>>, app: &gtk4::Application) {
-    eprintln!("SplitEngine integration in progress: close pane");
+    let (close_workspace, active_index) = {
+        let mut s = state.borrow_mut();
+        if let Some(engine) = s.active_split_engine_mut() {
+            match engine.close_active() {
+                None => (true, s.active_index), // last pane → close workspace
+                Some(_) => (false, 0),
+            }
+        } else {
+            (false, 0)
+        }
+    };
+    if close_workspace {
+        handle_close_workspace(state, app);
+    }
 }
 
 /// Move focus to adjacent pane in `direction`.
 fn handle_focus_direction(state: &Rc<RefCell<AppState>>, direction: FocusDirection) {
-    eprintln!("SplitEngine integration in progress: focus direction");
+    let mut s = state.borrow_mut();
+    if let Some(engine) = s.active_split_engine_mut() {
+        engine.focus_next_in_direction(direction);
+    }
 }

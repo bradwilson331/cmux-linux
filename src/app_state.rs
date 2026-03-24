@@ -173,6 +173,10 @@ impl AppState {
                 label.add_css_class("active-workspace-label");
             }
         }
+        // Grab GTK keyboard focus on the active pane so key events reach Ghostty.
+        if let Some(engine) = self.split_engines.get(index) {
+            engine.grab_active_focus();
+        }
     }
 
     /// Switch to next workspace (wrap-around). Per D-10: Ctrl+].

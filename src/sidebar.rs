@@ -40,12 +40,27 @@ pub fn wire_sidebar_clicks(
         move |_list, row| {
             let index = row.index() as usize;
             state.borrow_mut().switch_to_index(index);
-            // Focus the active pane's GLArea after workspace switch.
-            let active_pane_id = {
-                let s = state.borrow();
-                s.active_workspace().and_then(|ws| Some(ws.id)) // workspace id as proxy — Plan 05 improves this
+            // SPLIT-07: call ghostty_surface_set_focus on the newly active pane.
+            // Workspace switches are focus changes — must call set_focus after switch.
+            let surface = {
+                let mut s = state.borrow_mut();
+                s.active_split_engine_mut()
+                    .and_then(|engine| engine.root.find_active_pane_id())
+                    .and_then(|pane_id| {
+                        if let Ok(reg) = crate::ghostty::callbacks::SURFACE_REGISTRY.lock() {
+                            reg.iter()
+                                .find(|(_, &pid)| pid == pane_id)
+                                .map(|(&ptr, _)| ptr as crate::ghostty::ffi::ghostty_surface_t)
+                        } else {
+                            None
+                        }
+                    })
             };
-            let _ = active_pane_id; // Full focus routing via SplitEngine wired in Plan 05
+            if let Some(surface) = surface {
+                unsafe {
+                    crate::ghostty::ffi::ghostty_surface_set_focus(surface, true);
+                }
+            }
         }
     });
 }
