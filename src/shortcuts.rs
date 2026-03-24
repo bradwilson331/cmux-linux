@@ -173,23 +173,8 @@ pub fn install_shortcuts(
 }
 
 /// Create a new workspace with an initial GLArea pane and add it to AppState + GtkStack.
-fn handle_new_workspace(state: &Rc<RefCell<AppState>>, app: &gtk4::Application) {
-    let (ws_id, ghostty_app, stack_ref) = {
-        let mut s = state.borrow_mut();
-        let ws_id = s.create_workspace();
-        (ws_id, s.ghostty_app, s.stack.clone())
-    };
-
-    let pane_id = ws_id * 1000; // unique pane ID for first pane of each workspace
-    let gl_area = crate::ghostty::surface::create_surface(app, ghostty_app, None, pane_id);
-    gl_area.add_css_class("active-pane");
-
-    let page_name = format!("workspace-{}", ws_id);
-    stack_ref.add_named(&gl_area, Some(&page_name));
-    stack_ref.set_visible_child_name(&page_name);
-
-    // Focus the new GLArea.
-    gl_area.grab_focus();
+fn handle_new_workspace(state: &Rc<RefCell<AppState>>, _app: &gtk4::Application) {
+    state.borrow_mut().create_workspace();
 }
 
 /// Show close-workspace confirmation dialog. If confirmed, closes the active workspace.

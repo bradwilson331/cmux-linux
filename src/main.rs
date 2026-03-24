@@ -165,25 +165,15 @@ fn build_ui(app: &Application) {
         stack.clone(),
         sidebar_list.clone(),
         ghostty_app,
+        app.clone(),
     );
 
     // Wire sidebar click-to-switch.
     crate::sidebar::wire_sidebar_clicks(&sidebar_list, state.clone());
 
-    // Create the first workspace with a real GLArea.
+    // Create the first workspace.
     {
-        let mut s = state.borrow_mut();
-        let ws_id = s.create_workspace();
-        let pane_id = ws_id * 1000; // unique pane ID for first pane of workspace
-        let gl_area = crate::ghostty::surface::create_surface(app, ghostty_app, None, pane_id);
-
-        // Add GLArea as the GtkStack page for this workspace.
-        let page_name = format!("workspace-{}", ws_id);
-        s.stack.add_named(&gl_area, Some(&page_name));
-        s.stack.set_visible_child_name(&page_name);
-
-        // Mark this pane as active (focus indicator).
-        gl_area.add_css_class("active-pane");
+        state.borrow_mut().create_workspace();
     }
 
     // 5. Handle delete-event for close confirmation

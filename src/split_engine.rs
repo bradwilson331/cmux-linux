@@ -194,7 +194,7 @@ impl SplitEngine {
         };
 
         // Create new GLArea + surface for the new pane.
-        let new_gl_area = crate::ghostty::surface::create_surface(
+        let (new_gl_area, _surface_cell) = crate::ghostty::surface::create_surface(
             &self.app,
             self.ghostty_app,
             inherited,

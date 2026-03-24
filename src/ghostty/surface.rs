@@ -20,7 +20,7 @@ pub fn create_surface(
     ghostty_app: ffi::ghostty_app_t,
     inherited_config: Option<*mut ffi::ghostty_surface_config_s>,
     pane_id: u64,
-) -> gtk4::GLArea {
+) -> (gtk4::GLArea, Rc<RefCell<Option<ffi::ghostty_surface_t>>>) {
     use gtk4::prelude::*;
     use std::sync::atomic::Ordering;
 
@@ -369,7 +369,7 @@ pub fn create_surface(
     });
     gl_area.add_controller(scroll_controller);
 
-    gl_area
+    (gl_area, surface_cell)
 }
 
 // ── Clipboard callbacks ──────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 use crate::ghostty::ffi;
+use crate::split_engine::SplitEngine;
 use crate::workspace::Workspace;
 use gtk4::prelude::*;
 use std::cell::RefCell;
@@ -7,6 +8,8 @@ use std::rc::Rc;
 pub type AppStateRef = Rc<RefCell<AppState>>;
 
 pub struct AppState {
+    pub split_engines: Vec<SplitEngine>,
+    pub gtk_app: gtk4::Application,
     /// All open workspaces. Never empty after initialization — create_workspace is called in new().
     pub workspaces: Vec<Workspace>,
     /// Index into workspaces of the currently visible workspace.
@@ -30,13 +33,16 @@ impl AppState {
         stack: gtk4::Stack,
         sidebar_list: gtk4::ListBox,
         ghostty_app: ffi::ghostty_app_t,
+        gtk_app: gtk4::Application,
     ) -> AppStateRef {
         let state = AppState {
             workspaces: Vec::new(),
+            split_engines: Vec::new(),
             active_index: 0,
             stack,
             sidebar_list,
             ghostty_app,
+            gtk_app,
             next_id: 1,
             next_display_number: 1,
         };
@@ -52,7 +58,7 @@ impl AppState {
         let display_number = self.next_display_number;
         self.next_display_number += 1;
 
-        let workspace = Workspace::new(id, display_number);
+        let mut workspace = Workspace::new(id, display_number);
         let name = workspace.name.clone();
 
         // Append a row to the sidebar GtkListBox.
@@ -60,21 +66,34 @@ impl AppState {
         label.set_halign(gtk4::Align::Start);
         let row = gtk4::ListBoxRow::new();
         row.set_child(Some(&label));
-        // Store workspace id on the row for click-to-switch routing (Plan 04).
         unsafe {
             row.set_data("workspace-id", id);
         }
         self.sidebar_list.append(&row);
 
-        self.workspaces.push(workspace);
-        let new_index = self.workspaces.len() - 1;
+        // Create surface and split engine
+        let pane_id = id * 1000;
+        let (gl_area, surface_cell) =
+            crate::ghostty::surface::create_surface(&self.gtk_app, self.ghostty_app, None, pane_id);
+        let engine = SplitEngine::new(
+            self.gtk_app.clone(),
+            self.ghostty_app,
+            gl_area.clone(),
+            surface_cell,
+            pane_id,
+        );
 
-        // Switch to the new workspace in the sidebar.
-        // The GtkStack page is added by Plan 04 (requires the GLArea root widget).
-        self.active_index = new_index;
-        if let Some(row) = self.sidebar_list.row_at_index(new_index as i32) {
-            self.sidebar_list.select_row(Some(&row));
-        }
+        // Add to stack
+        let page_name = format!("workspace-{}", id);
+        self.stack
+            .add_named(&engine.root_widget(), Some(&page_name));
+        workspace.stack_page_name = page_name;
+
+        self.workspaces.push(workspace);
+        self.split_engines.push(engine);
+
+        let new_index = self.workspaces.len() - 1;
+        self.switch_to_index(new_index);
 
         id
     }
@@ -86,6 +105,23 @@ impl AppState {
         if self.workspaces.len() <= 1 {
             return false; // Cannot close the last workspace
         }
+
+        // Before removing from workspaces, free all Ghostty surfaces in the split engine.
+        if let Some(engine) = self.split_engines.get(index) {
+            let mut surfaces = Vec::new();
+            engine.root.collect_surfaces(&mut surfaces);
+            for surface in surfaces {
+                if !surface.is_null() {
+                    unsafe {
+                        crate::ghostty::ffi::ghostty_surface_free(surface);
+                    }
+                    if let Ok(mut reg) = crate::ghostty::callbacks::SURFACE_REGISTRY.lock() {
+                        reg.remove(&(surface as usize));
+                    }
+                }
+            }
+        }
+        self.split_engines.remove(index);
 
         let workspace = self.workspaces.remove(index);
 
@@ -159,6 +195,10 @@ impl AppState {
             self.active_index - 1
         };
         self.switch_to_index(prev);
+    }
+
+    pub fn active_split_engine_mut(&mut self) -> Option<&mut SplitEngine> {
+        self.split_engines.get_mut(self.active_index)
     }
 
     /// Rename the active workspace. Per D-03/D-10: Ctrl+Shift+R (UI wired in Plan 04/05).
