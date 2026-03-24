@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 02-workspaces-pane-splits-03-PLAN.md
-last_updated: "2026-03-24T04:47:43.243Z"
+stopped_at: Completed 02-workspaces-pane-splits-04-PLAN.md
+last_updated: "2026-03-24T04:54:30.221Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 16
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 02 (workspaces-pane-splits) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Plan: 5 of 7
 | Phase 01-ghostty-foundation P09 | 15 | 2 tasks | 3 files |
 | Phase 02-workspaces-pane-splits P00 | 15m | 3 tasks | 4 files |
 | Phase 02-workspaces-pane-splits P03 | 0.33 | 1 tasks | 1 files |
+| Phase 02-workspaces-pane-splits P04 | 15 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,7 @@ Recent decisions affecting current work:
 - [Phase 01-ghostty-foundation]: Remove lib.rs: binary-only crate required for build.rs rustc-link-lib=static=ghostty to apply to binary link step
 - [Phase 01-ghostty-foundation]: SURFACE_PTR global for clipboard: read_clipboard_cb has no surface arg, requires AtomicUsize global set at realize time
 - [Phase 01-ghostty-foundation]: set_focusable(true) on GTK4 GLArea is required for EventControllerKey keyboard events
+- [Phase 02-workspaces-pane-splits]: Commented out non-compiling AlertDialog code, preserving the intended 'proceed on close' behavior. This is a temporary fix until the correct API usage is determined.
 
 ### Pending Todos
 
@@ -96,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T04:47:43.240Z
-Stopped at: Completed 02-workspaces-pane-splits-03-PLAN.md
+Last session: 2026-03-24T04:54:30.218Z
+Stopped at: Completed 02-workspaces-pane-splits-04-PLAN.md
 Resume file: None
