@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use gtk4::glib;
 
 /// Call glGetError() via FFI to check for GL errors after ghostty calls.
 /// Returns 0 if no error, or the GL error code otherwise.
@@ -25,7 +26,7 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     use std::ffi::CString;
     use std::sync::atomic::Ordering;
 
-    use crate::ghostty::callbacks::{action_cb, close_surface_cb, wakeup_cb, APP_PTR};
+    use crate::ghostty::callbacks::{action_cb, close_surface_cb, wakeup_cb, APP_PTR, SURFACE_PTR};
     use crate::ghostty::ffi;
 
     let gl_area = gtk4::GLArea::new();
@@ -34,6 +35,10 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     // Manual render mode: only render when wakeup_cb schedules queue_render().
     // An independent render loop adds input latency (per CLAUDE.md pitfall).
     gl_area.set_auto_render(false);
+    // Must be focusable to receive keyboard events via EventControllerKey.
+    gl_area.set_focusable(true);
+    // Grab keyboard focus when the user clicks inside the terminal.
+    gl_area.set_focus_on_click(true);
 
     // Initialize ghostty app (one-time, before surface creation).
     // ghostty_init + ghostty_app_new do NOT require a GL context.
@@ -163,6 +168,8 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
 
             // Store the surface pointer for other callbacks.
             *cell.borrow_mut() = Some(surface);
+            // Also store in global for read_clipboard_cb (which has no surface arg).
+            SURFACE_PTR.store(surface as usize, Ordering::SeqCst);
 
             // Request first render.
             area.queue_render();
@@ -402,10 +409,17 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
 unsafe extern "C" fn read_clipboard_cb(
     _userdata: *mut std::ffi::c_void,
     clipboard_type: crate::ghostty::ffi::ghostty_clipboard_e,
-    _request: *mut std::ffi::c_void,
+    request: *mut std::ffi::c_void,
 ) {
     use crate::ghostty::ffi;
     use gtk4::prelude::*;
+    use std::sync::atomic::Ordering;
+
+    let surface_ptr = crate::ghostty::callbacks::SURFACE_PTR.load(Ordering::SeqCst);
+    if surface_ptr == 0 {
+        return;
+    }
+    let surface = surface_ptr as ffi::ghostty_surface_t;
 
     let display = match gtk4::gdk::Display::default() {
         Some(d) => d,
@@ -417,10 +431,20 @@ unsafe extern "C" fn read_clipboard_cb(
         display.clipboard()
     };
 
-    // We can't store _request across an async boundary without unsafe global storage.
-    // For Phase 1 simplicity: fire-and-forget read. Full async implementation in Phase 2.
-    // This is sufficient for basic terminal clipboard paste.
-    let _ = clipboard;
+    // Read clipboard text synchronously using GLib event loop.
+    // gtk4::glib::MainContext::block_on runs the async future on the current (main) thread.
+    // This is safe here because read_clipboard_cb is called from the GLib main thread.
+    let text_result = glib::MainContext::default().block_on(clipboard.read_text_future());
+
+    let c_text = match text_result {
+        Ok(Some(ref s)) => std::ffi::CString::new(s.as_str()).ok(),
+        _ => None,
+    };
+    let text_ptr = c_text.as_ref().map(|s| s.as_ptr()).unwrap_or(std::ptr::null());
+
+    unsafe {
+        ffi::ghostty_surface_complete_clipboard_request(surface, text_ptr, request, true);
+    }
 }
 
 unsafe extern "C" fn confirm_read_clipboard_cb(

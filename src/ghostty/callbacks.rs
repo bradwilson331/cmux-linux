@@ -10,6 +10,10 @@ pub static WAKEUP_PENDING: AtomicBool = AtomicBool::new(false);
 /// Safety: ghostty_app_t is opaque void* and only called from the GLib main thread.
 pub static APP_PTR: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
+/// The GhostttySurface handle — stored so read_clipboard_cb can complete paste requests.
+/// Safety: ghostty_surface_t is opaque void* and only accessed from the GLib main thread.
+pub static SURFACE_PTR: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
 /// Called by Ghostty from its renderer thread. Must not call any ghostty_* API inline.
 /// Instead, schedules ghostty_app_tick() on the GLib main loop (per D-04, GHOST-07).
 pub unsafe extern "C" fn wakeup_cb(_userdata: *mut std::ffi::c_void) {
