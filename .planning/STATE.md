@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 01-ghostty-foundation plan 08 - render pipeline confirmed working
-last_updated: "2026-03-24T02:10:11.128Z"
+status: Ready to plan
+stopped_at: Completed 01-ghostty-foundation plan 09 - input and clipboard wired, binary builds correctly
+last_updated: "2026-03-24T03:07:15.161Z"
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Current Position
 
-Phase: 01 (ghostty-foundation) — EXECUTING
-Plan: 3 of 9
+Phase: 2
+Plan: Not started
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Plan: 3 of 9
 | Phase 01-ghostty-foundation P06 | 152 | 3 tasks | 3 files |
 | Phase 01-ghostty-foundation P07 | 45 | 2 tasks | 6 files |
 | Phase 01-ghostty-foundation P08 | 15 | 2 tasks | 2 files |
+| Phase 01-ghostty-foundation P09 | 15 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,9 @@ Recent decisions affecting current work:
 - [Phase 01-ghostty-foundation]: must_draw_from_app_thread=true in embedded.zig routes renderer draws through action_cb on main thread — avoids GLAD threadlocal crash
 - [Phase 01-ghostty-foundation]: Replace gladLoaderLoadGLContext stub with real GLAD loader from vendor/glad/src/gl.c — stub returned version 0 causing OpenGL version check failure
 - [Phase 01-ghostty-foundation]: ApplicationFlags::NON_UNIQUE required for GTK4 app in cross-namespace DBus sessions (NX/containers) — prevents deadlock in GApplication singleton registration
+- [Phase 01-ghostty-foundation]: Remove lib.rs: binary-only crate required for build.rs rustc-link-lib=static=ghostty to apply to binary link step
+- [Phase 01-ghostty-foundation]: SURFACE_PTR global for clipboard: read_clipboard_cb has no surface arg, requires AtomicUsize global set at realize time
+- [Phase 01-ghostty-foundation]: set_focusable(true) on GTK4 GLArea is required for EventControllerKey keyboard events
 
 ### Pending Todos
 
@@ -90,6 +94,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T02:10:11.125Z
-Stopped at: Completed 01-ghostty-foundation plan 08 - render pipeline confirmed working
+Last session: 2026-03-24T02:48:12.032Z
+Stopped at: Completed 01-ghostty-foundation plan 09 - input and clipboard wired, binary builds correctly
 Resume file: None
