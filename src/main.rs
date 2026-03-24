@@ -5,6 +5,7 @@ use std::thread;
 use std::sync::mpsc;
 
 mod ghostty;
+mod workspace;
 
 const APP_ID: &str = "io.cmux.App";
 
