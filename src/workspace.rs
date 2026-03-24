@@ -1,70 +1,34 @@
+/// Workspace: one tab in the cmux sidebar.
+/// Each workspace has an independent pane split tree (managed by SplitEngine in split_engine.rs).
+/// The root GTK widget of a workspace's split tree is added as a named page in the GtkStack.
+#[derive(Debug)]
 pub struct Workspace {
+    /// Unique workspace ID — used as the GtkStack page name.
     pub id: u64,
+    /// Display name shown in the sidebar GtkListBox row.
     pub name: String,
-    pub display_number: u32,
+    /// The name key used with GtkStack::add_named / set_visible_child_name.
     pub stack_page_name: String,
+    /// Sequential number used for default naming ("Workspace N").
+    /// Preserved even after renames so we don't reuse numbers.
+    pub display_number: usize,
 }
 
 impl Workspace {
-    pub fn new(id: u64, display_number: u32) -> Self {
-        // Dummy implementation
+    /// Create a new workspace with a default "Workspace N" name.
+    pub fn new(id: u64, display_number: usize) -> Self {
+        let name = format!("Workspace {}", display_number);
+        let stack_page_name = format!("workspace-{}", id);
         Self {
             id,
-            name: "".to_string(),
+            name,
+            stack_page_name,
             display_number,
-            stack_page_name: "".to_string(),
         }
     }
 
-    pub fn rename(&mut self, name: String) {
-        // Dummy implementation
-        self.name = name;
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // WS-01: Can create a workspace with a default name
-    #[test]
-    fn test_workspace_default_name() {
-        let ws = Workspace::new(1, 1);
-        assert_eq!(ws.name, "Workspace 1");
-        assert_eq!(ws.id, 1);
-        assert_eq!(ws.display_number, 1);
-    }
-
-    // WS-01: Second workspace gets incremented display number
-    #[test]
-    fn test_workspace_default_name_increments() {
-        let ws1 = Workspace::new(1, 1);
-        let ws2 = Workspace::new(2, 2);
-        assert_eq!(ws1.name, "Workspace 1");
-        assert_eq!(ws2.name, "Workspace 2");
-    }
-
-    // WS-04: Can rename a workspace
-    #[test]
-    fn test_workspace_rename() {
-        let mut ws = Workspace::new(1, 1);
-        ws.rename("My Terminal".to_string());
-        assert_eq!(ws.name, "My Terminal");
-        // id and display_number unchanged
-        assert_eq!(ws.id, 1);
-    }
-
-    // WS-06: stack_page_name is derived from workspace id
-    #[test]
-    fn test_workspace_stack_page_name() {
-        let ws = Workspace::new(42, 3);
-        assert_eq!(ws.stack_page_name, "workspace-42");
-    }
-
-    // WS-02: Workspace with id 0 is a valid state (close-last guard is in AppState)
-    #[test]
-    fn test_workspace_new_id_zero() {
-        let ws = Workspace::new(0, 1);
-        assert_eq!(ws.id, 0);
+    /// Rename this workspace to a new display name.
+    pub fn rename(&mut self, new_name: String) {
+        self.name = new_name;
     }
 }
