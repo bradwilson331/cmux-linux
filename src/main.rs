@@ -6,6 +6,7 @@ use std::sync::mpsc;
 
 mod ghostty;
 mod workspace;
+mod split_engine;
 
 const APP_ID: &str = "io.cmux.App";
 
