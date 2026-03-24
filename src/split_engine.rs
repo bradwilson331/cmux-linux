@@ -1,7 +1,7 @@
 use crate::ghostty::ffi;
 use gtk4::prelude::*;
 
-/// Direction for pane focus navigation (Ctrl+Alt+arrows per D-10).
+/// Direction for pane focus navigation (Ctrl+Shift+arrows per D-10).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FocusDirection {
     Left,

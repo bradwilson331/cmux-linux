@@ -143,26 +143,26 @@ pub fn install_shortcuts(
                     gtk4::glib::Propagation::Stop
                 }
 
-                // Ctrl+Alt+Left: Focus pane left (SPLIT-03, D-10)
-                (true, false, true, k) if k == gtk4::gdk::Key::Left => {
+                // Ctrl+Shift+Left: Focus pane left (SPLIT-03, D-10)
+                (true, true, false, k) if k == gtk4::gdk::Key::Left => {
                     handle_focus_direction(&state, FocusDirection::Left);
                     gtk4::glib::Propagation::Stop
                 }
 
-                // Ctrl+Alt+Right: Focus pane right (SPLIT-03, D-10)
-                (true, false, true, k) if k == gtk4::gdk::Key::Right => {
+                // Ctrl+Shift+Right: Focus pane right (SPLIT-03, D-10)
+                (true, true, false, k) if k == gtk4::gdk::Key::Right => {
                     handle_focus_direction(&state, FocusDirection::Right);
                     gtk4::glib::Propagation::Stop
                 }
 
-                // Ctrl+Alt+Up: Focus pane up (SPLIT-03, D-10)
-                (true, false, true, k) if k == gtk4::gdk::Key::Up => {
+                // Ctrl+Shift+Up: Focus pane up (SPLIT-03, D-10)
+                (true, true, false, k) if k == gtk4::gdk::Key::Up => {
                     handle_focus_direction(&state, FocusDirection::Up);
                     gtk4::glib::Propagation::Stop
                 }
 
-                // Ctrl+Alt+Down: Focus pane down (SPLIT-03, D-10)
-                (true, false, true, k) if k == gtk4::gdk::Key::Down => {
+                // Ctrl+Shift+Down: Focus pane down (SPLIT-03, D-10)
+                (true, true, false, k) if k == gtk4::gdk::Key::Down => {
                     handle_focus_direction(&state, FocusDirection::Down);
                     gtk4::glib::Propagation::Stop
                 }
