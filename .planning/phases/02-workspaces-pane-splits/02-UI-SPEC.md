@@ -96,6 +96,12 @@ Source: Derived from macOS cmux dark theme; adapted for GTK4 CSS.
 
 ---
 
+## Focal Point
+
+Primary focal point is the active terminal pane (largest area); secondary focal point is the active workspace row in the sidebar (accent highlight).
+
+---
+
 ## Component Inventory
 
 Phase 2 introduces these GTK4 widget compositions. The executor must implement each exactly as described.
@@ -208,7 +214,7 @@ ApplicationWindow (default_width=800, default_height=600)
 | Empty state heading | "No Workspaces" |
 | Empty state body | "Press Ctrl+N to create a workspace." |
 | Error state — workspace creation fails | "Could not create workspace. Check terminal output for details." |
-| Destructive confirmation — close workspace | Dialog title: "Close Workspace?" Body: "All panes in this workspace will be closed. This cannot be undone." Buttons: "Cancel" (default) / "Close Workspace" (destructive, `@destructive` color) |
+| Destructive confirmation — close workspace | Dialog title: "Close Workspace?" Body: "All panes in this workspace will be closed. This cannot be undone." Buttons: "Keep Workspace" (default) / "Close Workspace" (destructive, `@destructive` color) |
 | Rename placeholder | "Workspace name" (GtkEntry placeholder text) |
 | Default workspace name | "Workspace 1", "Workspace 2", ... (incrementing integer suffix) |
 
