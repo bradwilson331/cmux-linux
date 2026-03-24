@@ -353,8 +353,23 @@ impl SplitEngine {
         // Find the surface before removing it from the tree.
         let surface_to_free = self.find_surface(active_id)?;
 
+        // Capture the raw GLArea pointer BEFORE the tree removal drops the GObject.
+        // GL_AREA_REGISTRY holds raw pointers; once GTK finalizes the GObject the
+        // pointer becomes dangling. Remove it here while the GLArea is still alive.
+        let raw_gl_area: Option<*mut gtk4::ffi::GtkGLArea> = self
+            .find_gl_area(active_id)
+            .map(|a| a.as_ptr() as *mut gtk4::ffi::GtkGLArea);
+
         // Remove the leaf from the tree and get the surviving sibling's pane_id.
         let surviving_id = remove_leaf_from_tree(&mut self.root, active_id)?;
+
+        // Remove the now-dropped GLArea from GL_AREA_REGISTRY before any further
+        // callbacks can dereference the dangling pointer (Gap 2 fix).
+        if let Some(raw_ptr) = raw_gl_area {
+            if let Ok(mut areas) = crate::ghostty::callbacks::GL_AREA_REGISTRY.lock() {
+                areas.retain(|p| p.0 != raw_ptr);
+            }
+        }
 
         // Deregister from SURFACE_REGISTRY and free the surface.
         unsafe {
