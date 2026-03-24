@@ -56,7 +56,7 @@ Plans:
 - [x] 02-00-PLAN.md — Wave 0 test stubs: #[cfg(test)] modules in workspace.rs and split_engine.rs
 - [x] 02-01-PLAN.md — Multi-surface infrastructure: replace single-GLArea globals with GL_AREA_REGISTRY + SURFACE_REGISTRY
 - [x] 02-02-PLAN.md — Workspace model: src/workspace.rs + src/app_state.rs with AppState CRUD operations
-- [ ] 02-03-PLAN.md — Split engine: src/split_engine.rs SplitNode tree with split/close/focus operations
+- [x] 02-03-PLAN.md — Split engine: src/split_engine.rs SplitNode tree with split/close/focus operations
 - [ ] 02-04-PLAN.md — Window layout + sidebar: full GtkBox(H)+GtkStack layout, sidebar CSS, build_ui restructure
 - [ ] 02-05-PLAN.md — Keyboard shortcuts: src/shortcuts.rs capture-phase interception, all D-10 shortcuts wired
 - [ ] 02-06-PLAN.md — Human verification: full Phase 2 feature verification checkpoint

@@ -28,8 +28,8 @@
 
 - [x] **SPLIT-01**: User can split the active pane horizontally
 - [x] **SPLIT-02**: User can split the active pane vertically
-- [ ] **SPLIT-03**: User can navigate between panes via keyboard shortcut
-- [ ] **SPLIT-04**: User can drag dividers to resize panes
+- [x] **SPLIT-03**: User can navigate between panes via keyboard shortcut
+- [x] **SPLIT-04**: User can drag dividers to resize panes
 - [x] **SPLIT-05**: User can close the active pane
 - [x] **SPLIT-06**: Pane layout is represented as an immutable tree (SplitEngine — Bonsplit Rust port)
 - [x] **SPLIT-07**: Focus routing: correct pane receives keyboard input; `ghostty_surface_set_focus` called on focus change
@@ -136,8 +136,8 @@
 | WS-06 | Phase 2 | Complete |
 | SPLIT-01 | Phase 2 | Complete |
 | SPLIT-02 | Phase 2 | Complete |
-| SPLIT-03 | Phase 2 | Pending |
-| SPLIT-04 | Phase 2 | Pending |
+| SPLIT-03 | Phase 2 | Complete |
+| SPLIT-04 | Phase 2 | Complete |
 | SPLIT-05 | Phase 2 | Complete |
 | SPLIT-06 | Phase 2 | Complete |
 | SPLIT-07 | Phase 2 | Complete |
