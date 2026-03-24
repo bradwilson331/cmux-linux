@@ -8,7 +8,7 @@ use std::sync::{LazyLock, Mutex};
 // This is safe because we only ever access the pointer on the GLib main thread,
 // inside glib::idle_add_once closures.
 #[derive(Copy, Clone)]
-struct GtkGLAreaPtr(*mut ffi::GtkGLArea);
+pub(crate) struct GtkGLAreaPtr(pub(crate) *mut ffi::GtkGLArea);
 unsafe impl Send for GtkGLAreaPtr {}
 unsafe impl Sync for GtkGLAreaPtr {}
 

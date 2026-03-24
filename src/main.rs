@@ -1,8 +1,10 @@
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, gio};
+use std::ffi::CString;
+use std::sync::atomic::Ordering;
+use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread;
-use std::sync::mpsc;
 
 mod ghostty;
 mod workspace;
@@ -86,7 +88,51 @@ fn build_ui(app: &Application) {
         .build();
 
     eprintln!("cmux: ApplicationWindow created, creating GLArea surface");
-    let gl_area = ghostty::surface::create_surface(app);
+    // TODO Phase 2 Plan 04: move ghostty init to AppState::new()
+    let ghostty_app = unsafe {
+        use crate::ghostty::callbacks::{
+            action_cb, close_surface_cb, wakeup_cb, APP_PTR,
+        };
+        use crate::ghostty::ffi;
+
+        let argv: Vec<CString> = std::env::args().map(|a| CString::new(a).unwrap()).collect();
+        let mut ptrs: Vec<*mut i8> = argv.iter().map(|a| a.as_ptr() as *mut i8).collect();
+        ffi::ghostty_init(ptrs.len(), ptrs.as_mut_ptr());
+        eprintln!("cmux: ghostty_init complete");
+
+        let config = ffi::ghostty_config_new();
+        ffi::ghostty_config_load_default_files(config);
+        ffi::ghostty_config_finalize(config); // CRITICAL: finalize before ghostty_app_new
+        eprintln!("cmux: ghostty_config finalized");
+
+        // Runtime config: register all C callbacks.
+        let runtime_config = ffi::ghostty_runtime_config_s {
+            userdata: std::ptr::null_mut(),
+            supports_selection_clipboard: true,
+            wakeup_cb: Some(wakeup_cb),
+            action_cb: Some(action_cb),
+            read_clipboard_cb: Some(ghostty::surface::read_clipboard_cb),
+            confirm_read_clipboard_cb: Some(ghostty::surface::confirm_read_clipboard_cb),
+            write_clipboard_cb: Some(ghostty::surface::write_clipboard_cb),
+            close_surface_cb: Some(close_surface_cb),
+        };
+
+        let ghostty_app = ffi::ghostty_app_new(&runtime_config, config);
+        ffi::ghostty_config_free(config);
+
+        if ghostty_app.is_null() {
+            eprintln!("cmux: FATAL — ghostty_app_new returned null");
+            std::process::exit(1);
+        }
+        eprintln!("cmux: ghostty_app_new succeeded: {:p}", ghostty_app);
+
+        // Store app pointer globally for wakeup_cb to use.
+        APP_PTR.store(ghostty_app as usize, Ordering::SeqCst);
+
+        ghostty_app
+    };
+
+    let gl_area = ghostty::surface::create_surface(app, ghostty_app, None, 0);
     window.set_child(Some(&gl_area));
     eprintln!("cmux: window.present() about to be called");
     window.present();

@@ -1,6 +1,7 @@
+use crate::ghostty::ffi;
+use gtk4::glib;
 use std::cell::RefCell;
 use std::rc::Rc;
-use gtk4::glib;
 
 /// Call glGetError() via FFI to check for GL errors after ghostty calls.
 /// Returns 0 if no error, or the GL error code otherwise.
@@ -11,23 +12,19 @@ fn gl_get_error() -> u32 {
     unsafe { glGetError() }
 }
 
-/// Thread-local storage for the GLArea — allows wakeup_cb (via idle_add_once)
-/// to call queue_render() on the main thread without passing it through C callbacks.
-/// RefCell is required because gtk4::GLArea is not Copy.
-thread_local! {
-    pub(crate) static GL_AREA_FOR_RENDER: RefCell<Option<gtk4::GLArea>> = RefCell::new(None);
-}
-
 /// Creates and returns a GtkGLArea with a Ghostty terminal surface wired up.
 /// Initializes ghostty_app_t, then defers ghostty_surface_t creation to the
 /// GtkGLArea realize signal — when the GL context is guaranteed to exist.
-pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
+pub fn create_surface(
+    _app: &gtk4::Application,
+    ghostty_app: ffi::ghostty_app_t,
+    inherited_config: Option<*mut ffi::ghostty_surface_config_s>,
+    pane_id: u64,
+) -> gtk4::GLArea {
     use gtk4::prelude::*;
-    use std::ffi::CString;
     use std::sync::atomic::Ordering;
 
-    use crate::ghostty::callbacks::{action_cb, close_surface_cb, wakeup_cb, APP_PTR, SURFACE_PTR};
-    use crate::ghostty::ffi;
+    use crate::ghostty::callbacks::{self, SURFACE_PTR};
 
     let gl_area = gtk4::GLArea::new();
     // Per Pitfall 1: require OpenGL 4.3 before the area is realized.
@@ -40,57 +37,10 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     // Grab keyboard focus when the user clicks inside the terminal.
     gl_area.set_focus_on_click(true);
 
-    // Initialize ghostty app (one-time, before surface creation).
-    // ghostty_init + ghostty_app_new do NOT require a GL context.
-    // Safety: called once on the main thread before any surface is created.
-    let ghostty_app = unsafe {
-        let argv: Vec<CString> = std::env::args().map(|a| CString::new(a).unwrap()).collect();
-        let mut ptrs: Vec<*mut i8> = argv.iter().map(|a| a.as_ptr() as *mut i8).collect();
-        ffi::ghostty_init(ptrs.len(), ptrs.as_mut_ptr());
-        eprintln!("cmux: ghostty_init complete");
-
-        let config = ffi::ghostty_config_new();
-        ffi::ghostty_config_load_default_files(config);
-        ffi::ghostty_config_finalize(config); // CRITICAL: finalize before ghostty_app_new
-        eprintln!("cmux: ghostty_config finalized");
-
-        // Runtime config: register all C callbacks.
-        let runtime_config = ffi::ghostty_runtime_config_s {
-            userdata: std::ptr::null_mut(),
-            supports_selection_clipboard: true,
-            wakeup_cb: Some(wakeup_cb),
-            action_cb: Some(action_cb),
-            read_clipboard_cb: Some(read_clipboard_cb),
-            confirm_read_clipboard_cb: Some(confirm_read_clipboard_cb),
-            write_clipboard_cb: Some(write_clipboard_cb),
-            close_surface_cb: Some(close_surface_cb),
-        };
-
-        let ghostty_app = ffi::ghostty_app_new(&runtime_config, config);
-        ffi::ghostty_config_free(config);
-
-        if ghostty_app.is_null() {
-            eprintln!("cmux: FATAL — ghostty_app_new returned null");
-            std::process::exit(1);
-        }
-        eprintln!("cmux: ghostty_app_new succeeded: {:p}", ghostty_app);
-
-        // Store app pointer globally for wakeup_cb to use.
-        APP_PTR.store(ghostty_app as usize, Ordering::SeqCst);
-
-        ghostty_app
-    };
-
     // Shared cell for the surface pointer — created in realize (after GL context exists),
     // then used in render, resize, input, and scale-factor callbacks.
     // Rc<RefCell<...>> is safe here: all callbacks run on the GLib main thread.
-    let surface_cell: Rc<RefCell<Option<ffi::ghostty_surface_t>>> =
-        Rc::new(RefCell::new(None));
-
-    // Store gl_area in thread-local for wakeup_cb to call queue_render on.
-    GL_AREA_FOR_RENDER.with(|cell| {
-        *cell.borrow_mut() = Some(gl_area.clone());
-    });
+    let surface_cell: Rc<RefCell<Option<ffi::ghostty_surface_t>>> = Rc::new(RefCell::new(None));
 
     // ── GtkGLArea::realize ───────────────────────────────────────────────────
     // GL context is now valid. Create the surface HERE so ghostty can access
@@ -105,7 +55,11 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
                 std::process::exit(1); // Per D-09: no GUI error dialog in Phase 1
             }
             eprintln!("cmux: GL context made current, no error");
-            eprintln!("cmux: GL area size at realize: {}x{}", area.width(), area.height());
+            eprintln!(
+                "cmux: GL area size at realize: {}x{}",
+                area.width(),
+                area.height()
+            );
             eprintln!("cmux: GL scale factor at realize: {}", area.scale_factor());
 
             // Log GL version and renderer info for diagnostics.
@@ -125,7 +79,12 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
                     },
                 };
 
-                let mut surface_config = ffi::ghostty_surface_config_new();
+                let mut surface_config = if let Some(ic) = inherited_config {
+                    unsafe { *ic } // copy the inherited config struct
+                } else {
+                    unsafe { ffi::ghostty_surface_config_new() }
+                };
+
                 surface_config.platform_tag = ffi::ghostty_platform_e_GHOSTTY_PLATFORM_GTK4;
                 surface_config.platform = platform;
                 surface_config.userdata = std::ptr::null_mut();
@@ -147,6 +106,10 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
                 }
                 s
             };
+
+            if let Ok(mut registry) = callbacks::SURFACE_REGISTRY.lock() {
+                registry.insert(surface as usize, pane_id);
+            }
 
             // Set initial size and scale after surface creation.
             let scale = area.scale_factor() as f64;
@@ -170,6 +133,13 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
             *cell.borrow_mut() = Some(surface);
             // Also store in global for read_clipboard_cb (which has no surface arg).
             SURFACE_PTR.store(surface as usize, Ordering::SeqCst);
+
+            // Register this GLArea in the multi-surface registry for wakeup_cb
+            if let Ok(mut areas) = callbacks::GL_AREA_REGISTRY.lock() {
+                areas.push(callbacks::GtkGLAreaPtr(
+                    area.as_ptr() as *mut gtk4::ffi::GtkGLArea
+                ));
+            }
 
             // Request first render.
             area.queue_render();
@@ -237,7 +207,6 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     key_controller.connect_key_pressed({
         let cell = surface_cell.clone();
         move |_ctrl, keyval, keycode, state| {
-            use crate::ghostty::ffi;
             use crate::ghostty::input::map_mods;
 
             let surface = match *cell.borrow() {
@@ -279,7 +248,6 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     key_controller.connect_key_released({
         let cell = surface_cell.clone();
         move |_ctrl, _keyval, keycode, state| {
-            use crate::ghostty::ffi;
             use crate::ghostty::input::map_mods;
 
             let surface = match *cell.borrow() {
@@ -306,7 +274,6 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     click_gesture.connect_pressed({
         let cell = surface_cell.clone();
         move |gesture, _n_press, _x, _y| {
-            use crate::ghostty::ffi;
             let surface = match *cell.borrow() {
                 Some(s) => s,
                 None => return,
@@ -331,7 +298,6 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     click_gesture.connect_released({
         let cell = surface_cell.clone();
         move |gesture, _n_press, _x, _y| {
-            use crate::ghostty::ffi;
             let surface = match *cell.borrow() {
                 Some(s) => s,
                 None => return,
@@ -379,7 +345,6 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
     scroll_controller.connect_scroll({
         let cell = surface_cell.clone();
         move |ctrl, dx, dy| {
-            use crate::ghostty::ffi;
             let surface = match *cell.borrow() {
                 Some(s) => s,
                 None => return gtk4::glib::Propagation::Proceed,
@@ -409,12 +374,11 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
 
 // ── Clipboard callbacks ──────────────────────────────────────────────────────
 
-unsafe extern "C" fn read_clipboard_cb(
+pub(crate) unsafe extern "C" fn read_clipboard_cb(
     _userdata: *mut std::ffi::c_void,
     clipboard_type: crate::ghostty::ffi::ghostty_clipboard_e,
     request: *mut std::ffi::c_void,
 ) {
-    use crate::ghostty::ffi;
     use gtk4::prelude::*;
     use std::sync::atomic::Ordering;
 
@@ -443,14 +407,17 @@ unsafe extern "C" fn read_clipboard_cb(
         Ok(Some(ref s)) => std::ffi::CString::new(s.as_str()).ok(),
         _ => None,
     };
-    let text_ptr = c_text.as_ref().map(|s| s.as_ptr()).unwrap_or(std::ptr::null());
+    let text_ptr = c_text
+        .as_ref()
+        .map(|s| s.as_ptr())
+        .unwrap_or(std::ptr::null());
 
     unsafe {
         ffi::ghostty_surface_complete_clipboard_request(surface, text_ptr, request, true);
     }
 }
 
-unsafe extern "C" fn confirm_read_clipboard_cb(
+pub(crate) unsafe extern "C" fn confirm_read_clipboard_cb(
     _userdata: *mut std::ffi::c_void,
     value: *const std::os::raw::c_char,
     surface_ptr: *mut std::ffi::c_void,
@@ -470,14 +437,13 @@ unsafe extern "C" fn confirm_read_clipboard_cb(
     }
 }
 
-unsafe extern "C" fn write_clipboard_cb(
+pub(crate) unsafe extern "C" fn write_clipboard_cb(
     _userdata: *mut std::ffi::c_void,
     clipboard_type: crate::ghostty::ffi::ghostty_clipboard_e,
     content: *const crate::ghostty::ffi::ghostty_clipboard_content_s,
     _len: usize,
     _confirm: bool,
 ) {
-    use crate::ghostty::ffi;
     use gtk4::prelude::*;
 
     if content.is_null() {
