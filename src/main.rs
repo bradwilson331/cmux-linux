@@ -1,7 +1,7 @@
+
 use gtk4::prelude::*;
-use gtk4::{Application, ApplicationWindow, gio};
+use gtk4::{Application, ApplicationWindow, gio, CssProvider, StyleContext};
 use std::ffi::CString;
-use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::thread;
@@ -13,6 +13,20 @@ mod app_state;
 mod sidebar;
 
 const APP_ID: &str = "io.cmux.App";
+
+const APP_CSS: &str = "
+/* cmux Phase 2 styles — per UI-SPEC.md */
+window { background-color: #1a1a1a; }
+.sidebar { background-color: #242424; }
+.workspace-list { background-color: #242424; }
+.workspace-list row { min-height: 36px; padding: 8px 16px; }
+.workspace-list row label { color: #cccccc; font-size: 14px; font-weight: 400; }
+.workspace-list row:hover:not(.active-workspace) { background-color: #2e2e2e; }
+.workspace-list row.active-workspace { background-color: #5b8dd9; }
+.workspace-list row.active-workspace label { color: #ffffff; font-weight: 600; }
+.active-pane { border: 1px solid #5b8dd9; }
+.rename-entry { font-size: 14px; padding: 2px 4px; }
+";
 
 fn main() {
     // Create tokio runtime before GTK app initialization
@@ -72,7 +86,7 @@ fn main() {
     eprintln!("cmux: GtkApplication created, connecting activate signal");
     app.connect_activate(build_ui);
     eprintln!("cmux: calling app.run()");
-    let exit_code = app.run();
+    let _exit_code = app.run();
     eprintln!("cmux: app.run() returned");
     
     // Shutdown the runtime when the app exits
@@ -80,7 +94,51 @@ fn main() {
 }
 
 fn build_ui(app: &Application) {
-    eprintln!("cmux: build_ui called — creating window");
+    // 1. Initialize Ghostty once
+    let ghostty_app = unsafe {
+        use crate::ghostty::ffi;
+        use crate::ghostty::callbacks::APP_PTR;
+        use std::sync::atomic::Ordering;
+
+        let argv: Vec<CString> = std::env::args().map(|a| CString::new(a).unwrap()).collect();
+        let mut ptrs: Vec<*mut i8> = argv.iter().map(|a| a.as_ptr() as *mut i8).collect();
+        ffi::ghostty_init(ptrs.len(), ptrs.as_mut_ptr());
+
+        let config = ffi::ghostty_config_new();
+        ffi::ghostty_config_load_default_files(config);
+        ffi::ghostty_config_finalize(config);
+
+        let runtime_config = ffi::ghostty_runtime_config_s {
+            userdata: std::ptr::null_mut(),
+            supports_selection_clipboard: true,
+            wakeup_cb: Some(crate::ghostty::callbacks::wakeup_cb),
+            action_cb: Some(crate::ghostty::callbacks::action_cb),
+            read_clipboard_cb: Some(crate::ghostty::surface::read_clipboard_cb),
+            confirm_read_clipboard_cb: Some(crate::ghostty::surface::confirm_read_clipboard_cb),
+            write_clipboard_cb: Some(crate::ghostty::surface::write_clipboard_cb),
+            close_surface_cb: Some(crate::ghostty::callbacks::close_surface_cb),
+        };
+
+        let ghostty_app = ffi::ghostty_app_new(&runtime_config, config);
+        ffi::ghostty_config_free(config);
+        if ghostty_app.is_null() {
+            eprintln!("cmux: FATAL — ghostty_app_new returned null");
+            std::process::exit(1);
+        }
+        APP_PTR.store(ghostty_app as usize, Ordering::SeqCst);
+        ghostty_app
+    };
+
+    // 2. Load CSS
+    let provider = CssProvider::new();
+    provider.load_from_data(APP_CSS);
+    gtk4::style_context_add_provider_for_display(
+        &gtk4::gdk::Display::default().expect("no display"),
+        &provider,
+        gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+    );
+
+    // 3. Build the window layout
     let window = ApplicationWindow::builder()
         .application(app)
         .title("cmux")
@@ -88,54 +146,72 @@ fn build_ui(app: &Application) {
         .default_height(600)
         .build();
 
-    eprintln!("cmux: ApplicationWindow created, creating GLArea surface");
-    // TODO Phase 2 Plan 04: move ghostty init to AppState::new()
-    let ghostty_app = unsafe {
-        use crate::ghostty::callbacks::{
-            action_cb, close_surface_cb, wakeup_cb, APP_PTR,
-        };
-        use crate::ghostty::ffi;
+    let (sidebar_scroll, sidebar_list) = crate::sidebar::build_sidebar();
+    let stack = gtk4::Stack::new();
+    stack.set_transition_type(gtk4::StackTransitionType::None);
 
-        let argv: Vec<CString> = std::env::args().map(|a| CString::new(a).unwrap()).collect();
-        let mut ptrs: Vec<*mut i8> = argv.iter().map(|a| a.as_ptr() as *mut i8).collect();
-        ffi::ghostty_init(ptrs.len(), ptrs.as_mut_ptr());
-        eprintln!("cmux: ghostty_init complete");
+    let hbox = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    hbox.append(&sidebar_scroll);
+    hbox.append(&stack);
+    // Make the stack expand to fill remaining width.
+    stack.set_hexpand(true);
+    stack.set_vexpand(true);
 
-        let config = ffi::ghostty_config_new();
-        ffi::ghostty_config_load_default_files(config);
-        ffi::ghostty_config_finalize(config); // CRITICAL: finalize before ghostty_app_new
-        eprintln!("cmux: ghostty_config finalized");
+    window.set_child(Some(&hbox));
 
-        // Runtime config: register all C callbacks.
-        let runtime_config = ffi::ghostty_runtime_config_s {
-            userdata: std::ptr::null_mut(),
-            supports_selection_clipboard: true,
-            wakeup_cb: Some(wakeup_cb),
-            action_cb: Some(action_cb),
-            read_clipboard_cb: Some(ghostty::surface::read_clipboard_cb),
-            confirm_read_clipboard_cb: Some(ghostty::surface::confirm_read_clipboard_cb),
-            write_clipboard_cb: Some(ghostty::surface::write_clipboard_cb),
-            close_surface_cb: Some(close_surface_cb),
-        };
+    // 4. Create AppState and initial workspace
+    let state = crate::app_state::AppState::new(
+        stack.clone(),
+        sidebar_list.clone(),
+        ghostty_app,
+    );
 
-        let ghostty_app = ffi::ghostty_app_new(&runtime_config, config);
-        ffi::ghostty_config_free(config);
+    // Wire sidebar click-to-switch.
+    crate::sidebar::wire_sidebar_clicks(&sidebar_list, state.clone());
 
-        if ghostty_app.is_null() {
-            eprintln!("cmux: FATAL — ghostty_app_new returned null");
-            std::process::exit(1);
+    // Create the first workspace with a real GLArea.
+    {
+        let mut s = state.borrow_mut();
+        let ws_id = s.create_workspace();
+        let pane_id = ws_id * 1000; // unique pane ID for first pane of workspace
+        let gl_area = crate::ghostty::surface::create_surface(app, ghostty_app, None, pane_id);
+
+        // Add GLArea as the GtkStack page for this workspace.
+        let page_name = format!("workspace-{}", ws_id);
+        s.stack.add_named(&gl_area, Some(&page_name));
+        s.stack.set_visible_child_name(&page_name);
+
+        // Mark this pane as active (focus indicator).
+        gl_area.add_css_class("active-pane");
+    }
+
+    // 5. Handle delete-event for close confirmation
+    window.connect_close_request({
+        let state = state.clone();
+        move |_win| {
+            let count = state.borrow().workspaces.len();
+            if count == 0 {
+                return gtk4::glib::Propagation::Proceed;
+            }
+            // Show close confirmation dialog.
+            // let dialog = gtk4::AlertDialog::builder()
+            //     .message("Close Workspace?")
+            //     .detail("All panes in this workspace will be closed. This cannot be undone.")
+            //     .modal(true)
+            //     .build();
+            // dialog.set_buttons(&["Keep Workspace", "Close Workspace"]);
+            // dialog.set_default_button(0);
+            // dialog.set_cancel_button(0);
+
+            // For window close, just allow it — full per-workspace dialog wired in shortcuts.rs.
+            // This dialog is for the window X button — proceed to close.
+            gtk4::glib::Propagation::Proceed
         }
-        eprintln!("cmux: ghostty_app_new succeeded: {:p}", ghostty_app);
+    });
 
-        // Store app pointer globally for wakeup_cb to use.
-        APP_PTR.store(ghostty_app as usize, Ordering::SeqCst);
+    // 6. Sidebar toggle state (D-04, Ctrl+B — full shortcut wired in Plan 05):
+    // Storing sidebar_scroll on the stack is enough for now. Plan 05 will pass it to shortcuts.
 
-        ghostty_app
-    };
-
-    let gl_area = ghostty::surface::create_surface(app, ghostty_app, None, 0);
-    window.set_child(Some(&gl_area));
-    eprintln!("cmux: window.present() about to be called");
+    // 7. Present the window
     window.present();
-    eprintln!("cmux: window.present() returned");
 }
