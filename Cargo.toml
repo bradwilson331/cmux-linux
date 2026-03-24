@@ -2,13 +2,12 @@
 name = "cmux-linux"
 version = "0.1.0"
 edition = "2021"
-links = "ghostty"
 
 [dependencies]
-gtk4 = "0.10"
-glib = "0.20"
+gtk4 = "0.10.3"
 tokio = { version = "1", features = ["full"] }
+glib = "0.21.5"
 
 [build-dependencies]
-bindgen = "0.72"
-cc = "1"
+bindgen = "0.72.1"
+cc = "1.2.57"
