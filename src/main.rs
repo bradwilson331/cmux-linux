@@ -11,6 +11,7 @@ mod workspace;
 mod split_engine;
 mod app_state;
 mod sidebar;
+mod shortcuts;
 
 const APP_ID: &str = "io.cmux.App";
 
@@ -212,6 +213,9 @@ fn build_ui(app: &Application) {
     // 6. Sidebar toggle state (D-04, Ctrl+B — full shortcut wired in Plan 05):
     // Storing sidebar_scroll on the stack is enough for now. Plan 05 will pass it to shortcuts.
 
-    // 7. Present the window
+    // 7. Install keyboard shortcuts
+    crate::shortcuts::install_shortcuts(&window, state.clone(), &sidebar_scroll, app);
+
+    // 8. Present the window
     window.present();
 }
