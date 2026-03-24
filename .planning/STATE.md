@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 02-workspaces-pane-splits-04-PLAN.md
-last_updated: "2026-03-24T04:54:30.221Z"
+stopped_at: Completed 02-workspaces-pane-splits-07-PLAN.md
+last_updated: "2026-03-24T18:04:07.929Z"
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 16
-  completed_plans: 14
+  total_plans: 17
+  completed_plans: 16
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 02 (workspaces-pane-splits) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Plan: 6 of 7
 | Phase 02-workspaces-pane-splits P00 | 15m | 3 tasks | 4 files |
 | Phase 02-workspaces-pane-splits P03 | 0.33 | 1 tasks | 1 files |
 | Phase 02-workspaces-pane-splits P04 | 15 | 2 tasks | 2 files |
+| Phase 02-workspaces-pane-splits P07 | 2 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,8 @@ Recent decisions affecting current work:
 - [Phase 01-ghostty-foundation]: SURFACE_PTR global for clipboard: read_clipboard_cb has no surface arg, requires AtomicUsize global set at realize time
 - [Phase 01-ghostty-foundation]: set_focusable(true) on GTK4 GLArea is required for EventControllerKey keyboard events
 - [Phase 02-workspaces-pane-splits]: Commented out non-compiling AlertDialog code, preserving the intended 'proceed on close' behavior. This is a temporary fix until the correct API usage is determined.
+- [Phase 02-workspaces-pane-splits]: Use notify::position on GtkPaned to detect drag end and restore active pane focus
+- [Phase 02-workspaces-pane-splits]: Change Ctrl+Alt+Arrow to Ctrl+Shift+Arrow to avoid Linux compositor interception (GNOME/KDE)
 
 ### Pending Todos
 
@@ -98,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T04:54:30.218Z
-Stopped at: Completed 02-workspaces-pane-splits-04-PLAN.md
+Last session: 2026-03-24T18:04:07.927Z
+Stopped at: Completed 02-workspaces-pane-splits-07-PLAN.md
 Resume file: None
