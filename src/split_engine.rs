@@ -194,17 +194,18 @@ impl SplitEngine {
         // place it inside the new Paned. We then need to add the Paned to the Stack page.
         // Only capture this for Leaf roots — for nested splits the outer Paned stays in the Stack.
         let old_root_widget = self.root.widget();
-        let stack_slot: Option<(gtk4::Stack, String)> = if matches!(self.root, SplitNode::Leaf { .. }) {
-            old_root_widget
-                .parent()
-                .and_then(|p| p.downcast::<gtk4::Stack>().ok())
-                .and_then(|stack| {
-                    let name = stack.page(&old_root_widget).name()?.to_string();
-                    Some((stack, name))
-                })
-        } else {
-            None
-        };
+        let stack_slot: Option<(gtk4::Stack, String)> =
+            if matches!(self.root, SplitNode::Leaf { .. }) {
+                old_root_widget
+                    .parent()
+                    .and_then(|p| p.downcast::<gtk4::Stack>().ok())
+                    .and_then(|stack| {
+                        let name = stack.page(&old_root_widget).name()?.to_string();
+                        Some((stack, name))
+                    })
+            } else {
+                None
+            };
 
         // Find the active leaf's surface for inherited config.
         let inherited_surface = self.find_surface(active_id)?;
@@ -306,6 +307,24 @@ impl SplitEngine {
                     };
                     if size > 0 {
                         paned_ref.set_position(size / 2);
+                    }
+                });
+            }
+
+            // Restore GTK focus after GtkPaned drag (Gap 1A).
+            // The drag temporarily moves GTK focus to the divider handle, freezing
+            // Ghostty's cursor blink. Re-grab focus on the active GLArea.
+            {
+                paned.connect_notify(Some("position"), |_paned, _pspec| {
+                    if let Ok(areas) = crate::ghostty::callbacks::GL_AREA_REGISTRY.lock() {
+                        for area_ptr in areas.iter() {
+                            let area: gtk4::glib::translate::Borrowed<gtk4::GLArea> =
+                                unsafe { gtk4::glib::translate::from_glib_borrow(area_ptr.0) };
+                            if area.has_css_class("active-pane") {
+                                area.grab_focus();
+                                break;
+                            }
+                        }
                     }
                 });
             }
@@ -637,9 +656,16 @@ fn find_adjacent(root: &SplitNode, active_id: u64, direction: FocusDirection) ->
 /// Remove `widget` from its current GTK parent so it can be reparented.
 /// GTK4 requires `gtk_widget_get_parent(child) == NULL` before set_start/end_child.
 fn remove_widget_from_parent(widget: &gtk4::Widget) {
-    let Some(parent) = widget.parent() else { return };
+    let Some(parent) = widget.parent() else {
+        return;
+    };
     if let Some(paned) = parent.downcast_ref::<gtk4::Paned>() {
-        if paned.start_child().as_ref().map(|w| w == widget).unwrap_or(false) {
+        if paned
+            .start_child()
+            .as_ref()
+            .map(|w| w == widget)
+            .unwrap_or(false)
+        {
             paned.set_start_child(None::<&gtk4::Widget>);
         } else {
             paned.set_end_child(None::<&gtk4::Widget>);

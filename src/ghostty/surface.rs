@@ -206,8 +206,8 @@ pub fn create_surface(
                 // DEFAULT priority, delaying DEFAULT_IDLE wakeup idles). Calling app_tick
                 // + queue_render here ensures the terminal reflows and re-renders even
                 // during a sustained resize drag.
-                let app_ptr = crate::ghostty::callbacks::APP_PTR
-                    .load(std::sync::atomic::Ordering::SeqCst);
+                let app_ptr =
+                    crate::ghostty::callbacks::APP_PTR.load(std::sync::atomic::Ordering::SeqCst);
                 if app_ptr != 0 {
                     unsafe {
                         let app = app_ptr as ffi::ghostty_app_t;
@@ -220,6 +220,7 @@ pub fn create_surface(
                             unsafe { glib::translate::from_glib_borrow(area_ptr.0) };
                         if area.is_realized() {
                             area.queue_render();
+                            area.queue_draw(); // Gap 1B: repaints CSS border (blue active-pane decoration)
                         }
                     }
                 }
