@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Completed 01-ghostty-foundation plan 09 - input and clipboard wired, binary builds correctly
-last_updated: "2026-03-24T03:07:15.161Z"
+status: Ready to execute
+stopped_at: Completed 02-workspaces-pane-splits-00-PLAN.md
+last_updated: "2026-03-24T04:35:00.225Z"
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 16
+  completed_plans: 10
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control — powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** Phase 01 — ghostty-foundation
+**Current focus:** Phase 02 — workspaces-pane-splits
 
 ## Current Position
 
-Phase: 2
-Plan: Not started
+Phase: 02 (workspaces-pane-splits) — EXECUTING
+Plan: 2 of 7
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Plan: Not started
 | Phase 01-ghostty-foundation P07 | 45 | 2 tasks | 6 files |
 | Phase 01-ghostty-foundation P08 | 15 | 2 tasks | 2 files |
 | Phase 01-ghostty-foundation P09 | 15 | 2 tasks | 3 files |
+| Phase 02-workspaces-pane-splits P00 | 15m | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T02:48:12.032Z
-Stopped at: Completed 01-ghostty-foundation plan 09 - input and clipboard wired, binary builds correctly
+Last session: 2026-03-24T04:35:00.222Z
+Stopped at: Completed 02-workspaces-pane-splits-00-PLAN.md
 Resume file: None

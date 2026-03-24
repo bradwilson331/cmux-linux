@@ -17,21 +17,21 @@
 
 ### Workspace Management
 
-- [ ] **WS-01**: User can create a new workspace (tab)
-- [ ] **WS-02**: User can close a workspace
-- [ ] **WS-03**: User can switch between workspaces via keyboard shortcut and click
-- [ ] **WS-04**: User can rename a workspace
-- [ ] **WS-05**: User can switch to workspace by number (1–9) via keyboard shortcut
-- [ ] **WS-06**: Workspace list is visible in a sidebar/tab bar
+- [x] **WS-01**: User can create a new workspace (tab)
+- [x] **WS-02**: User can close a workspace
+- [x] **WS-03**: User can switch between workspaces via keyboard shortcut and click
+- [x] **WS-04**: User can rename a workspace
+- [x] **WS-05**: User can switch to workspace by number (1–9) via keyboard shortcut
+- [x] **WS-06**: Workspace list is visible in a sidebar/tab bar
 
 ### Pane Splitting
 
-- [ ] **SPLIT-01**: User can split the active pane horizontally
-- [ ] **SPLIT-02**: User can split the active pane vertically
+- [x] **SPLIT-01**: User can split the active pane horizontally
+- [x] **SPLIT-02**: User can split the active pane vertically
 - [ ] **SPLIT-03**: User can navigate between panes via keyboard shortcut
 - [ ] **SPLIT-04**: User can drag dividers to resize panes
-- [ ] **SPLIT-05**: User can close the active pane
-- [ ] **SPLIT-06**: Pane layout is represented as an immutable tree (SplitEngine — Bonsplit Rust port)
+- [x] **SPLIT-05**: User can close the active pane
+- [x] **SPLIT-06**: Pane layout is represented as an immutable tree (SplitEngine — Bonsplit Rust port)
 - [ ] **SPLIT-07**: Focus routing: correct pane receives keyboard input; `ghostty_surface_set_focus` called on focus change
 
 ### Socket API
@@ -128,18 +128,18 @@
 | GHOST-05 | Phase 1 | Complete |
 | GHOST-06 | Phase 1 | Complete |
 | GHOST-07 | Phase 1 | Complete |
-| WS-01 | Phase 2 | Pending |
-| WS-02 | Phase 2 | Pending |
-| WS-03 | Phase 2 | Pending |
-| WS-04 | Phase 2 | Pending |
-| WS-05 | Phase 2 | Pending |
-| WS-06 | Phase 2 | Pending |
-| SPLIT-01 | Phase 2 | Pending |
-| SPLIT-02 | Phase 2 | Pending |
+| WS-01 | Phase 2 | Complete |
+| WS-02 | Phase 2 | Complete |
+| WS-03 | Phase 2 | Complete |
+| WS-04 | Phase 2 | Complete |
+| WS-05 | Phase 2 | Complete |
+| WS-06 | Phase 2 | Complete |
+| SPLIT-01 | Phase 2 | Complete |
+| SPLIT-02 | Phase 2 | Complete |
 | SPLIT-03 | Phase 2 | Pending |
 | SPLIT-04 | Phase 2 | Pending |
-| SPLIT-05 | Phase 2 | Pending |
-| SPLIT-06 | Phase 2 | Pending |
+| SPLIT-05 | Phase 2 | Complete |
+| SPLIT-06 | Phase 2 | Complete |
 | SPLIT-07 | Phase 2 | Pending |
 | SOCK-01 | Phase 3 | Pending |
 | SOCK-02 | Phase 3 | Pending |
