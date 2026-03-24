@@ -51,7 +51,14 @@ Plans:
   2. User can split the active pane horizontally and vertically, navigate between panes with keyboard shortcuts, drag dividers to resize, and close individual panes
   3. Focus routing is correct: keyboard input goes to the active pane after every split, navigation, and close operation
   4. Memory is stable after 50 workspace create/close cycles (no GObject ref-cycle leaks, no Ghostty surface leaks)
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 02-01-PLAN.md — Multi-surface infrastructure: replace single-GLArea globals with GL_AREA_REGISTRY + SURFACE_REGISTRY
+- [ ] 02-02-PLAN.md — Workspace model: src/workspace.rs + src/app_state.rs with AppState CRUD operations
+- [ ] 02-03-PLAN.md — Split engine: src/split_engine.rs SplitNode tree with split/close/focus operations
+- [ ] 02-04-PLAN.md — Window layout + sidebar: full GtkBox(H)+GtkStack layout, sidebar CSS, build_ui restructure
+- [ ] 02-05-PLAN.md — Keyboard shortcuts: src/shortcuts.rs capture-phase interception, all D-10 shortcuts wired
+- [ ] 02-06-PLAN.md — Human verification: full Phase 2 feature verification checkpoint
 **UI hint**: yes
 
 ### Phase 3: Socket API + Session Persistence
@@ -96,7 +103,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Ghostty Foundation | 8/9 | In Progress|  |
-| 2. Workspaces + Pane Splits | 0/? | Not started | - |
+| 2. Workspaces + Pane Splits | 0/6 | Not started | - |
 | 3. Socket API + Session Persistence | 0/? | Not started | - |
 | 4. Notifications + HiDPI + SSH | 0/? | Not started | - |
 | 5. Config + Distribution | 0/? | Not started | - |
