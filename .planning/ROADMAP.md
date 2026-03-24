@@ -51,8 +51,9 @@ Plans:
   2. User can split the active pane horizontally and vertically, navigate between panes with keyboard shortcuts, drag dividers to resize, and close individual panes
   3. Focus routing is correct: keyboard input goes to the active pane after every split, navigation, and close operation
   4. Memory is stable after 50 workspace create/close cycles (no GObject ref-cycle leaks, no Ghostty surface leaks)
-**Plans**: 6 plans
+**Plans**: 7 plans
 Plans:
+- [ ] 02-00-PLAN.md — Wave 0 test stubs: #[cfg(test)] modules in workspace.rs and split_engine.rs
 - [ ] 02-01-PLAN.md — Multi-surface infrastructure: replace single-GLArea globals with GL_AREA_REGISTRY + SURFACE_REGISTRY
 - [ ] 02-02-PLAN.md — Workspace model: src/workspace.rs + src/app_state.rs with AppState CRUD operations
 - [ ] 02-03-PLAN.md — Split engine: src/split_engine.rs SplitNode tree with split/close/focus operations
