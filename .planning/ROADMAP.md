@@ -38,7 +38,7 @@ Plans:
 - [x] 01-05-PLAN.md — Fix linking: Correct build.rs linkage, add missing stubs (gap closure)
 - [x] 01-06-PLAN.md — Add tokio runtime: Initialize tokio, bridge to GLib (gap closure)
 - [x] 01-07-PLAN.md — Fix initialization crash: Proper Ghostty lifecycle, defensive checks (gap closure)
-- [ ] 01-08-PLAN.md — Fix rendering: Missing function stubs, GL context debugging (gap closure)
+- [x] 01-08-PLAN.md — Fix rendering: Missing function stubs, GL context debugging (gap closure)
 - [ ] 01-09-PLAN.md — Verify functionality: Test input/output/clipboard, achieve Phase 1 goals (gap closure)
 **UI hint**: yes
 
@@ -95,7 +95,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Ghostty Foundation | 1/4 | In Progress|  |
+| 1. Ghostty Foundation | 8/9 | In Progress|  |
 | 2. Workspaces + Pane Splits | 0/? | Not started | - |
 | 3. Socket API + Session Persistence | 0/? | Not started | - |
 | 4. Notifications + HiDPI + SSH | 0/? | Not started | - |

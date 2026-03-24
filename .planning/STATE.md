@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 01-ghostty-foundation plan 07 - startup crash fixed
-last_updated: "2026-03-24T02:03:38.579Z"
+stopped_at: Completed 01-ghostty-foundation plan 08 - render pipeline confirmed working
+last_updated: "2026-03-24T02:10:11.128Z"
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 01 (ghostty-foundation) — EXECUTING
-Plan: 2 of 9
+Plan: 3 of 9
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Plan: 2 of 9
 | Phase 01-ghostty-foundation P05 | 207 | 3 tasks | 4 files |
 | Phase 01-ghostty-foundation P06 | 152 | 3 tasks | 3 files |
 | Phase 01-ghostty-foundation P07 | 45 | 2 tasks | 6 files |
+| Phase 01-ghostty-foundation P08 | 15 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,7 @@ Recent decisions affecting current work:
 - [Phase 01-ghostty-foundation]: Defer ghostty_surface_new to GLArea realize callback — GL context must be current before surface creation
 - [Phase 01-ghostty-foundation]: must_draw_from_app_thread=true in embedded.zig routes renderer draws through action_cb on main thread — avoids GLAD threadlocal crash
 - [Phase 01-ghostty-foundation]: Replace gladLoaderLoadGLContext stub with real GLAD loader from vendor/glad/src/gl.c — stub returned version 0 causing OpenGL version check failure
+- [Phase 01-ghostty-foundation]: ApplicationFlags::NON_UNIQUE required for GTK4 app in cross-namespace DBus sessions (NX/containers) — prevents deadlock in GApplication singleton registration
 
 ### Pending Todos
 
@@ -88,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T02:03:38.577Z
-Stopped at: Completed 01-ghostty-foundation plan 07 - startup crash fixed
+Last session: 2026-03-24T02:10:11.125Z
+Stopped at: Completed 01-ghostty-foundation plan 08 - render pipeline confirmed working
 Resume file: None
