@@ -238,7 +238,7 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
         let cell = surface_cell.clone();
         move |_ctrl, keyval, keycode, state| {
             use crate::ghostty::ffi;
-            use crate::ghostty::input::{map_keycode_to_ghostty, map_mods};
+            use crate::ghostty::input::map_mods;
 
             let surface = match *cell.borrow() {
                 Some(s) => s,
@@ -261,7 +261,10 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
             };
 
             let mut input = unsafe { std::mem::zeroed::<ffi::ghostty_input_key_s>() };
-            input.keycode = map_keycode_to_ghostty(keycode);
+            // keycode must be the raw GTK hardware keycode (XKB scancode).
+            // Ghostty looks this up in its own native keycodes table to resolve the physical key.
+            // Do NOT translate to ghostty_input_key_e here — that is an entirely different type.
+            input.keycode = keycode;
             input.mods = map_mods(state);
             input.action = ffi::ghostty_input_action_e_GHOSTTY_ACTION_PRESS;
             input.text = text_ptr;
@@ -277,7 +280,7 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
         let cell = surface_cell.clone();
         move |_ctrl, _keyval, keycode, state| {
             use crate::ghostty::ffi;
-            use crate::ghostty::input::{map_keycode_to_ghostty, map_mods};
+            use crate::ghostty::input::map_mods;
 
             let surface = match *cell.borrow() {
                 Some(s) => s,
@@ -285,7 +288,7 @@ pub fn create_surface(_app: &gtk4::Application) -> gtk4::GLArea {
             };
 
             let mut input = unsafe { std::mem::zeroed::<ffi::ghostty_input_key_s>() };
-            input.keycode = map_keycode_to_ghostty(keycode);
+            input.keycode = keycode;
             input.mods = map_mods(state);
             input.action = ffi::ghostty_input_action_e_GHOSTTY_ACTION_RELEASE;
             input.text = std::ptr::null();
