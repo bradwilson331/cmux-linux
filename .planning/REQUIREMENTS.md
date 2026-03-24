@@ -32,7 +32,7 @@
 - [ ] **SPLIT-04**: User can drag dividers to resize panes
 - [x] **SPLIT-05**: User can close the active pane
 - [x] **SPLIT-06**: Pane layout is represented as an immutable tree (SplitEngine — Bonsplit Rust port)
-- [ ] **SPLIT-07**: Focus routing: correct pane receives keyboard input; `ghostty_surface_set_focus` called on focus change
+- [x] **SPLIT-07**: Focus routing: correct pane receives keyboard input; `ghostty_surface_set_focus` called on focus change
 
 ### Socket API
 
@@ -140,7 +140,7 @@
 | SPLIT-04 | Phase 2 | Pending |
 | SPLIT-05 | Phase 2 | Complete |
 | SPLIT-06 | Phase 2 | Complete |
-| SPLIT-07 | Phase 2 | Pending |
+| SPLIT-07 | Phase 2 | Complete |
 | SOCK-01 | Phase 3 | Pending |
 | SOCK-02 | Phase 3 | Pending |
 | SOCK-03 | Phase 3 | Pending |
