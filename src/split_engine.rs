@@ -189,18 +189,22 @@ impl SplitEngine {
         let new_pane_id = self.next_pane_id;
         self.next_pane_id += 1;
 
-        // Before the split: if the root is a Leaf (first split), the GLArea is a direct child
-        // of the GtkStack page. When replace_in_tree reparents it into the new Paned,
-        // GTK removes it from the Stack. Save the Stack + page name so we can re-parent
-        // the new Paned root into the Stack after the split.
+        // When the root is a Leaf (first split), the GLArea is a direct child of the GtkStack
+        // page. The replacer will remove it from the Stack (via remove_widget_from_parent) and
+        // place it inside the new Paned. We then need to add the Paned to the Stack page.
+        // Only capture this for Leaf roots — for nested splits the outer Paned stays in the Stack.
         let old_root_widget = self.root.widget();
-        let stack_slot: Option<(gtk4::Stack, String)> = old_root_widget
-            .parent()
-            .and_then(|p| p.downcast::<gtk4::Stack>().ok())
-            .and_then(|stack| {
-                let name = stack.page(&old_root_widget).name()?.to_string();
-                Some((stack, name))
-            });
+        let stack_slot: Option<(gtk4::Stack, String)> = if matches!(self.root, SplitNode::Leaf { .. }) {
+            old_root_widget
+                .parent()
+                .and_then(|p| p.downcast::<gtk4::Stack>().ok())
+                .and_then(|stack| {
+                    let name = stack.page(&old_root_widget).name()?.to_string();
+                    Some((stack, name))
+                })
+        } else {
+            None
+        };
 
         // Find the active leaf's surface for inherited config.
         let inherited_surface = self.find_surface(active_id)?;
@@ -263,6 +267,10 @@ impl SplitEngine {
         let mut replacer = Some(|old_leaf: SplitNode| {
             let old_widget = old_leaf.widget();
             let new_widget = new_leaf.widget();
+
+            // GTK4 requires a widget to have no parent before set_start/end_child.
+            // old_widget may be parented to the Stack (first split) or an outer Paned (nested).
+            remove_widget_from_parent(&old_widget);
 
             let paned = gtk4::Paned::new(orientation_cap);
             paned.set_start_child(Some(&old_widget));
@@ -506,11 +514,12 @@ fn replace_child_in_parent(
             paned.set_end_child(Some(new_widget));
         }
     } else if let Some(stack) = parent.downcast_ref::<gtk4::Stack>() {
-        // Find the page name for the old widget, add new widget with same name, remove old.
         let page = stack.page(old_widget);
         if let Some(name) = page.name() {
             let name_str = name.to_string();
             stack.remove(old_widget);
+            // new_widget may still be parented to the Paned we're replacing; unparent first.
+            remove_widget_from_parent(new_widget);
             stack.add_named(new_widget, Some(&name_str));
             stack.set_visible_child_name(&name_str);
         } else {
@@ -600,6 +609,21 @@ fn find_adjacent(root: &SplitNode, active_id: u64, direction: FocusDirection) ->
                 None
             }
         }
+    }
+}
+
+/// Remove `widget` from its current GTK parent so it can be reparented.
+/// GTK4 requires `gtk_widget_get_parent(child) == NULL` before set_start/end_child.
+fn remove_widget_from_parent(widget: &gtk4::Widget) {
+    let Some(parent) = widget.parent() else { return };
+    if let Some(paned) = parent.downcast_ref::<gtk4::Paned>() {
+        if paned.start_child().as_ref().map(|w| w == widget).unwrap_or(false) {
+            paned.set_start_child(None::<&gtk4::Widget>);
+        } else {
+            paned.set_end_child(None::<&gtk4::Widget>);
+        }
+    } else if let Some(stack) = parent.downcast_ref::<gtk4::Stack>() {
+        stack.remove(widget);
     }
 }
 
