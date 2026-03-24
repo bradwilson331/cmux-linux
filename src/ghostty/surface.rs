@@ -18,7 +18,7 @@ fn gl_get_error() -> u32 {
 pub fn create_surface(
     _app: &gtk4::Application,
     ghostty_app: ffi::ghostty_app_t,
-    inherited_config: Option<*mut ffi::ghostty_surface_config_s>,
+    inherited_config: Option<ffi::ghostty_surface_config_s>,
     pane_id: u64,
 ) -> (gtk4::GLArea, Rc<RefCell<Option<ffi::ghostty_surface_t>>>) {
     use gtk4::prelude::*;
@@ -80,7 +80,7 @@ pub fn create_surface(
                 };
 
                 let mut surface_config = if let Some(ic) = inherited_config {
-                    unsafe { *ic } // copy the inherited config struct
+                    ic // already owned by value — no dangling pointer
                 } else {
                     unsafe { ffi::ghostty_surface_config_new() }
                 };

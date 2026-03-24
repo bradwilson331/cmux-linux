@@ -189,23 +189,37 @@ impl SplitEngine {
         let new_pane_id = self.next_pane_id;
         self.next_pane_id += 1;
 
+        // Before the split: if the root is a Leaf (first split), the GLArea is a direct child
+        // of the GtkStack page. When replace_in_tree reparents it into the new Paned,
+        // GTK removes it from the Stack. Save the Stack + page name so we can re-parent
+        // the new Paned root into the Stack after the split.
+        let old_root_widget = self.root.widget();
+        let stack_slot: Option<(gtk4::Stack, String)> = old_root_widget
+            .parent()
+            .and_then(|p| p.downcast::<gtk4::Stack>().ok())
+            .and_then(|stack| {
+                let name = stack.page(&old_root_widget).name()?.to_string();
+                Some((stack, name))
+            });
+
         // Find the active leaf's surface for inherited config.
         let inherited_surface = self.find_surface(active_id)?;
 
         // Get inherited config from the active surface (for CWD inheritance per D-08).
-        let inherited = unsafe {
-            let mut inherited_config = ffi::ghostty_surface_inherited_config(
+        // Pass by value (ghostty_surface_config_s is Copy) — avoids dangling pointer
+        // in the GLArea realize callback, which fires asynchronously after this returns.
+        let inherited_config = unsafe {
+            ffi::ghostty_surface_inherited_config(
                 inherited_surface,
                 ffi::ghostty_surface_context_e_GHOSTTY_SURFACE_CONTEXT_SPLIT,
-            );
-            Some(&mut inherited_config as *mut _)
+            )
         };
 
         // Create new GLArea + surface for the new pane.
         let (new_gl_area, _surface_cell) = crate::ghostty::surface::create_surface(
             &self.app,
             self.ghostty_app,
-            inherited,
+            Some(inherited_config),
             new_pane_id,
         );
 
@@ -218,6 +232,14 @@ impl SplitEngine {
         };
 
         let _replaced = self.replace_leaf_with_split(active_id, new_leaf, orientation)?;
+
+        // If the root was a Leaf, it's now a Split whose Paned has no parent.
+        // Re-parent the new Paned root into the GtkStack page we saved above.
+        if let Some((stack, name)) = stack_slot {
+            let new_root = self.root.widget();
+            stack.add_named(&new_root, Some(&name));
+            stack.set_visible_child_name(&name);
+        }
 
         // After realize, update active focus to the new pane.
         self.active_pane_id = new_pane_id;
