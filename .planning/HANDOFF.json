@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-25T05:20:23.918Z",
+  "timestamp": "2026-03-25T05:52:50.605Z",
   "phase": "02",
   "phase_name": "workspaces-pane-splits",
   "phase_dir": ".planning/phases/02-workspaces-pane-splits",
@@ -9,28 +9,41 @@
   "completed_tasks": [
     {"id": 1, "name": "Remove false/true bounce from restore_active_pane_focus", "status": "done"},
     {"id": 2, "name": "Remove 150ms false/true bounce from connect_resize", "status": "done"},
-    {"id": 3, "name": "Add ghostty_surface_refresh+queue_render in EventControllerFocus::enter", "status": "done"}
+    {"id": 3, "name": "Add ghostty_surface_refresh+queue_render in EventControllerFocus::enter", "status": "done"},
+    {"id": 4, "name": "Fix cursor VISIBLE BUT SOLID after window resize", "status": "done", "progress": "Fixed in ghostty fork Thread.zig: cursorCancelCallback now restarts blink timer if flags.focused=true when cancel fires. Root cause: ?*void userdata prevented restart; changed to Thread*. Zig 0.15.2 rebuild clean, Rust relinked."}
   ],
   "remaining_tasks": [
-    {"id": 4, "name": "Fix cursor VISIBLE BUT SOLID after window resize", "status": "blocked_investigating"},
-    {"id": 5, "name": "Retest split pane cursor freeze (not yet verified)", "status": "not_tested"}
+    {"id": 5, "name": "Retest split pane cursor freeze — verify fixed after cancel-race fix", "status": "not_tested"}
   ],
-  "blockers": [
-    {
-      "description": "Cursor visible but not blinking after resize. Timer runs (wakeup_cb #61 fires). Root cause hypothesis: renderer Thread.zig renderCallback calls updateFrame(cursor_blink_visible) then drawFrame(now=false). With must_draw_from_app_thread=true, drawFrame checks hasVsync() - if TRUE, early-returns WITHOUT pushing redraw_surface. App-side queue_render presents LAST BAKED frame with stale cursor state.",
-      "type": "technical",
-      "workaround": "NEXT: Read ghostty/src/renderer/generic.zig lines 1033-1050 hasVsync() impl. If true for embedded Linux OpenGL, need to disable vsync OR use drawNow signal path for cursor blink."
-    }
+  "blockers": [],
+  "human_actions_pending": [
+    {"action": "UAT: run target/debug/cmux-linux, resize window, verify cursor blinks after resize", "context": "Fix is in ghostty/src/renderer/Thread.zig cursorCancelCallback. Binary at target/debug/cmux-linux.", "blocking": false},
+    {"action": "UAT: Ctrl+D to split, drag divider, verify cursor blinks in active pane", "context": "Same cancel-race likely covers this path too. Not yet tested.", "blocking": false}
   ],
-  "human_actions_pending": [],
   "decisions": [
     {
       "decision": "Removed false/true focus bounce from both restore_active_pane_focus and connect_resize",
-      "rationale": "Bounce permanently kills cursor timer via async cancel race: set_focus(false) initiates cancel (cursor_c_cancel). set_focus(true) arrives before cancel fires - cursor_c.state()==.active - restart skipped - cancel fires - timer dead forever. See Thread.zig focused=true handler line 407.",
+      "rationale": "Bounce permanently kills cursor timer via async cancel race: set_focus(false) initiates cancel (cursor_c_cancel). set_focus(true) arrives before cancel fires — cursor_c.state()==.active — restart skipped — cancel fires — timer dead forever.",
+      "phase": "02"
+    },
+    {
+      "decision": "Fix the cancel race in Ghostty Thread.zig cursorCancelCallback, not in cmux Rust code",
+      "rationale": "Root cause: cursorCancelCallback had ?*void userdata so it couldn't restart the timer when cancel completed with flags.focused=true. Changed cancel call to pass Thread* self. On cancel completion, if flags.focused=true and cursor_c not active, restart immediately.",
+      "phase": "02"
+    },
+    {
+      "decision": "hasVsync() hypothesis was WRONG — DisplayLink=void on Linux, always returns false",
+      "rationale": "generic.zig line 39-41: DisplayLink = switch(os) { .macos => ..., else => void }. The hasVsync early-return in drawFrame never fires on Linux. True root cause was the cancel-race.",
       "phase": "02"
     }
   ],
-  "uncommitted_files": ["src/ghostty/surface.rs", "src/split_engine.rs", ".planning/debug/post-divider-drag-cursor-freeze.md"],
-  "next_action": "Read ghostty/src/renderer/generic.zig lines 1033-1050 to check hasVsync() for embedded renderer. If hasVsync=true, fix is to either disable vsync in embedded config or ensure draw_now.notify() is called after cursor blink state change.",
-  "context_notes": "User confirmed cursor is VISIBLE BUT SOLID (not blinking) after resize. Wakeup_cb fires, renders happen. Ghostty bakes frame in renderCallback via updateFrame(cursor_blink_visible). If hasVsync=true, drawFrame(false) skips app notification. cmux wakeup_cb calls queue_render directly but presents stale baked frame."
+  "uncommitted_files": [
+    "ghostty (submodule — Thread.zig changed)",
+    "src/app_state.rs",
+    "src/ghostty/callbacks.rs",
+    ".planning/phases/02-workspaces-pane-splits/02-08-PLAN.md",
+    "Cargo.lock"
+  ],
+  "next_action": "UAT: run target/debug/cmux-linux, resize window — cursor must blink. Then Ctrl+D split, drag divider, cursor must blink in active pane. If both pass: commit ghostty submodule pointer + remaining files, write 02-08 SUMMARY.",
+  "context_notes": "Race: set_focus(false) starts cancel (cursor_c=.active), set_focus(true) arrives before cancel fires (both drained same mailbox pass in wakeupCallback), restart guard sees .active and skips, cancel fires → dead. Fix: cursorCancelCallback(Thread* self): if self.flags.focused && cursor_c != .active → restart. Zig 0.15.2 at /home/twilson/code/cmux-linux/zig-x86_64-linux-0.15.2/zig."
 }
