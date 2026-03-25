@@ -1,41 +1,38 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-23T18:44:18.113Z",
-  "phase": "01",
-  "phase_name": "ghostty-foundation",
-  "phase_dir": ".planning/phases/01-ghostty-foundation",
-  "plan": 7,
-  "task": 0,
-  "total_tasks": 3,
+  "timestamp": "2026-03-25T04:26:53.758Z",
+  "phase": "02",
+  "phase_name": "workspaces-pane-splits",
+  "phase_dir": ".planning/phases/02-workspaces-pane-splits",
+  "plan": 6,
+  "task": 1,
+  "total_tasks": 1,
   "status": "paused",
   "completed_tasks": [
-    {"id": 1, "name": "01-01: Rust project scaffold", "status": "done", "commit": "multiple"},
-    {"id": 2, "name": "01-02: Ghostty fork extension", "status": "done", "commit": "multiple"},
-    {"id": 3, "name": "01-03: Surface embedding", "status": "done", "commit": "multiple"},
-    {"id": 4, "name": "01-04: Input routing", "status": "done", "commit": "multiple"},
-    {"id": 5, "name": "01-05: Fix linking errors", "status": "done", "commit": "e993ed62"},
-    {"id": 6, "name": "01-06: Add tokio runtime", "status": "done", "commit": "fce8457c"}
+    {"id": "02-00 through 02-05, 02-07, 02-08", "name": "All implementation + gap closure plans", "status": "done"}
   ],
   "remaining_tasks": [
-    {"id": 7, "name": "01-07: Fix app crash on startup", "status": "not_started"},
-    {"id": 8, "name": "01-08: Fix rendering pipeline", "status": "not_started"},
-    {"id": 9, "name": "01-09: Verify all Phase 1 requirements", "status": "not_started"}
+    {"id": "02-06", "name": "Human verification checkpoint — re-test after focus bug fix", "status": "blocked_on_human_testing"}
   ],
   "blockers": [
-    {"description": "App crashes with segfault on startup", "type": "technical", "workaround": "Plans 01-07 through 01-09 created to fix"},
-    {"description": "Cannot verify terminal functionality until crash is fixed", "type": "technical", "workaround": "Sequential fix planned"}
+    {
+      "description": "UAT step 5 (Ctrl+D split) cursor freezes after split resize. Possibly step 7 (pane resize) too.",
+      "type": "technical",
+      "workaround": "Fix applied this session: removed set_focus(true) from re-realize path; moved cell storage before grab_focus. Needs UAT re-test."
+    }
   ],
-  "human_actions_pending": [],
+  "human_actions_pending": [
+    {
+      "action": "Re-run UAT steps 5-12: cargo build && ./target/debug/cmux-linux",
+      "context": "Two focus bugs fixed. Confirm split+resize cursor freeze resolved. If still broken, collect debug log (eprintln in EventControllerFocus enter/leave).",
+      "blocking": true
+    }
+  ],
   "decisions": [
-    {"decision": "Use gtk4 0.10 instead of 0.11", "rationale": "rustc 1.91.1 compatibility", "phase": "01"},
-    {"decision": "Create stub implementations for missing functions", "rationale": "Allow compilation while full implementation pending", "phase": "01"},
-    {"decision": "Add tokio runtime with GLib bridge", "rationale": "Success criteria requires both async runtimes", "phase": "01"}
+    {"decision": "Removed set_focus(true) from re-realize path", "rationale": "Was incorrectly refocusing old pane during split — both panes got focused=true, killing new pane cursor blink. EventControllerFocus enter handles restoration now.", "phase": "02"},
+    {"decision": "Moved cell.borrow_mut()=Some(surface) before grab_focus()", "rationale": "EventControllerFocus enter was no-op (cell=None) during realize. Must store first.", "phase": "02"}
   ],
-  "uncommitted_files": [
-    ".planning/config.json",
-    ".planning/phases/01-ghostty-foundation/01-VERIFICATION.md",
-    ".planning/phases/01-ghostty-foundation/01-VERIFICATION-2.md"
-  ],
-  "next_action": "Execute plan 01-07 to debug and fix the segmentation fault preventing app startup",
-  "context_notes": "Phase 01 has 6 completed plans but verification found runtime crash. Created 3 additional gap-closure plans (07-09) to fix crash, implement rendering, and verify all requirements. The app builds successfully but crashes immediately on startup - likely due to Ghostty surface initialization timing or missing GL context setup."
+  "uncommitted_files": ["src/ghostty/surface.rs"],
+  "next_action": "cargo build && ./target/debug/cmux-linux — re-test UAT steps 5-12. If passing, approve 02-06 checkpoint and run /gsd:execute-phase 02 to complete verification.",
+  "context_notes": "Phase 02 is 8/9 plans done. Only 02-06 (human UAT) remains. UAT 1-4 passed. Step 5 (split right) and window resize caused cursor freeze. Root cause: surface.rs re-realize was calling set_focus(old,true) unconditionally on every split. Fixed. Build passes."
 }

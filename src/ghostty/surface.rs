@@ -86,15 +86,15 @@ pub fn create_surface(
             }
 
             // Check if surface already exists (re-realize after reparent).
-            // If so, just update the size/scale, restore focus, and refresh — don't create a new surface.
+            // If so, just update the size/scale and refresh — don't create a new surface.
             //
-            // CRITICAL: split_active() calls set_focus(false) BEFORE reparenting the widget.
-            // Ghostty's render thread cancels the cursor blink timer when focus is lost.
-            // We MUST restore focus here to restart the cursor blink timer.
-            //
-            // Note: set_focus(true) will send a .focus message to the render thread, which
-            // restarts the cursor timer (Thread.zig lines 404-417). Without this, the cursor
-            // stays frozen after split/resize operations.
+            // DO NOT restore focus here. During a split, the old pane is reparented into
+            // a GtkPaned — it should NOT regain focus. The new pane gets focus via its own
+            // fresh realize path (set_focus(true) + grab_focus). EventControllerFocus
+            // handles focus restoration automatically when GTK gives this widget focus back
+            // (via `enter` signal). Calling set_focus(true) here incorrectly marks the old
+            // pane as focused, causing both panes to have focused=true simultaneously and
+            // triggering Ghostty's early-return guard on the new pane's subsequent focus calls.
             if let Some(existing_surface) = *cell.borrow() {
                 eprintln!(
                     "cmux: GLArea {:p} re-realized — reusing existing surface {:p}",
@@ -120,10 +120,8 @@ pub fn create_surface(
                         );
                     }
                     ffi::ghostty_surface_set_content_scale(existing_surface, scale, scale);
-                    // Restore focus to restart cursor blink timer (was set to false before reparent)
-                    ffi::ghostty_surface_set_focus(existing_surface, true);
                     eprintln!(
-                        "cmux: re-realize — restored focus to surface {:p}",
+                        "cmux: re-realize — skipping set_focus(true) for surface {:p} (EventControllerFocus handles restoration)",
                         existing_surface
                     );
                     // Refresh to kick Ghostty's render loop after GL context change
@@ -214,12 +212,14 @@ pub fn create_surface(
                 eprintln!("cmux: ghostty_surface_set_focus(true)");
             }
 
+            // Store the surface pointer BEFORE grab_focus so that EventControllerFocus
+            // `enter` can call set_focus(true) when the widget receives GTK keyboard focus.
+            // If we store after, the enter handler finds cell=None and is a no-op.
+            *cell.borrow_mut() = Some(surface);
+
             // Grab GTK keyboard focus so the terminal receives key events immediately
             // without requiring a mouse click (belt-and-suspenders with switch_to_index).
             area.grab_focus();
-
-            // Store the surface pointer for other callbacks.
-            *cell.borrow_mut() = Some(surface);
             // Also store in global for read_clipboard_cb (which has no surface arg).
             SURFACE_PTR.store(surface as usize, Ordering::SeqCst);
 
