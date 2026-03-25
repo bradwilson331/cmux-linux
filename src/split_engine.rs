@@ -826,57 +826,34 @@ fn remove_widget_from_parent(widget: &gtk4::Widget) {
 
 /// Restore GTK keyboard focus and Ghostty surface focus to the active pane.
 /// Called once when a GtkPaned drag ends — NOT on every pixel of movement.
-/// Finds the GLArea with the "active-pane" CSS class, calls grab_focus() to
-/// return GTK keyboard routing, and ghostty_surface_set_focus(true) to restart
-/// Ghostty's cursor blink timer.
+/// Re-syncs each surface's cached size with the GLArea's current allocation to
+/// break any anti-flicker stall in Ghostty's drawFrame() guard, then kicks
+/// the render thread with ghostty_surface_refresh + queue_render.
+///
+/// Does NOT touch focus state. The cursor blink timer runs independently of
+/// resize. Calling set_focus(false→true) here kills the timer due to an async
+/// cancel race in Ghostty's renderer thread: the false message enqueues a timer
+/// cancel, but the true message is processed before the cancel callback fires,
+/// so the guard `if cursor_c.state() != .active` sees `.active` and skips the
+/// restart. The cancel then completes, leaving the timer permanently dead.
 fn restore_active_pane_focus() {
-    // After a GtkPaned drag ends, Ghostty's renderer may be stuck re-presenting
-    // stale frames. The anti-flicker guard in drawFrame() compares GL_VIEWPORT
-    // (the actual widget size) against the renderer's cached screen size. During
-    // rapid resize, the renderer's cached size can fall behind. The guard then
-    // returns early on every frame — permanently re-presenting the last good frame.
-    //
-    // Fix: re-set the size on ALL surfaces from their GLArea's current allocation,
-    // then call ghostty_surface_refresh on each to kick the render thread into
-    // rebuilding cells. Also toggle focus off→on to restart the cursor blink timer
-    // (Ghostty's focusCallback short-circuits if `self.focused == focused`).
-
-    // First: re-set size + refresh ALL surfaces to break the anti-flicker stall.
+    // Re-set size + refresh ALL surfaces to break the anti-flicker stall.
     if let Ok(areas) = crate::ghostty::callbacks::GL_AREA_REGISTRY.lock() {
         if let Ok(gl_to_surface) = crate::ghostty::callbacks::GL_TO_SURFACE.lock() {
             for area_ptr in areas.iter() {
                 let area: gtk4::glib::translate::Borrowed<gtk4::GLArea> =
                     unsafe { gtk4::glib::translate::from_glib_borrow(area_ptr.0) };
-                eprintln!(
-                    "cmux: drag-end recovery: area {:p} realized={} mapped={} visible={} size={}x{} has_focus={}",
-                    area_ptr.0, area.is_realized(), area.is_mapped(),
-                    area.is_visible(), area.width(), area.height(), area.has_focus()
-                );
                 if let Some(&surface_ptr) = gl_to_surface.get(&(area_ptr.0 as usize)) {
                     let scale = area.scale_factor();
                     let w = (area.width() * scale) as u32;
                     let h = (area.height() * scale) as u32;
-                    eprintln!(
-                        "cmux: drag-end recovery: surface {:p} phys_size={}x{} active={}",
-                        surface_ptr as *const (), w, h, area.has_css_class("active-pane")
-                    );
                     if w > 0 && h > 0 {
                         unsafe {
                             let surface = surface_ptr as ffi::ghostty_surface_t;
                             ffi::ghostty_surface_set_size(surface, w, h);
-                            if area.has_css_class("active-pane") {
-                                ffi::ghostty_surface_set_focus(surface, true);
-                            } else {
-                                ffi::ghostty_surface_set_focus(surface, false);
-                            }
                             ffi::ghostty_surface_refresh(surface);
                         }
                     }
-                } else {
-                    eprintln!(
-                        "cmux: drag-end recovery: WARNING — no surface for area {:p}",
-                        area_ptr.0
-                    );
                 }
                 if area.is_realized() {
                     area.queue_render();

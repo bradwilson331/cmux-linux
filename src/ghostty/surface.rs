@@ -317,6 +317,11 @@ pub fn create_surface(
     //
     // sizeCallback early-returns when the size hasn't changed, so redundant
     // calls during rapid drag are cheap (just a comparison, no reflow).
+    //
+    // Do NOT bounce focus (false→true) here. The cursor blink timer is
+    // independent of resize — ghostty_surface_set_size only calls setScreenSize
+    // on the renderer; it does not cancel the blink timer. A false→true bounce
+    // kills the timer via an async cancel race (see restore_active_pane_focus).
     {
         let cell = surface_cell.clone();
         gl_area.connect_resize(move |area, logical_w, logical_h| {
@@ -520,11 +525,19 @@ pub fn create_surface(
     let focus_controller = gtk4::EventControllerFocus::new();
     focus_controller.connect_enter({
         let cell = surface_cell.clone();
+        let gl_area_for_focus = gl_area.clone();
         move |_ctrl| {
             if let Some(surface) = *cell.borrow() {
                 unsafe {
                     ffi::ghostty_surface_set_focus(surface, true);
+                    // Kick the render loop so the cursor becomes visible immediately
+                    // rather than waiting up to one blink interval (~500ms). The
+                    // renderer thread processes the focused=true message asynchronously;
+                    // without a refresh+queue_render here, GTK renders that happen
+                    // before the message is processed show the stale (invisible) cursor.
+                    ffi::ghostty_surface_refresh(surface);
                 }
+                gl_area_for_focus.queue_render();
             }
         }
     });
