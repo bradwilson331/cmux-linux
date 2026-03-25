@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 02-workspaces-pane-splits-07-PLAN.md
-last_updated: "2026-03-24T18:04:07.929Z"
+stopped_at: Completed 02-workspaces-pane-splits-08-PLAN.md
+last_updated: "2026-03-25T03:53:59.140Z"
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 17
-  completed_plans: 16
+  total_plans: 18
+  completed_plans: 17
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 02 (workspaces-pane-splits) — EXECUTING
-Plan: 7 of 7
+Plan: 2 of 9
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Plan: 7 of 7
 | Phase 02-workspaces-pane-splits P03 | 0.33 | 1 tasks | 1 files |
 | Phase 02-workspaces-pane-splits P04 | 15 | 2 tasks | 2 files |
 | Phase 02-workspaces-pane-splits P07 | 2 | 3 tasks | 3 files |
+| Phase 02-workspaces-pane-splits PP08 | 10 | 4 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,8 @@ Recent decisions affecting current work:
 - [Phase 02-workspaces-pane-splits]: Commented out non-compiling AlertDialog code, preserving the intended 'proceed on close' behavior. This is a temporary fix until the correct API usage is determined.
 - [Phase 02-workspaces-pane-splits]: Use notify::position on GtkPaned to detect drag end and restore active pane focus
 - [Phase 02-workspaces-pane-splits]: Change Ctrl+Alt+Arrow to Ctrl+Shift+Arrow to avoid Linux compositor interception (GNOME/KDE)
+- [Phase 02-workspaces-pane-splits]: EventControllerFocus on GLArea keeps Ghostty focused state in sync with GTK focus routing after any widget-tree operation
+- [Phase 02-workspaces-pane-splits]: focus_active_surface() replaces grab_active_focus() for Ctrl+B to also sync Ghostty internal focus state
 
 ### Pending Todos
 
@@ -101,6 +104,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-24T18:04:07.927Z
-Stopped at: Completed 02-workspaces-pane-splits-07-PLAN.md
+Last session: 2026-03-25T03:53:59.137Z
+Stopped at: Completed 02-workspaces-pane-splits-08-PLAN.md
 Resume file: None
