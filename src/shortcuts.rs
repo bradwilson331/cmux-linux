@@ -117,9 +117,10 @@ pub fn install_shortcuts(
                 (true, false, false, k) if k == gtk4::gdk::Key::b => {
                     let visible = sidebar_clone.is_visible();
                     sidebar_clone.set_visible(!visible);
-                    // Re-grab terminal focus — sidebar visibility change defocuses GLArea.
+                    // Re-grab terminal focus and notify Ghostty — sidebar visibility change
+                    // defocuses GLArea and diverges Ghostty's internal focused state.
                     if let Some(engine) = state.borrow_mut().active_split_engine_mut() {
-                        engine.grab_active_focus();
+                        engine.focus_active_surface();
                     }
                     gtk4::glib::Propagation::Stop
                 }
