@@ -12,6 +12,12 @@ fn gl_get_error() -> u32 {
     unsafe { glGetError() }
 }
 
+extern "C" {
+    fn glGetIntegerv(pname: u32, params: *mut i32);
+}
+const GL_VIEWPORT: u32 = 0x0BA2;
+const GL_DRAW_FRAMEBUFFER_BINDING: u32 = 0x8CA6;
+
 /// Creates and returns a GtkGLArea with a Ghostty terminal surface wired up.
 /// Initializes ghostty_app_t, then defers ghostty_surface_t creation to the
 /// GtkGLArea realize signal — when the GL context is guaranteed to exist.
@@ -26,7 +32,18 @@ pub fn create_surface(
 
     use crate::ghostty::callbacks::{self, SURFACE_PTR};
 
+    eprintln!(
+        "cmux: create_surface called for pane_id={}, inherited_config={}",
+        pane_id,
+        inherited_config.is_some()
+    );
+
     let gl_area = gtk4::GLArea::new();
+    eprintln!(
+        "cmux: created GLArea {:p} for pane_id={}",
+        gl_area.as_ptr(),
+        pane_id
+    );
     // Per Pitfall 1: require OpenGL 4.3 before the area is realized.
     gl_area.set_required_version(4, 3);
     // Manual render mode: only render when wakeup_cb schedules queue_render().
@@ -49,15 +66,73 @@ pub fn create_surface(
     // ── GtkGLArea::realize ───────────────────────────────────────────────────
     // GL context is now valid. Create the surface HERE so ghostty can access
     // the GL context immediately after creation (fixes segfault in set_content_scale).
+    //
+    // IMPORTANT: GTK may re-realize the widget when reparenting (e.g., moving from
+    // GtkStack into GtkPaned during split). We must check if the surface already
+    // exists and reuse it, otherwise we create orphaned surfaces that never render.
+    let pane_id_for_log = pane_id;
     gl_area.connect_realize({
         let cell = surface_cell.clone();
         move |area| {
-            eprintln!("cmux: GLArea realize — making GL context current");
+            eprintln!(
+                "cmux: GLArea {:p} realize for pane_id={} — making GL context current",
+                area.as_ptr(),
+                pane_id_for_log
+            );
             area.make_current();
             if let Some(err) = area.error() {
                 eprintln!("cmux: GLArea realize error: {err}");
                 std::process::exit(1); // Per D-09: no GUI error dialog in Phase 1
             }
+
+            // Check if surface already exists (re-realize after reparent).
+            // If so, just update the size/scale, restore focus, and refresh — don't create a new surface.
+            //
+            // CRITICAL: split_active() calls set_focus(false) BEFORE reparenting the widget.
+            // Ghostty's render thread cancels the cursor blink timer when focus is lost.
+            // We MUST restore focus here to restart the cursor blink timer.
+            //
+            // Note: set_focus(true) will send a .focus message to the render thread, which
+            // restarts the cursor timer (Thread.zig lines 404-417). Without this, the cursor
+            // stays frozen after split/resize operations.
+            if let Some(existing_surface) = *cell.borrow() {
+                eprintln!(
+                    "cmux: GLArea {:p} re-realized — reusing existing surface {:p}",
+                    area.as_ptr(),
+                    existing_surface
+                );
+                let scale = area.scale_factor() as f64;
+                let w = area.width();
+                let h = area.height();
+                unsafe {
+                    let phys_w = (w as f64 * scale) as u32;
+                    let phys_h = (h as f64 * scale) as u32;
+                    if phys_w > 0 && phys_h > 0 {
+                        ffi::ghostty_surface_set_size(existing_surface, phys_w, phys_h);
+                        eprintln!(
+                            "cmux: re-realize — set_size({}, {}) for surface {:p}",
+                            phys_w, phys_h, existing_surface
+                        );
+                    } else {
+                        eprintln!(
+                            "cmux: re-realize — skipping set_size(0,0) at realize time for surface {:p}; resize signal will follow",
+                            existing_surface
+                        );
+                    }
+                    ffi::ghostty_surface_set_content_scale(existing_surface, scale, scale);
+                    // Restore focus to restart cursor blink timer (was set to false before reparent)
+                    ffi::ghostty_surface_set_focus(existing_surface, true);
+                    eprintln!(
+                        "cmux: re-realize — restored focus to surface {:p}",
+                        existing_surface
+                    );
+                    // Refresh to kick Ghostty's render loop after GL context change
+                    ffi::ghostty_surface_refresh(existing_surface);
+                }
+                area.queue_render();
+                return;
+            }
+
             eprintln!("cmux: GL context made current, no error");
             eprintln!(
                 "cmux: GL area size at realize: {}x{}",
@@ -121,12 +196,18 @@ pub fn create_surface(
             let h = area.height();
             unsafe {
                 // Per Pitfall 5: convert logical→physical pixels.
-                ffi::ghostty_surface_set_size(
-                    surface,
-                    (w as f64 * scale) as u32,
-                    (h as f64 * scale) as u32,
-                );
-                eprintln!("cmux: ghostty_surface_set_size({}, {})", w, h);
+                // Guard against calling set_size(0,0) at realize time — widget has not been
+                // allocated its real size yet. connect_resize will fire with the correct size.
+                let phys_w = (w as f64 * scale) as u32;
+                let phys_h = (h as f64 * scale) as u32;
+                if phys_w > 0 && phys_h > 0 {
+                    ffi::ghostty_surface_set_size(surface, phys_w, phys_h);
+                    eprintln!("cmux: ghostty_surface_set_size({}, {})", phys_w, phys_h);
+                } else {
+                    eprintln!(
+                        "cmux: ghostty_surface_set_size skipped at realize time (size 0x0) — connect_resize will provide real size"
+                    );
+                }
                 ffi::ghostty_surface_set_content_scale(surface, scale, scale);
                 eprintln!("cmux: ghostty_surface_set_content_scale({scale})");
                 ffi::ghostty_surface_set_focus(surface, true);
@@ -148,24 +229,73 @@ pub fn create_surface(
                     area.as_ptr() as *mut gtk4::ffi::GtkGLArea
                 ));
             }
+            // Register GLArea → surface mapping for notify::position focus restore
+            if let Ok(mut gl_to_surface) = callbacks::GL_TO_SURFACE.lock() {
+                gl_to_surface.insert(area.as_ptr() as usize, surface as usize);
+            }
 
             // Request first render.
             area.queue_render();
         }
     });
 
+    // ── GtkGLArea::unrealize — detect unexpected unrealize during drag/resize
+    {
+        let pane_id_unrealize = pane_id;
+        gl_area.connect_unrealize(move |area| {
+            eprintln!(
+                "cmux: WARNING — GLArea {:p} pane={} UNREALIZED! mapped={} visible={}",
+                area.as_ptr(),
+                pane_id_unrealize,
+                area.is_mapped(),
+                area.is_visible()
+            );
+        });
+    }
+
     // ── GtkGLArea::render ────────────────────────────────────────────────────
     // Called by GTK frame clock when queue_render() was requested.
     gl_area.connect_render({
         let cell = surface_cell.clone();
-        move |_area, _ctx| {
-            eprintln!("cmux: render callback fired");
+        let render_count = std::rc::Rc::new(std::cell::Cell::new(0u64));
+        let pane_id_render = pane_id;
+        move |area, _ctx| {
+            let count = render_count.get() + 1;
+            render_count.set(count);
+            // Log every render — keep the session short!
+            if true {
+                eprintln!(
+                    "cmux: render #{} pane={} area={:p} size={}x{} err={:?}",
+                    count,
+                    pane_id_render,
+                    area.as_ptr(),
+                    area.width(),
+                    area.height(),
+                    area.error()
+                );
+            }
             if let Some(surface) = *cell.borrow() {
-                eprintln!("cmux: calling ghostty_surface_draw({:p})", surface);
+                // Log GL state before draw to diagnose render stalls.
+                if count % 60 == 1 || count <= 5 {
+                    let mut viewport = [0i32; 4];
+                    let mut draw_fbo = 0i32;
+                    unsafe {
+                        glGetIntegerv(GL_VIEWPORT, viewport.as_mut_ptr());
+                        glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &mut draw_fbo);
+                    }
+                    eprintln!(
+                        "cmux: render GL state pane={}: viewport={}x{}+{}+{} draw_fbo={}",
+                        pane_id_render,
+                        viewport[2],
+                        viewport[3],
+                        viewport[0],
+                        viewport[1],
+                        draw_fbo
+                    );
+                }
                 unsafe {
                     ffi::ghostty_surface_draw(surface);
                 }
-                eprintln!("cmux: ghostty_surface_draw complete");
             } else {
                 eprintln!("cmux: render callback — surface not yet initialized, skipping draw");
             }
@@ -174,57 +304,55 @@ pub fn create_surface(
     });
 
     // ── GtkGLArea::resize ────────────────────────────────────────────────────
-    // GTK provides logical (CSS) pixels. Ghostty needs physical pixels (Pitfall 5).
-    // ghostty_surface_set_size calls sizeCallback which reflowes the terminal buffer —
-    // expensive when called on every pixel during a GtkPaned drag. Debounce: record the
-    // latest size and defer the actual call to the next idle, coalescing burst resizes.
+    // GTK provides logical (CSS) pixels; Ghostty needs physical pixels (Pitfall 5).
+    //
+    // CRITICAL: ghostty_surface_set_size must be called SYNCHRONOUSLY in this
+    // signal handler, not deferred to an idle. Ghostty's renderer anti-flicker
+    // guard in drawFrame() compares GL_VIEWPORT (the actual widget size) against
+    // the renderer's cached screen size. If we defer set_size to an idle, the
+    // next drawFrame(true) — triggered by queue_render — sees a size mismatch
+    // and re-presents the last frame forever (the guard returns before updating
+    // the renderer's cached size). This matches Ghostty's own GTK apprt which
+    // calls sizeCallback directly in glareaResize, not deferred.
+    //
+    // sizeCallback early-returns when the size hasn't changed, so redundant
+    // calls during rapid drag are cheap (just a comparison, no reflow).
     {
         let cell = surface_cell.clone();
-        let pending = std::rc::Rc::new(std::cell::Cell::new(false));
-        let last_size = std::rc::Rc::new(std::cell::Cell::new((0u32, 0u32)));
         gl_area.connect_resize(move |area, logical_w, logical_h| {
             let scale = area.scale_factor();
-            last_size.set(((logical_w * scale) as u32, (logical_h * scale) as u32));
-            if pending.get() {
-                return; // idle already queued; it will use latest last_size
+            let phys_w = (logical_w * scale) as u32;
+            let phys_h = (logical_h * scale) as u32;
+
+            if let Some(surface) = *cell.borrow() {
+                unsafe {
+                    ffi::ghostty_surface_set_size(surface, phys_w, phys_h);
+                }
             }
-            pending.set(true);
-            let cell = cell.clone();
-            let pending = pending.clone();
-            let last_size = last_size.clone();
-            gtk4::glib::idle_add_local_once(move || {
-                pending.set(false);
-                let (w, h) = last_size.get();
-                if let Some(surface) = *cell.borrow() {
-                    unsafe {
-                        ffi::ghostty_surface_set_size(surface, w, h);
+
+            // Drive the render loop directly — wakeup idles can be starved during
+            // rapid resize events (sustained mouse drag floods the GLib main loop
+            // with motion events at DEFAULT priority, delaying DEFAULT_IDLE wakeup
+            // idles). Calling app_tick + queue_render here ensures the terminal
+            // reflows and re-renders even during a sustained resize drag.
+            let app_ptr =
+                crate::ghostty::callbacks::APP_PTR.load(std::sync::atomic::Ordering::SeqCst);
+            if app_ptr != 0 {
+                unsafe {
+                    let app = app_ptr as ffi::ghostty_app_t;
+                    ffi::ghostty_app_tick(app);
+                }
+            }
+            if let Ok(areas) = crate::ghostty::callbacks::GL_AREA_REGISTRY.lock() {
+                for area_ptr in areas.iter() {
+                    let area: glib::translate::Borrowed<gtk4::GLArea> =
+                        unsafe { glib::translate::from_glib_borrow(area_ptr.0) };
+                    if area.is_realized() {
+                        area.queue_render();
+                        area.queue_draw(); // Gap 1B: repaints CSS border
                     }
                 }
-                // After resize: drive the render loop directly rather than waiting
-                // for wakeup_cb — wakeup idles can be starved during rapid resize events
-                // (sustained mouse drag floods the GLib main loop with motion events at
-                // DEFAULT priority, delaying DEFAULT_IDLE wakeup idles). Calling app_tick
-                // + queue_render here ensures the terminal reflows and re-renders even
-                // during a sustained resize drag.
-                let app_ptr =
-                    crate::ghostty::callbacks::APP_PTR.load(std::sync::atomic::Ordering::SeqCst);
-                if app_ptr != 0 {
-                    unsafe {
-                        let app = app_ptr as ffi::ghostty_app_t;
-                        ffi::ghostty_app_tick(app);
-                    }
-                }
-                if let Ok(areas) = crate::ghostty::callbacks::GL_AREA_REGISTRY.lock() {
-                    for area_ptr in areas.iter() {
-                        let area: glib::translate::Borrowed<gtk4::GLArea> =
-                            unsafe { glib::translate::from_glib_borrow(area_ptr.0) };
-                        if area.is_realized() {
-                            area.queue_render();
-                            area.queue_draw(); // Gap 1B: repaints CSS border (blue active-pane decoration)
-                        }
-                    }
-                }
-            });
+            }
         });
     }
 
@@ -382,6 +510,35 @@ pub fn create_surface(
         }
     });
     gl_area.add_controller(motion_controller);
+
+    // ── Focus tracking (GHOST-05) ─────────────────────────────────────────────
+    // EventControllerFocus fires enter/leave when GTK keyboard focus enters/leaves the widget.
+    // This ensures ghostty_surface_set_focus() stays in sync with GTK focus routing —
+    // critical after GtkPaned drags (separator steals focus) and sidebar show/hide.
+    // Without this, Ghostty's internal focused flag diverges from GTK reality, and
+    // subsequent set_focus(true) calls hit the early-return guard (if self.focused == focused { return; }).
+    let focus_controller = gtk4::EventControllerFocus::new();
+    focus_controller.connect_enter({
+        let cell = surface_cell.clone();
+        move |_ctrl| {
+            if let Some(surface) = *cell.borrow() {
+                unsafe {
+                    ffi::ghostty_surface_set_focus(surface, true);
+                }
+            }
+        }
+    });
+    focus_controller.connect_leave({
+        let cell = surface_cell.clone();
+        move |_ctrl| {
+            if let Some(surface) = *cell.borrow() {
+                unsafe {
+                    ffi::ghostty_surface_set_focus(surface, false);
+                }
+            }
+        }
+    });
+    gl_area.add_controller(focus_controller);
 
     // ── Scroll input ─────────────────────────────────────────────────────────────
     let scroll_controller = gtk4::EventControllerScroll::new(
