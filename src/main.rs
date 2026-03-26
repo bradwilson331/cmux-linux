@@ -30,6 +30,16 @@ window { background-color: #1a1a1a; }
    wide-handle is set programmatically; separator gets min-width/height for draggability. */
 paned > separator { background-color: #3a3a3a; min-width: 4px; min-height: 4px; }
 paned > separator:hover { background-color: #5b8dd9; }
+/* Phase 4: Attention dot for bell notifications (NOTF-02) */
+.attention-dot {
+    background-color: #e8a444;
+    border-radius: 50%;
+    min-width: 8px;
+    min-height: 8px;
+    max-width: 8px;
+    max-height: 8px;
+    margin: 0 4px;
+}
 ";
 
 fn main() {

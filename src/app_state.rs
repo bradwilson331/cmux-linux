@@ -68,11 +68,25 @@ impl AppState {
         let mut workspace = Workspace::new(id, display_number);
         let name = workspace.name.clone();
 
-        // Append a row to the sidebar GtkListBox.
+        // Phase 4: Row layout: GtkBox(H, 4) > [GtkBox(V, 0) > [GtkLabel(name)], GtkLabel(dot)]
+        // VBox allows Plan 04 to add a connection-state subtitle without restructuring.
+        let hbox = gtk4::Box::new(gtk4::Orientation::Horizontal, 4);
+        let vbox = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
         let label = gtk4::Label::new(Some(&name));
         label.set_halign(gtk4::Align::Start);
+        label.set_hexpand(true);
+        vbox.append(&label);
+        vbox.set_hexpand(true);
+        hbox.append(&vbox);
+
+        // Attention dot — hidden by default, shown when has_attention
+        let dot = gtk4::Label::new(None);
+        dot.add_css_class("attention-dot");
+        dot.set_visible(false);
+        hbox.append(&dot);
+
         let row = gtk4::ListBoxRow::new();
-        row.set_child(Some(&label));
+        row.set_child(Some(&hbox));
         unsafe {
             row.set_data("workspace-id", id);
         }
@@ -178,14 +192,24 @@ impl AppState {
             for i in 0..count {
                 if let Some(r) = self.sidebar_list.row_at_index(i) {
                     r.remove_css_class("active-workspace");
-                    if let Some(label) = r.child().and_downcast::<gtk4::Label>() {
-                        label.set_css_classes(&[]);
+                    // Phase 4: navigate nested layout: row > hbox > vbox > label
+                    if let Some(hbox) = r.child().and_downcast::<gtk4::Box>() {
+                        if let Some(vbox) = hbox.first_child().and_downcast::<gtk4::Box>() {
+                            if let Some(label) = vbox.first_child().and_downcast::<gtk4::Label>() {
+                                label.set_css_classes(&[]);
+                            }
+                        }
                     }
                 }
             }
             row.add_css_class("active-workspace");
-            if let Some(label) = row.child().and_downcast::<gtk4::Label>() {
-                label.add_css_class("active-workspace-label");
+            // Phase 4: navigate nested layout: row > hbox > vbox > label
+            if let Some(hbox) = row.child().and_downcast::<gtk4::Box>() {
+                if let Some(vbox) = hbox.first_child().and_downcast::<gtk4::Box>() {
+                    if let Some(label) = vbox.first_child().and_downcast::<gtk4::Label>() {
+                        label.add_css_class("active-workspace-label");
+                    }
+                }
             }
         }
         // Grab GTK keyboard focus on the active pane so key events reach Ghostty.
@@ -224,10 +248,14 @@ impl AppState {
     pub fn rename_active(&mut self, new_name: String) {
         if let Some(ws) = self.workspaces.get_mut(self.active_index) {
             ws.rename(new_name.clone());
-            // Update the sidebar label.
+            // Update the sidebar label (Phase 4 nested layout: row > hbox > vbox > label).
             if let Some(row) = self.sidebar_list.row_at_index(self.active_index as i32) {
-                if let Some(label) = row.child().and_downcast::<gtk4::Label>() {
-                    label.set_text(&new_name);
+                if let Some(hbox) = row.child().and_downcast::<gtk4::Box>() {
+                    if let Some(vbox) = hbox.first_child().and_downcast::<gtk4::Box>() {
+                        if let Some(label) = vbox.first_child().and_downcast::<gtk4::Label>() {
+                            label.set_text(&new_name);
+                        }
+                    }
                 }
             }
             self.trigger_session_save();

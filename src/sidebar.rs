@@ -78,9 +78,13 @@ pub fn start_inline_rename(
         None => return,
     };
 
-    // Get current name from the label.
+    // Get current name from the label (Phase 4 nested layout: row > hbox > vbox > label).
     let current_name = row
         .child()
+        .and_downcast::<gtk4::Box>()
+        .and_then(|hbox| hbox.first_child())
+        .and_downcast::<gtk4::Box>()
+        .and_then(|vbox| vbox.first_child())
         .and_downcast::<gtk4::Label>()
         .map(|l| l.text().to_string())
         .unwrap_or_default();
@@ -103,14 +107,9 @@ pub fn start_inline_rename(
             if !trimmed.is_empty() {
                 state.borrow_mut().rename_active(trimmed.clone());
             }
-            // Restore label.
-            let label = gtk4::Label::new(Some(if trimmed.is_empty() {
-                &new_name
-            } else {
-                &trimmed
-            }));
-            label.set_halign(gtk4::Align::Start);
-            row.set_child(Some(&label));
+            // Restore Phase 4 nested layout: hbox > [vbox > [label], dot]
+            let display = if trimmed.is_empty() { &new_name } else { &trimmed };
+            row.set_child(Some(&rebuild_sidebar_row_content(display)));
         }
     });
 
@@ -125,13 +124,8 @@ pub fn start_inline_rename(
                 if !trimmed.is_empty() {
                     state.borrow_mut().rename_active(trimmed.clone());
                 }
-                let label = gtk4::Label::new(Some(if trimmed.is_empty() {
-                    &new_name
-                } else {
-                    &trimmed
-                }));
-                label.set_halign(gtk4::Align::Start);
-                row_clone.set_child(Some(&label));
+                let display = if trimmed.is_empty() { &new_name } else { &trimmed };
+                row_clone.set_child(Some(&rebuild_sidebar_row_content(display)));
             }
         }
     });
@@ -143,9 +137,7 @@ pub fn start_inline_rename(
         let current_name_clone = current_name.clone();
         move |_, keyval, _, _| {
             if keyval == gtk4::gdk::Key::Escape {
-                let label = gtk4::Label::new(Some(&current_name_clone));
-                label.set_halign(gtk4::Align::Start);
-                row_clone.set_child(Some(&label));
+                row_clone.set_child(Some(&rebuild_sidebar_row_content(&current_name_clone)));
                 gtk4::glib::Propagation::Stop
             } else {
                 gtk4::glib::Propagation::Proceed
@@ -153,4 +145,24 @@ pub fn start_inline_rename(
         }
     });
     entry.add_controller(key_ctrl);
+}
+
+/// Rebuild the Phase 4 sidebar row content: GtkBox(H, 4) > [GtkBox(V, 0) > [GtkLabel(name)], GtkLabel(dot)].
+/// Dot is hidden by default (fresh state after rename).
+fn rebuild_sidebar_row_content(name: &str) -> gtk4::Box {
+    let hbox = gtk4::Box::new(gtk4::Orientation::Horizontal, 4);
+    let vbox = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+    let label = gtk4::Label::new(Some(name));
+    label.set_halign(gtk4::Align::Start);
+    label.set_hexpand(true);
+    vbox.append(&label);
+    vbox.set_hexpand(true);
+    hbox.append(&vbox);
+
+    let dot = gtk4::Label::new(None);
+    dot.add_css_class("attention-dot");
+    dot.set_visible(false);
+    hbox.append(&dot);
+
+    hbox
 }
