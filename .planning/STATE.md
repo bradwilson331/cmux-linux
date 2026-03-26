@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 03-socket-api-session-persistence-00-PLAN.md
-last_updated: "2026-03-26T01:54:38.671Z"
+stopped_at: Completed 03-socket-api-session-persistence-01-PLAN.md
+last_updated: "2026-03-26T02:04:28.071Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 25
-  completed_plans: 18
+  completed_plans: 19
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 03 (socket-api-session-persistence) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Plan: 2 of 7
 | Phase 02-workspaces-pane-splits P07 | 2 | 3 tasks | 3 files |
 | Phase 02-workspaces-pane-splits PP08 | 10 | 4 tasks | 3 files |
 | Phase 03-socket-api-session-persistence P00 | 116 | 2 tasks | 6 files |
+| Phase 03-socket-api-session-persistence P01 | 18 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,8 @@ Recent decisions affecting current work:
 - [Phase 02-workspaces-pane-splits]: EventControllerFocus on GLArea keeps Ghostty focused state in sync with GTK focus routing after any widget-tree operation
 - [Phase 02-workspaces-pane-splits]: focus_active_surface() replaces grab_active_focus() for Ctrl+B to also sync Ghostty internal focus state
 - [Phase 03-socket-api-session-persistence]: cargo test --bin cmux-linux used for binary crate unit tests; cargo test --lib not applicable
+- [Phase 03-socket-api-session-persistence]: glib::MainContext::channel removed in glib 0.18+; use tokio::sync::mpsc::unbounded_channel + glib::MainContext::default().spawn_local() as equivalent bridge pattern
+- [Phase 03-socket-api-session-persistence]: Mutex<Option<UnboundedReceiver<...>>> wraps cmd_rx so it can be moved into a Fn connect_activate closure (receiver is not Clone)
 
 ### Pending Todos
 
@@ -106,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T01:54:38.668Z
-Stopped at: Completed 03-socket-api-session-persistence-00-PLAN.md
+Last session: 2026-03-26T02:04:28.068Z
+Stopped at: Completed 03-socket-api-session-persistence-01-PLAN.md
 Resume file: None

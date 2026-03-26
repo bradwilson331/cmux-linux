@@ -75,7 +75,7 @@ Plans:
 **Plans**: 7 plans
 Plans:
 - [x] 03-00-PLAN.md — Wave 0 scaffold: Cargo.toml deps (serde/serde_json/uuid/libc), module stubs with test scaffolds
-- [ ] 03-01-PLAN.md — Data model: UUID fields in Workspace/SplitNode, SplitNodeData serde type, glib channel replaces mpsc polling
+- [x] 03-01-PLAN.md — Data model: UUID fields in Workspace/SplitNode, SplitNodeData serde type, glib channel replaces mpsc polling
 - [ ] 03-02-PLAN.md — Socket server: SO_PEERCRED auth, XDG path setup, accept loop, cmux.py Linux path discovery
 - [ ] 03-03-PLAN.md — Tier-1 handlers (system/workspace/window/debug): full dispatch table + Tier-2 stubs
 - [ ] 03-04-PLAN.md — Tier-1 handlers (surface/pane): send_text/send_key/focus/close with SOCK-05 focus policy
@@ -114,6 +114,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Ghostty Foundation | 8/9 | In Progress|  |
 | 2. Workspaces + Pane Splits | 5/8 | In Progress|  |
-| 3. Socket API + Session Persistence | 0/7 | Not started | - |
+| 3. Socket API + Session Persistence | 2/7 | In Progress|  |
 | 4. Notifications + HiDPI + SSH | 0/? | Not started | - |
 | 5. Config + Distribution | 0/? | Not started | - |
