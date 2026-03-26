@@ -12,6 +12,8 @@ mod split_engine;
 mod app_state;
 mod sidebar;
 mod shortcuts;
+mod socket;
+mod session;
 
 const APP_ID: &str = "io.cmux.App";
 
