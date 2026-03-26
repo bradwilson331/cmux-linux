@@ -31,7 +31,7 @@ A Linux user should get the same cmux experience as a Mac user: tabs, splits, wo
 - [x] Unix socket server in Rust — v2 JSON-RPC protocol compatibility with macOS cmux — Validated in Phase 03: socket-api-session-persistence
 - [ ] Keyboard shortcut configuration — load from config file, bind to actions
 - [x] Session persistence — save/restore workspace+pane layout to JSON on disk — Validated in Phase 03: socket-api-session-persistence
-- [ ] Terminal notification/attention state — activity detection per pane
+- [x] Terminal notification/attention state — activity detection per pane — Validated in Phase 04: notifications-hidpi-ssh
 - [ ] CI/CD for Linux (GitHub Actions, Ubuntu runners)
 - [ ] Distribution packaging — .deb, .AppImage, or Flatpak
 
@@ -98,4 +98,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-26 after Phase 03 completion*
+*Last updated: 2026-03-26 after Phase 04 completion*
