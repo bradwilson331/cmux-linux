@@ -73,6 +73,10 @@ impl AppState {
 
         // Create surface and split engine
         let pane_id = id * 1000;
+        eprintln!(
+            "cmux: create_workspace calling create_surface for workspace_id={}, pane_id={}",
+            id, pane_id
+        );
         let (gl_area, surface_cell) =
             crate::ghostty::surface::create_surface(&self.gtk_app, self.ghostty_app, None, pane_id);
         let engine = SplitEngine::new(

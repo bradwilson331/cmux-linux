@@ -36,6 +36,9 @@ pub static SURFACE_REGISTRY: LazyLock<Mutex<HashMap<usize, u64>>> =
 
 /// Called by Ghostty from its renderer thread. Must not call any ghostty_* API inline.
 /// Instead, schedules ghostty_app_tick() on the GLib main loop (per D-04, GHOST-07).
+/// Wakeup count for diagnostic logging (only logs occasionally to avoid spam)
+static WAKEUP_COUNT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 pub unsafe extern "C" fn wakeup_cb(_userdata: *mut std::ffi::c_void) {
     // Swap: if already pending, another idle task is queued — skip.
     if WAKEUP_PENDING.swap(true, Ordering::SeqCst) {
@@ -43,6 +46,13 @@ pub unsafe extern "C" fn wakeup_cb(_userdata: *mut std::ffi::c_void) {
     }
     glib::idle_add_once(|| {
         WAKEUP_PENDING.store(false, Ordering::SeqCst);
+
+        // Log wakeup occasionally to verify it's firing
+        let count = WAKEUP_COUNT.fetch_add(1, Ordering::SeqCst) + 1;
+        if count % 60 == 1 {
+            eprintln!("cmux: wakeup_cb #{}", count);
+        }
+
         let app_ptr = APP_PTR.load(Ordering::SeqCst);
         if app_ptr != 0 {
             unsafe {
@@ -62,6 +72,11 @@ pub unsafe extern "C" fn wakeup_cb(_userdata: *mut std::ffi::c_void) {
         }
     });
 }
+
+/// Maps GLArea raw pointer (as usize) → surface pointer (as usize).
+/// Used by notify::position handler to restore Ghostty focus after divider drag.
+pub static GL_TO_SURFACE: LazyLock<Mutex<HashMap<usize, usize>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Called by Ghostty when a surface wants to close (e.g. shell exits).
 /// Runs on the GLib main thread (called during ghostty_app_tick).
