@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 5 context gathered
-last_updated: "2026-03-26T13:41:59.868Z"
+status: Ready to execute
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-26T14:30:50.622Z"
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 31
-  completed_plans: 30
+  total_plans: 33
+  completed_plans: 31
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control — powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** Phase 04 — notifications-hidpi-ssh
+**Current focus:** Phase 05 — config-distribution
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
+Phase: 05 (config-distribution) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Plan: Not started
 | Phase 04 P02 | 218 | 1 tasks | 3 files |
 | Phase 04 P03 | 1 | 1 tasks | 4 files |
 | Phase 04 P04 | 4 | 3 tasks | 9 files |
+| Phase 05 P02 | 2 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,8 @@ Recent decisions affecting current work:
 - [Phase 04]: notification.list returns workspace-level attention matching macOS socket API
 - [Phase 04]: SSH events processed in existing 100ms GTK timer alongside bell notifications
 - [Phase 04]: proxy.stream terminal I/O routing deferred as known gap for future work
+- [Phase 05]: Zig 0.15.2 (not 0.13.0) to match ghostty build.zig.zon minimum_zig_version
+- [Phase 05]: ubuntu-22.04 pinned for AppImage reproducibility (not ubuntu-latest)
 
 ### Pending Todos
 
@@ -133,6 +136,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T13:41:59.865Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-config-distribution/05-CONTEXT.md
+Last session: 2026-03-26T14:30:50.619Z
+Stopped at: Completed 05-02-PLAN.md
+Resume file: None

@@ -113,7 +113,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [ ] 05-01-PLAN.md — TOML config system: config.rs with XDG path, ShortcutMap HashMap lookup, refactored shortcuts.rs
-- [ ] 05-02-PLAN.md — Linux CI and AppImage: ci.yml linux-build job, release.yml AppImage job, .desktop file and icon
+- [x] 05-02-PLAN.md — Linux CI and AppImage: ci.yml linux-build job, release.yml AppImage job, .desktop file and icon
 
 ## Progress
 

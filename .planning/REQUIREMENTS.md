@@ -77,10 +77,10 @@
 
 ### Distribution
 
-- [ ] **DIST-01**: GitHub Actions CI pipeline: build, clippy lint, unit tests on ubuntu-latest
-- [ ] **DIST-02**: AppImage artifact produced on each release tag
-- [ ] **DIST-03**: `.desktop` file included for application launcher integration
-- [ ] **DIST-04**: App runs on Wayland and X11/XWayland
+- [x] **DIST-01**: GitHub Actions CI pipeline: build, clippy lint, unit tests on ubuntu-latest
+- [x] **DIST-02**: AppImage artifact produced on each release tag
+- [x] **DIST-03**: `.desktop` file included for application launcher integration
+- [x] **DIST-04**: App runs on Wayland and X11/XWayland
 
 ## v2 Requirements
 
@@ -164,10 +164,10 @@
 | CFG-02 | Phase 5 | Pending |
 | CFG-03 | Phase 5 | Pending |
 | CFG-04 | Phase 5 | Pending |
-| DIST-01 | Phase 5 | Pending |
-| DIST-02 | Phase 5 | Pending |
-| DIST-03 | Phase 5 | Pending |
-| DIST-04 | Phase 5 | Pending |
+| DIST-01 | Phase 5 | Complete |
+| DIST-02 | Phase 5 | Complete |
+| DIST-03 | Phase 5 | Complete |
+| DIST-04 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 47 total
