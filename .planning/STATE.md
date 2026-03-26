@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 03-socket-api-session-persistence-04-PLAN.md
-last_updated: "2026-03-26T02:47:26.663Z"
+stopped_at: Completed 03-socket-api-session-persistence-05-PLAN.md
+last_updated: "2026-03-26T02:53:42.731Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 25
-  completed_plans: 22
+  completed_plans: 23
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 03 (socket-api-session-persistence) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Plan: 4 of 7
 | Phase 03 P02 | 3 | 2 tasks | 4 files |
 | Phase 03 P03 | 4 | 2 tasks | 4 files |
 | Phase 03 P04 | 5 | 2 tasks | 2 files |
+| Phase 03 P05 | 4 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,8 @@ Recent decisions affecting current work:
 - [Phase 03]: Used ghostty_surface_text for send_text/send_key — matches existing debug.type pattern
 - [Phase 03]: surface.close adapts close_active() by setting target as active first — no direct close-by-uuid API
 - [Phase 03]: surface.refresh uses GTK4 queue_render() on GLArea instead of direct ghostty_surface_draw
+- [Phase 03]: Snapshot SessionData on GTK main thread in trigger_session_save() and send via mpsc to tokio debounce task -- avoids Rc Send problem
+- [Phase 03]: Phase 3 restores workspace names only; full split layout restore deferred to Phase 4
 
 ### Pending Todos
 
@@ -118,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T02:47:26.661Z
-Stopped at: Completed 03-socket-api-session-persistence-04-PLAN.md
+Last session: 2026-03-26T02:53:42.729Z
+Stopped at: Completed 03-socket-api-session-persistence-05-PLAN.md
 Resume file: None
