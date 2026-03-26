@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-03-26T12:58:15.742Z"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-03-26T13:02:21.940Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 31
-  completed_plans: 27
+  completed_plans: 28
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 04 (notifications-hidpi-ssh) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Plan: 3 of 5
 | Phase 03 P07 | 2 | 1 tasks | 2 files |
 | Phase 04 P01 | 7 | 2 tasks | 6 files |
 | Phase 04 P02 | 218 | 1 tasks | 3 files |
+| Phase 04 P03 | 1 | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,7 @@ Recent decisions affecting current work:
 - [Phase 04]: Bell processing via glib::timeout_add_local(100ms) polling BELL_PENDING atomic -- action_cb fires on main thread but AppState is Rc<RefCell> not accessible from wakeup_cb
 - [Phase 04]: Nested sidebar row layout (GtkBox(H) > GtkBox(V) > Label + dot) established in Plan 01 to avoid double-refactor in Plan 04
 - [Phase 04]: Enabled gdk4 v4_12 feature for GdkSurface::scale() fractional scaling on Wayland
+- [Phase 04]: notification.list returns workspace-level attention matching macOS socket API
 
 ### Pending Todos
 
@@ -128,6 +130,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T12:58:15.739Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-03-26T13:02:21.938Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None

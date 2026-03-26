@@ -96,7 +96,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Bell attention tracking: action_cb RING_BELL handler, per-pane/workspace has_attention, sidebar dot, desktop notifications
 - [x] 04-02-PLAN.md — HiDPI verification: audit scale-factor handler, verify CSS at fractional scales, fix any issues
-- [ ] 04-03-PLAN.md — Notification socket commands: notification.list, notification.clear, surface.health attention field
+- [x] 04-03-PLAN.md — Notification socket commands: notification.list, notification.clear, surface.health attention field
 - [ ] 04-04-PLAN.md — SSH remote workspaces: data model, cmuxd-remote deployment, stdio tunnel, reconnection, socket API
 - [ ] 04-05-PLAN.md — Human verification: full Phase 4 feature verification checkpoint
 **UI hint**: yes
