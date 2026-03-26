@@ -21,7 +21,8 @@ pub fn start_socket_server(
     _runtime: &tokio::runtime::Handle,
     _state: crate::app_state::AppStateRef,
 ) {
-    todo!("SOCK-01: implement socket server — Plan 02")
+    eprintln!("cmux: socket server not yet implemented (Plan 02)");
+    // No-op until Plan 02 implements the real server
 }
 
 #[cfg(test)]
