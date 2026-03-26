@@ -215,11 +215,14 @@ fn build_ui(
     // Wire sidebar click-to-switch.
     crate::sidebar::wire_sidebar_clicks(&sidebar_list, state.clone());
 
-    // Set save_notify and session_tx on AppState so trigger_session_save() works.
+    // Set save_notify, session_tx, and SSH event channel on AppState.
+    let (ssh_event_tx, mut ssh_event_rx) = tokio::sync::mpsc::unbounded_channel::<crate::ssh::SshEvent>();
     {
         let mut s = state.borrow_mut();
         s.save_notify = Some(save_notify);
         s.session_tx = Some(session_tx);
+        s.ssh_event_tx = Some(ssh_event_tx);
+        s.runtime_handle = Some(runtime_handle.clone());
     }
 
     // Restore session if available (SESS-02), otherwise create default workspace.
@@ -256,16 +259,25 @@ fn build_ui(
         });
     }
 
-    // Phase 4: Process pending bell notifications on the GTK main thread.
+    // Phase 4: Process pending bell notifications and SSH events on the GTK main thread.
     // action_cb sets BELL_PENDING from within ghostty_app_tick (already on main thread).
-    // This idle-driven check runs after each tick to dispatch to AppState::set_pane_attention.
+    // SSH events arrive via ssh_event_rx from tokio tasks.
     {
         let state = state.clone();
         glib::timeout_add_local(std::time::Duration::from_millis(100), move || {
+            // Process bell notifications
             if crate::ghostty::callbacks::BELL_PENDING.swap(false, std::sync::atomic::Ordering::SeqCst) {
                 let pane_id = crate::ghostty::callbacks::BELL_PANE_ID.load(std::sync::atomic::Ordering::SeqCst);
                 if pane_id != 0 {
                     state.borrow_mut().set_pane_attention(pane_id);
+                }
+            }
+            // Process SSH events
+            while let Ok(event) = ssh_event_rx.try_recv() {
+                match event {
+                    crate::ssh::SshEvent::StateChanged { workspace_id, state: conn_state } => {
+                        state.borrow_mut().update_connection_state(workspace_id, conn_state);
+                    }
                 }
             }
             glib::ControlFlow::Continue
