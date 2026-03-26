@@ -2,9 +2,6 @@
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, gio, CssProvider, StyleContext};
 use std::ffi::CString;
-use std::sync::mpsc;
-use std::sync::Arc;
-use std::thread;
 
 mod ghostty;
 mod workspace;
@@ -36,71 +33,51 @@ paned > separator:hover { background-color: #5b8dd9; }
 ";
 
 fn main() {
-    // Create tokio runtime before GTK app initialization
-    let runtime = Arc::new(
-        tokio::runtime::Runtime::new()
-            .expect("Failed to create tokio runtime")
-    );
-    
-    // Spawn the runtime in a separate thread to avoid blocking GTK
+    // Tokio runtime for socket I/O (kept alive for app lifetime).
+    let runtime = tokio::runtime::Runtime::new()
+        .expect("Failed to create tokio runtime");
     let runtime_handle = runtime.handle().clone();
-    thread::spawn(move || {
-        // Keep the runtime alive for the duration of the application
-        // This thread will just park itself after creating the runtime
-        thread::park();
-    });
-    
-    // Create a channel to bridge tokio to GTK main thread
-    // Using std::sync::mpsc for now, but in production we'd use glib::MainContext::channel
-    let (tx, rx) = mpsc::channel::<String>();
-    
-    // Use glib::idle_add to process messages in GTK main thread
-    // This is the pattern for bridging async tasks to the main thread
-    let rx = Arc::new(std::sync::Mutex::new(rx));
-    glib::timeout_add_local(std::time::Duration::from_millis(100), move || {
-        if let Ok(rx) = rx.lock() {
-            if let Ok(msg) = rx.try_recv() {
-                println!("Received from tokio: {}", msg);
-            }
-        }
-        glib::ControlFlow::Continue
-    });
-    
-    // Store the sender for tokio tasks to use
-    let tx_for_tokio = tx.clone();
-    
-    // Test the bridge with a simple message
-    runtime_handle.spawn(async move {
-        println!("Tokio runtime started successfully");
-        
-        // Simulate async work
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        
-        // Send message to GTK main thread
-        let _ = tx_for_tokio.send("Tokio runtime successfully bridged to GLib main loop".to_string());
-        
-        // Log that both runtimes are working
-        println!("Tokio task completed - message sent to GLib main thread");
-    });
 
-    // NON_UNIQUE bypasses DBus singleton check — required in environments where
-    // cross-namespace DBus EXTERNAL auth deadlocks (e.g. NX/container sessions).
+    // glib::MainContext::channel pattern: event-driven bridge from tokio to GTK main thread.
+    // NOTE: glib::MainContext::channel was removed in glib 0.18+. We replicate its semantics
+    // using tokio::sync::mpsc::unbounded_channel + glib::MainContext::default().spawn_local()
+    // in build_ui. The Sender is Send+Clone — tokio tasks hold it. The Receiver is consumed by
+    // a spawn_local future that processes commands on the GTK main thread.
+    let (cmd_tx, cmd_rx) = tokio::sync::mpsc::unbounded_channel::<crate::socket::commands::SocketCommand>();
+
     let app = Application::builder()
         .application_id(APP_ID)
         .flags(gio::ApplicationFlags::NON_UNIQUE)
         .build();
 
     eprintln!("cmux: GtkApplication created, connecting activate signal");
-    app.connect_activate(build_ui);
+
+    // Move runtime_handle, cmd_tx, cmd_rx into the activate closure.
+    // cmd_rx is wrapped in Mutex<Option<...>> so it can be taken once from a Fn closure.
+    // Note: save_notify and saved_session are added to this closure by Plan 05.
+    let cmd_rx = std::sync::Mutex::new(Some(cmd_rx));
+    app.connect_activate({
+        let runtime_handle = runtime_handle.clone();
+        move |app| {
+            let rx = cmd_rx.lock().unwrap().take().expect("activate called more than once");
+            build_ui(app, runtime_handle.clone(), cmd_tx.clone(), rx);
+        }
+    });
+
     eprintln!("cmux: calling app.run()");
     let _exit_code = app.run();
     eprintln!("cmux: app.run() returned");
-    
-    // Shutdown the runtime when the app exits
-    // Note: In production, we'd want a more graceful shutdown mechanism
+
+    // Runtime drops here — tokio tasks are cancelled.
+    drop(runtime);
 }
 
-fn build_ui(app: &Application) {
+fn build_ui(
+    app: &Application,
+    runtime_handle: tokio::runtime::Handle,
+    cmd_tx: tokio::sync::mpsc::UnboundedSender<crate::socket::commands::SocketCommand>,
+    mut cmd_rx: tokio::sync::mpsc::UnboundedReceiver<crate::socket::commands::SocketCommand>,
+) {
     // 1. Initialize Ghostty once
     let ghostty_app = unsafe {
         use crate::ghostty::ffi;
@@ -181,6 +158,27 @@ fn build_ui(app: &Application) {
     {
         state.borrow_mut().create_workspace();
     }
+
+    // Attach command receiver to GTK main loop via glib::MainContext::default().spawn_local.
+    // This replaces the old glib::MainContext::channel pattern (removed in glib 0.18+).
+    // The spawn_local future runs on the GTK main thread, receiving SocketCommands sent from
+    // tokio tasks via the UnboundedSender (cmd_tx). All AppState mutations happen here.
+    // Full handler dispatch is wired in Plan 03. For now, just attach with stub dispatch.
+    {
+        let state = state.clone();
+        glib::MainContext::default().spawn_local(async move {
+            while let Some(cmd) = cmd_rx.recv().await {
+                crate::socket::handlers::handle_socket_command(cmd, &state);
+            }
+        });
+    }
+
+    // Start socket server (tokio accept loop + XDG path setup).
+    // Plan 02 implements start_socket_server; for now it's a no-op stub.
+    crate::socket::start_socket_server(&runtime_handle, state.clone());
+
+    // Silence unused variable warning for cmd_tx — Plan 02 passes it into the socket server.
+    let _ = cmd_tx;
 
     // 5. Handle delete-event for close confirmation
     window.connect_close_request({

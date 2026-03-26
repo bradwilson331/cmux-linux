@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod commands;
+pub mod handlers;
 
 use std::path::PathBuf;
 

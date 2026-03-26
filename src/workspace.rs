@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 /// Workspace: one tab in the cmux sidebar.
 /// Each workspace has an independent pane split tree (managed by SplitEngine in split_engine.rs).
 /// The root GTK widget of a workspace's split tree is added as a named page in the GtkStack.
@@ -12,6 +14,8 @@ pub struct Workspace {
     /// Sequential number used for default naming ("Workspace N").
     /// Preserved even after renames so we don't reuse numbers.
     pub display_number: usize,
+    /// Stable UUID for session persistence and v2 socket protocol identity.
+    pub uuid: Uuid,
 }
 
 impl Workspace {
@@ -24,11 +28,31 @@ impl Workspace {
             name,
             stack_page_name,
             display_number,
+            uuid: Uuid::new_v4(),
         }
     }
 
     /// Rename this workspace to a new display name.
     pub fn rename(&mut self, new_name: String) {
         self.name = new_name;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn workspace_new_has_uuid() {
+        let w = Workspace::new(1, 1);
+        // uuid must not be nil (all-zeros)
+        assert_ne!(w.uuid, Uuid::nil(), "Workspace::new() must generate a non-nil UUID");
+    }
+
+    #[test]
+    fn workspace_uuids_are_unique() {
+        let w1 = Workspace::new(1, 1);
+        let w2 = Workspace::new(2, 2);
+        assert_ne!(w1.uuid, w2.uuid, "Two workspaces must have distinct UUIDs");
     }
 }
