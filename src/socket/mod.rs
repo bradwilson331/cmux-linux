@@ -52,6 +52,9 @@ pub fn start_socket_server(
     // Remove stale socket from previous run (ignore ENOENT).
     let _ = std::fs::remove_file(&sock_path);
 
+    // Enter the tokio runtime context so UnixListener::bind can register with the reactor.
+    // bind() is synchronous but requires an active reactor context.
+    let _guard = runtime.enter();
     let listener = match tokio::net::UnixListener::bind(&sock_path) {
         Ok(l) => l,
         Err(e) => {
