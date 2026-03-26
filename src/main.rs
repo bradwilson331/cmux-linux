@@ -174,11 +174,9 @@ fn build_ui(
     }
 
     // Start socket server (tokio accept loop + XDG path setup).
-    // Plan 02 implements start_socket_server; for now it's a no-op stub.
-    crate::socket::start_socket_server(&runtime_handle, state.clone());
-
-    // Silence unused variable warning for cmd_tx — Plan 02 passes it into the socket server.
-    let _ = cmd_tx;
+    // cmd_tx is passed in so the socket server dispatches commands through the
+    // existing tokio mpsc bridge to the GTK main thread (spawn_local above).
+    crate::socket::start_socket_server(&runtime_handle, state.clone(), cmd_tx);
 
     // 5. Handle delete-event for close confirmation
     window.connect_close_request({
