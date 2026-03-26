@@ -1,25 +1,26 @@
 use crate::app_state::AppState;
+use crate::config::ShortcutAction;
 use crate::split_engine::FocusDirection;
-use gtk4::gio;
 use gtk4::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-/// Install all cmux Phase 2 keyboard shortcuts on the application window.
+/// Install all cmux keyboard shortcuts on the application window.
 ///
-/// Uses PropagationPhase::Capture (parent → child) so the window controller fires
+/// Uses PropagationPhase::Capture (parent -> child) so the window controller fires
 /// BEFORE Ghostty's per-GLArea EventControllerKey. Without capture phase, Ghostty
 /// eats Ctrl+D, Ctrl+N, etc. (per RESEARCH.md Pattern 4 and Anti-patterns).
 ///
-/// Per D-10: all shortcuts use Ctrl (not Cmd) as the modifier base.
+/// Shortcut bindings are driven by ShortcutMap (config-driven, D-06).
 pub fn install_shortcuts(
     window: &gtk4::ApplicationWindow,
     state: Rc<RefCell<AppState>>,
     sidebar: &gtk4::ScrolledWindow,
     app: &gtk4::Application,
+    shortcut_map: crate::config::ShortcutMap,
 ) {
     let key_ctrl = gtk4::EventControllerKey::new();
-    // CRITICAL: Capture phase — fires before GLArea key handlers.
+    // CRITICAL: Capture phase -- fires before GLArea key handlers.
     key_ctrl.set_propagation_phase(gtk4::PropagationPhase::Capture);
 
     let sidebar_clone = sidebar.clone();
@@ -28,81 +29,25 @@ pub fn install_shortcuts(
     key_ctrl.connect_key_pressed({
         let state = state.clone();
         move |_ctrl, keyval, _keycode, mods| {
-            use gtk4::gdk::ModifierType;
-            let ctrl = mods.contains(ModifierType::CONTROL_MASK);
-            let shift = mods.contains(ModifierType::SHIFT_MASK);
-            let alt = mods.contains(ModifierType::ALT_MASK);
-
-            // Match on (ctrl, shift, alt, keyval).
-            // Return Propagation::Stop for handled shortcuts (prevents Ghostty from seeing them).
-            // Return Propagation::Proceed for unhandled keys.
-
-            match (ctrl, shift, alt, keyval) {
-                // ── Workspace shortcuts ──────────────────────────────────
-                // Ctrl+N: New workspace (WS-01, D-10)
-                (true, false, false, k) if k == gtk4::gdk::Key::n => {
+            match shortcut_map.lookup(mods, keyval) {
+                // -- Workspace shortcuts --
+                Some(ShortcutAction::NewWorkspace) => {
                     handle_new_workspace(&state, &app_clone);
                     gtk4::glib::Propagation::Stop
                 }
-
-                // Ctrl+Shift+W: Close active workspace with confirmation (WS-02, D-10)
-                (true, true, false, k) if k == gtk4::gdk::Key::W => {
+                Some(ShortcutAction::CloseWorkspace) => {
                     handle_close_workspace(&state, &app_clone);
                     gtk4::glib::Propagation::Stop
                 }
-
-                // Ctrl+]: Next workspace (WS-03, D-10)
-                (true, false, false, k) if k == gtk4::gdk::Key::bracketright => {
+                Some(ShortcutAction::NextWorkspace) => {
                     state.borrow_mut().switch_next();
                     gtk4::glib::Propagation::Stop
                 }
-
-                // Ctrl+[: Prev workspace (WS-03, D-10)
-                (true, false, false, k) if k == gtk4::gdk::Key::bracketleft => {
+                Some(ShortcutAction::PrevWorkspace) => {
                     state.borrow_mut().switch_prev();
                     gtk4::glib::Propagation::Stop
                 }
-
-                // Ctrl+1 through Ctrl+9: Switch by number (WS-05, D-10)
-                (true, false, false, k) if k == gtk4::gdk::Key::_1 => {
-                    state.borrow_mut().switch_to_index(0);
-                    gtk4::glib::Propagation::Stop
-                }
-                (true, false, false, k) if k == gtk4::gdk::Key::_2 => {
-                    state.borrow_mut().switch_to_index(1);
-                    gtk4::glib::Propagation::Stop
-                }
-                (true, false, false, k) if k == gtk4::gdk::Key::_3 => {
-                    state.borrow_mut().switch_to_index(2);
-                    gtk4::glib::Propagation::Stop
-                }
-                (true, false, false, k) if k == gtk4::gdk::Key::_4 => {
-                    state.borrow_mut().switch_to_index(3);
-                    gtk4::glib::Propagation::Stop
-                }
-                (true, false, false, k) if k == gtk4::gdk::Key::_5 => {
-                    state.borrow_mut().switch_to_index(4);
-                    gtk4::glib::Propagation::Stop
-                }
-                (true, false, false, k) if k == gtk4::gdk::Key::_6 => {
-                    state.borrow_mut().switch_to_index(5);
-                    gtk4::glib::Propagation::Stop
-                }
-                (true, false, false, k) if k == gtk4::gdk::Key::_7 => {
-                    state.borrow_mut().switch_to_index(6);
-                    gtk4::glib::Propagation::Stop
-                }
-                (true, false, false, k) if k == gtk4::gdk::Key::_8 => {
-                    state.borrow_mut().switch_to_index(7);
-                    gtk4::glib::Propagation::Stop
-                }
-                (true, false, false, k) if k == gtk4::gdk::Key::_9 => {
-                    state.borrow_mut().switch_to_index(8);
-                    gtk4::glib::Propagation::Stop
-                }
-
-                // Ctrl+Shift+R: Rename active workspace (WS-04, D-10)
-                (true, true, false, k) if k == gtk4::gdk::Key::R => {
+                Some(ShortcutAction::RenameWorkspace) => {
                     let (active_index, sidebar_list) = {
                         let s = state.borrow();
                         let idx = s.active_index;
@@ -112,62 +57,67 @@ pub fn install_shortcuts(
                     crate::sidebar::start_inline_rename(&sidebar_list, active_index, state.clone());
                     gtk4::glib::Propagation::Stop
                 }
-
-                // Ctrl+B: Toggle sidebar visibility (D-04, D-10)
-                (true, false, false, k) if k == gtk4::gdk::Key::b => {
+                Some(ShortcutAction::ToggleSidebar) => {
                     let visible = sidebar_clone.is_visible();
                     sidebar_clone.set_visible(!visible);
-                    // Re-grab terminal focus and notify Ghostty — sidebar visibility change
-                    // defocuses GLArea and diverges Ghostty's internal focused state.
                     if let Some(engine) = state.borrow_mut().active_split_engine_mut() {
                         engine.focus_active_surface();
                     }
                     gtk4::glib::Propagation::Stop
                 }
-
-                // ── Pane split shortcuts ─────────────────────────────────
-                // Ctrl+D: Split right (SPLIT-01, D-10)
-                (true, false, false, k) if k == gtk4::gdk::Key::d => {
+                // -- Pane split shortcuts --
+                Some(ShortcutAction::SplitRight) => {
                     handle_split(&state, false);
                     gtk4::glib::Propagation::Stop
                 }
-
-                // Ctrl+Shift+D: Split down (SPLIT-02, D-10)
-                (true, true, false, k) if k == gtk4::gdk::Key::D => {
+                Some(ShortcutAction::SplitDown) => {
                     handle_split(&state, true);
                     gtk4::glib::Propagation::Stop
                 }
-
-                // Ctrl+Shift+X: Close active pane (SPLIT-05, UI-SPEC)
-                (true, true, false, k) if k == gtk4::gdk::Key::X => {
+                Some(ShortcutAction::ClosePane) => {
                     handle_close_pane(&state, &app_clone);
                     gtk4::glib::Propagation::Stop
                 }
-
-                // Ctrl+Shift+Left: Focus pane left (SPLIT-03, D-10)
-                (true, true, false, k) if k == gtk4::gdk::Key::Left => {
+                // -- Focus direction shortcuts --
+                Some(ShortcutAction::FocusLeft) => {
                     handle_focus_direction(&state, FocusDirection::Left);
                     gtk4::glib::Propagation::Stop
                 }
-
-                // Ctrl+Shift+Right: Focus pane right (SPLIT-03, D-10)
-                (true, true, false, k) if k == gtk4::gdk::Key::Right => {
+                Some(ShortcutAction::FocusRight) => {
                     handle_focus_direction(&state, FocusDirection::Right);
                     gtk4::glib::Propagation::Stop
                 }
-
-                // Ctrl+Shift+Up: Focus pane up (SPLIT-03, D-10)
-                (true, true, false, k) if k == gtk4::gdk::Key::Up => {
+                Some(ShortcutAction::FocusUp) => {
                     handle_focus_direction(&state, FocusDirection::Up);
                     gtk4::glib::Propagation::Stop
                 }
-
-                // Ctrl+Shift+Down: Focus pane down (SPLIT-03, D-10)
-                (true, true, false, k) if k == gtk4::gdk::Key::Down => {
+                Some(ShortcutAction::FocusDown) => {
                     handle_focus_direction(&state, FocusDirection::Down);
                     gtk4::glib::Propagation::Stop
                 }
-
+                // -- Workspace number shortcuts --
+                Some(action @ (
+                    ShortcutAction::Workspace1 | ShortcutAction::Workspace2 |
+                    ShortcutAction::Workspace3 | ShortcutAction::Workspace4 |
+                    ShortcutAction::Workspace5 | ShortcutAction::Workspace6 |
+                    ShortcutAction::Workspace7 | ShortcutAction::Workspace8 |
+                    ShortcutAction::Workspace9
+                )) => {
+                    let idx = match action {
+                        ShortcutAction::Workspace1 => 0,
+                        ShortcutAction::Workspace2 => 1,
+                        ShortcutAction::Workspace3 => 2,
+                        ShortcutAction::Workspace4 => 3,
+                        ShortcutAction::Workspace5 => 4,
+                        ShortcutAction::Workspace6 => 5,
+                        ShortcutAction::Workspace7 => 6,
+                        ShortcutAction::Workspace8 => 7,
+                        ShortcutAction::Workspace9 => 8,
+                        _ => unreachable!(),
+                    };
+                    state.borrow_mut().switch_to_index(idx);
+                    gtk4::glib::Propagation::Stop
+                }
                 // Everything else passes through to Ghostty.
                 _ => gtk4::glib::Propagation::Proceed,
             }
@@ -220,7 +170,7 @@ fn handle_close_workspace(state: &Rc<RefCell<AppState>>, app: &gtk4::Application
     state.borrow_mut().close_workspace(active_index);
 }
 
-/// Split the active pane. `vertical=false` → split right (Ctrl+D), `vertical=true` → split down.
+/// Split the active pane. `vertical=false` -> split right (Ctrl+D), `vertical=true` -> split down.
 fn handle_split(state: &Rc<RefCell<AppState>>, vertical: bool) {
     let mut s = state.borrow_mut();
     if let Some(engine) = s.active_split_engine_mut() {
@@ -240,7 +190,7 @@ fn handle_close_pane(state: &Rc<RefCell<AppState>>, app: &gtk4::Application) {
         let mut s = state.borrow_mut();
         if let Some(engine) = s.active_split_engine_mut() {
             match engine.close_active() {
-                None => (true, s.active_index), // last pane → close workspace
+                None => (true, s.active_index), // last pane -> close workspace
                 Some(_) => (false, 0),
             }
         } else {

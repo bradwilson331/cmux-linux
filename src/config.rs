@@ -168,7 +168,7 @@ impl ShortcutMap {
         let mut map = HashMap::new();
 
         for (action, config_val, default_accel) in entries {
-            let accel_str = config_val.as_deref().unwrap_or(default_accel);
+            let accel_str = config_val.as_deref().unwrap_or(*default_accel);
             let action_name = format!("{:?}", action);
 
             if let Some((key, mods)) = gtk4::accelerator_parse(accel_str) {
@@ -179,7 +179,7 @@ impl ShortcutMap {
                     "cmux: invalid shortcut '{}' for {}, using default '{}'",
                     accel_str, action_name, default_accel
                 );
-                if let Some((key, mods)) = gtk4::accelerator_parse(default_accel) {
+                if let Some((key, mods)) = gtk4::accelerator_parse(*default_accel) {
                     map.insert((mods & MOD_MASK, key), *action);
                 }
             }

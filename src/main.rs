@@ -12,6 +12,7 @@ mod shortcuts;
 mod socket;
 mod session;
 mod ssh;
+mod config;
 
 const APP_ID: &str = "io.cmux.App";
 
@@ -107,10 +108,15 @@ fn main() {
         });
     }
 
+    // Load config once at startup (D-06). Shortcut map built before activate.
+    let config = crate::config::load_config();
+    let shortcut_map = crate::config::ShortcutMap::from_config(&config.shortcuts);
+
     // Move runtime_handle, cmd_tx, cmd_rx into the activate closure.
     // cmd_rx is wrapped in Mutex<Option<...>> so it can be taken once from a Fn closure.
     let cmd_rx = std::sync::Mutex::new(Some(cmd_rx));
     let saved_session = std::sync::Mutex::new(Some(saved_session));
+    let shortcut_map = std::sync::Mutex::new(Some(shortcut_map));
     app.connect_activate({
         let runtime_handle = runtime_handle.clone();
         let save_notify = save_notify.clone();
@@ -118,7 +124,8 @@ fn main() {
         move |app| {
             let rx = cmd_rx.lock().unwrap().take().expect("activate called more than once");
             let session = saved_session.lock().unwrap().take().flatten();
-            build_ui(app, runtime_handle.clone(), cmd_tx.clone(), rx, save_notify.clone(), session_tx.clone(), session);
+            let smap = shortcut_map.lock().unwrap().take().expect("activate called more than once");
+            build_ui(app, runtime_handle.clone(), cmd_tx.clone(), rx, save_notify.clone(), session_tx.clone(), session, smap);
         }
     });
 
@@ -138,6 +145,7 @@ fn build_ui(
     save_notify: std::sync::Arc<tokio::sync::Notify>,
     session_tx: tokio::sync::mpsc::UnboundedSender<crate::session::SessionData>,
     saved_session: Option<crate::session::SessionData>,
+    shortcut_map: crate::config::ShortcutMap,
 ) {
     // 1. Initialize Ghostty once
     let ghostty_app = unsafe {
@@ -150,6 +158,7 @@ fn build_ui(
         ffi::ghostty_init(ptrs.len(), ptrs.as_mut_ptr());
 
         let config = ffi::ghostty_config_new();
+        // CFG-03: Ghostty loads its own config from ~/.config/ghostty/config
         ffi::ghostty_config_load_default_files(config);
         ffi::ghostty_config_finalize(config);
 
@@ -316,8 +325,8 @@ fn build_ui(
     // 6. Sidebar toggle state (D-04, Ctrl+B — full shortcut wired in Plan 05):
     // Storing sidebar_scroll on the stack is enough for now. Plan 05 will pass it to shortcuts.
 
-    // 7. Install keyboard shortcuts
-    crate::shortcuts::install_shortcuts(&window, state.clone(), &sidebar_scroll, app);
+    // 7. Install keyboard shortcuts (config-driven, D-06)
+    crate::shortcuts::install_shortcuts(&window, state.clone(), &sidebar_scroll, app, shortcut_map);
 
     // 8. Present the window
     window.present();
