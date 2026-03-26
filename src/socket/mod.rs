@@ -137,15 +137,114 @@ async fn dispatch_line(
 
     let req_id = req.get("id").cloned().unwrap_or(serde_json::Value::Null);
     let method = req.get("method").and_then(|m| m.as_str()).unwrap_or("").to_string();
+    let params = req.get("params").cloned().unwrap_or(serde_json::Value::Object(Default::default()));
 
     let (resp_tx, resp_rx) = tokio::sync::oneshot::channel();
 
-    let cmd = commands::SocketCommand::NotImplemented {
-        req_id: req_id.clone(),
-        method: method.clone(),
-        resp_tx,
+    let cmd = match method.as_str() {
+        "system.ping" => commands::SocketCommand::Ping { req_id: req_id.clone(), resp_tx },
+        "system.identify" => commands::SocketCommand::Identify { req_id: req_id.clone(), resp_tx },
+        "system.capabilities" => commands::SocketCommand::Capabilities { req_id: req_id.clone(), resp_tx },
+
+        "workspace.list" => commands::SocketCommand::WorkspaceList { req_id: req_id.clone(), resp_tx },
+        "workspace.current" => commands::SocketCommand::WorkspaceCurrent { req_id: req_id.clone(), resp_tx },
+        "workspace.create" => commands::SocketCommand::WorkspaceCreate { req_id: req_id.clone(), resp_tx },
+        "workspace.select" => commands::SocketCommand::WorkspaceSelect {
+            req_id: req_id.clone(),
+            id: params.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            resp_tx,
+        },
+        "workspace.close" => commands::SocketCommand::WorkspaceClose {
+            req_id: req_id.clone(),
+            id: params.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            resp_tx,
+        },
+        "workspace.rename" => commands::SocketCommand::WorkspaceRename {
+            req_id: req_id.clone(),
+            id: params.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            name: params.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            resp_tx,
+        },
+        "workspace.next" => commands::SocketCommand::WorkspaceNext { req_id: req_id.clone(), resp_tx },
+        "workspace.previous" => commands::SocketCommand::WorkspacePrev { req_id: req_id.clone(), resp_tx },
+        "workspace.last" => commands::SocketCommand::WorkspaceLast { req_id: req_id.clone(), resp_tx },
+        "workspace.reorder" => commands::SocketCommand::WorkspaceReorder {
+            req_id: req_id.clone(),
+            id: params.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            position: params.get("position").and_then(|v| v.as_u64()).unwrap_or(0) as usize,
+            resp_tx,
+        },
+
+        "surface.list" => commands::SocketCommand::SurfaceList { req_id: req_id.clone(), resp_tx },
+        "surface.split" => commands::SocketCommand::SurfaceSplit {
+            req_id: req_id.clone(),
+            id: params.get("id").and_then(|v| v.as_str()).map(String::from),
+            direction: params.get("direction").and_then(|v| v.as_str()).unwrap_or("horizontal").to_string(),
+            resp_tx,
+        },
+        "surface.focus" => commands::SocketCommand::SurfaceFocus {
+            req_id: req_id.clone(),
+            id: params.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            resp_tx,
+        },
+        "surface.close" => commands::SocketCommand::SurfaceClose {
+            req_id: req_id.clone(),
+            id: params.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            resp_tx,
+        },
+        "surface.send_text" => commands::SocketCommand::SurfaceSendText {
+            req_id: req_id.clone(),
+            id: params.get("id").and_then(|v| v.as_str()).map(String::from),
+            text: params.get("text").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            resp_tx,
+        },
+        "surface.send_key" => commands::SocketCommand::SurfaceSendKey {
+            req_id: req_id.clone(),
+            id: params.get("id").and_then(|v| v.as_str()).map(String::from),
+            key: params.get("key").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            resp_tx,
+        },
+        "surface.read_text" => commands::SocketCommand::SurfaceReadText {
+            req_id: req_id.clone(),
+            id: params.get("id").and_then(|v| v.as_str()).map(String::from),
+            resp_tx,
+        },
+        "surface.health" => commands::SocketCommand::SurfaceHealth {
+            req_id: req_id.clone(),
+            id: params.get("id").and_then(|v| v.as_str()).map(String::from),
+            resp_tx,
+        },
+        "surface.refresh" => commands::SocketCommand::SurfaceRefresh {
+            req_id: req_id.clone(),
+            id: params.get("id").and_then(|v| v.as_str()).map(String::from),
+            resp_tx,
+        },
+
+        "pane.list" => commands::SocketCommand::PaneList { req_id: req_id.clone(), resp_tx },
+        "pane.focus" => commands::SocketCommand::PaneFocus {
+            req_id: req_id.clone(),
+            id: params.get("id").and_then(|v| v.as_str()).map(String::from),
+            resp_tx,
+        },
+        "pane.last" => commands::SocketCommand::PaneLast { req_id: req_id.clone(), resp_tx },
+
+        "window.list" => commands::SocketCommand::WindowList { req_id: req_id.clone(), resp_tx },
+        "window.current" => commands::SocketCommand::WindowCurrent { req_id: req_id.clone(), resp_tx },
+
+        "debug.layout" => commands::SocketCommand::DebugLayout { req_id: req_id.clone(), resp_tx },
+        "debug.type" => commands::SocketCommand::DebugType {
+            req_id: req_id.clone(),
+            text: params.get("text").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            resp_tx,
+        },
+
+        _ => commands::SocketCommand::NotImplemented {
+            req_id: req_id.clone(),
+            method: method.clone(),
+            resp_tx,
+        },
     };
-    // Plan 03 replaces this with full dispatch table.
+
     if cmd_tx.send(cmd).is_err() {
         return serde_json::json!({
             "id": req_id,
