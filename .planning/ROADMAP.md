@@ -156,3 +156,13 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 5. Config + Distribution | 0/2 | Not started | - |
 | 6. Session Layout Restore + Surface Wiring | 0/2 | Not started | - |
 | 7. SSH Terminal I/O | 0/0 | Not started | - |
+
+### Phase 8: add agent-browser
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 7
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 8 to break down)

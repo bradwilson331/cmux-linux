@@ -132,6 +132,10 @@ Recent decisions affecting current work:
 - [Phase 06]: Reuse find_pane_id_by_uuid instead of adding duplicate find_pane_id_by_uuid_str
 - [Phase 06]: sync_surfaces_from_registry deferred via idle_add_local_once to let GTK realize all widgets first
 
+### Roadmap Evolution
+
+- Phase 8 added: add agent-browser
+
 ### Pending Todos
 
 None yet.
