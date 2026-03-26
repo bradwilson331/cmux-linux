@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 6 context gathered
-last_updated: "2026-03-26T17:18:57.493Z"
+status: Ready to execute
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-26T19:14:47.122Z"
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 33
-  completed_plans: 33
+  total_plans: 35
+  completed_plans: 34
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control — powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** Phase 02 — workspaces-pane-splits
+**Current focus:** Phase 06 — session-layout-surface-wiring
 
 ## Current Position
 
-Phase: 03
-Plan: Not started
+Phase: 06 (session-layout-surface-wiring) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Plan: Not started
 | Phase 04 P04 | 4 | 3 tasks | 9 files |
 | Phase 05 P02 | 2 | 2 tasks | 4 files |
 | Phase 05 P01 | 4 | 2 tasks | 4 files |
+| Phase 06 P01 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -125,6 +126,8 @@ Recent decisions affecting current work:
 - [Phase 05]: Zig 0.15.2 (not 0.13.0) to match ghostty build.zig.zon minimum_zig_version
 - [Phase 05]: ubuntu-22.04 pinned for AppImage reproducibility (not ubuntu-latest)
 - [Phase 05]: GTK4 accelerator_parse validates shortcut strings natively; ModifierType mask ignores Caps Lock/Num Lock
+- [Phase 06]: CWD capture scans /proc for child processes since no Ghostty FFI for PTY fd
+- [Phase 06]: serde default_ratio for v1 backward-compat session schema evolution
 
 ### Pending Todos
 
@@ -138,6 +141,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T17:18:57.490Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-session-layout-surface-wiring/06-CONTEXT.md
+Last session: 2026-03-26T19:14:47.119Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None

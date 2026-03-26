@@ -46,7 +46,7 @@
 ### Session Persistence
 
 - [x] **SESS-01**: Workspace and pane layout is saved to `~/.local/share/cmux/session.json` on each change (debounced)
-- [ ] **SESS-02**: Layout is fully restored on next app launch
+- [x] **SESS-02**: Layout is fully restored on next app launch
 - [x] **SESS-03**: Session file is written atomically (write `.tmp`, then `rename()`)
 - [x] **SESS-04**: App launches cleanly if session file is missing or corrupted (graceful fallback)
 
@@ -148,7 +148,7 @@
 | SOCK-05 | Phase 3 | Complete |
 | SOCK-06 | Phase 3 | Complete |
 | SESS-01 | Phase 3 | Complete |
-| SESS-02 | Phase 6 | Pending |
+| SESS-02 | Phase 6 | Complete |
 | SESS-03 | Phase 3 | Complete |
 | SESS-04 | Phase 3 | Complete |
 | NOTF-01 | Phase 4 | Complete |

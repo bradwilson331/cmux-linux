@@ -129,7 +129,7 @@ Plans:
   4. `surface.send_text` via socket actually types into the target pane
 **Plans**: 2 plans
 Plans:
-- [ ] 06-01-PLAN.md — Session save upgrade: ratio field, CWD capture, real tree serialization, version 2
+- [x] 06-01-PLAN.md — Session save upgrade: ratio field, CWD capture, real tree serialization, version 2
 - [ ] 06-02-PLAN.md — Session restore: from_data() tree rebuild, recursive surface wiring, main.rs version-aware restore
 
 ### Phase 7: SSH Terminal I/O
