@@ -116,6 +116,44 @@ impl SplitNode {
             }
         }
     }
+
+    /// Collect (uuid, pane_id, active) for all leaves in this subtree.
+    pub fn collect_pane_info(&self, out: &mut Vec<(Uuid, u64, bool)>, active_id: u64) {
+        match self {
+            SplitNode::Leaf { pane_id, uuid, .. } => {
+                out.push((*uuid, *pane_id, *pane_id == active_id));
+            }
+            SplitNode::Split { start, end, .. } => {
+                start.collect_pane_info(out, active_id);
+                end.collect_pane_info(out, active_id);
+            }
+        }
+    }
+
+    /// Find the ghostty surface handle for the leaf matching target_uuid (UUID string).
+    pub fn find_by_uuid(&self, target_uuid: &str) -> Option<ffi::ghostty_surface_t> {
+        match self {
+            SplitNode::Leaf { uuid, surface, .. } => {
+                if uuid.to_string() == target_uuid { Some(*surface) } else { None }
+            }
+            SplitNode::Split { start, end, .. } => {
+                start.find_by_uuid(target_uuid).or_else(|| end.find_by_uuid(target_uuid))
+            }
+        }
+    }
+
+    /// Find the pane_id for the leaf matching target_uuid (UUID string).
+    pub fn find_pane_id_by_uuid(&self, target_uuid: &str) -> Option<u64> {
+        match self {
+            SplitNode::Leaf { uuid, pane_id, .. } => {
+                if uuid.to_string() == target_uuid { Some(*pane_id) } else { None }
+            }
+            SplitNode::Split { start, end, .. } => {
+                start.find_pane_id_by_uuid(target_uuid)
+                    .or_else(|| end.find_pane_id_by_uuid(target_uuid))
+            }
+        }
+    }
 }
 
 /// SplitEngine manages one workspace's pane layout tree.
@@ -600,6 +638,23 @@ impl SplitEngine {
 
     fn find_gl_area(&self, pane_id: u64) -> Option<gtk4::GLArea> {
         find_gl_area_in_tree(&self.root, pane_id)
+    }
+
+    /// Returns all leaf panes in this engine as (uuid, pane_id, active) tuples.
+    pub fn all_panes(&self) -> Vec<(Uuid, u64, bool)> {
+        let mut panes = Vec::new();
+        self.root.collect_pane_info(&mut panes, self.active_pane_id);
+        panes
+    }
+
+    /// Look up a surface by its UUID string. Returns the ghostty surface handle if found.
+    pub fn find_surface_by_uuid(&self, target_uuid: &str) -> Option<ffi::ghostty_surface_t> {
+        self.root.find_by_uuid(target_uuid)
+    }
+
+    /// Look up a pane_id by its UUID string.
+    pub fn find_pane_id_by_uuid(&self, target_uuid: &str) -> Option<u64> {
+        self.root.find_pane_id_by_uuid(target_uuid)
     }
 }
 
