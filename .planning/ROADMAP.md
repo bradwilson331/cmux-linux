@@ -112,7 +112,7 @@ Plans:
   4. App launches and runs correctly on both Wayland and X11/XWayland sessions
 **Plans**: 2 plans
 Plans:
-- [ ] 05-01-PLAN.md — TOML config system: config.rs with XDG path, ShortcutMap HashMap lookup, refactored shortcuts.rs
+- [x] 05-01-PLAN.md — TOML config system: config.rs with XDG path, ShortcutMap HashMap lookup, refactored shortcuts.rs
 - [x] 05-02-PLAN.md — Linux CI and AppImage: ci.yml linux-build job, release.yml AppImage job, .desktop file and icon
 
 ## Progress

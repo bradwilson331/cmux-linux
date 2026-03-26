@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-26T14:30:50.622Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-26T14:32:47.545Z"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 33
-  completed_plans: 31
+  completed_plans: 32
 ---
 
 # Project State
@@ -72,6 +72,7 @@ Plan: 2 of 2
 | Phase 04 P03 | 1 | 1 tasks | 4 files |
 | Phase 04 P04 | 4 | 3 tasks | 9 files |
 | Phase 05 P02 | 2 | 2 tasks | 4 files |
+| Phase 05 P01 | 4 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,7 @@ Recent decisions affecting current work:
 - [Phase 04]: proxy.stream terminal I/O routing deferred as known gap for future work
 - [Phase 05]: Zig 0.15.2 (not 0.13.0) to match ghostty build.zig.zon minimum_zig_version
 - [Phase 05]: ubuntu-22.04 pinned for AppImage reproducibility (not ubuntu-latest)
+- [Phase 05]: GTK4 accelerator_parse validates shortcut strings natively; ModifierType mask ignores Caps Lock/Num Lock
 
 ### Pending Todos
 
@@ -136,6 +138,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T14:30:50.619Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-03-26T14:32:47.542Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None

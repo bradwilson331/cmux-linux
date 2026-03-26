@@ -52,10 +52,10 @@
 
 ### Configuration
 
-- [ ] **CFG-01**: cmux config file loaded from `~/.config/cmux/config.toml` at startup
-- [ ] **CFG-02**: Keyboard shortcuts are configurable via config file
-- [ ] **CFG-03**: Ghostty config (colors, font, shell, etc.) is loaded via Ghostty's own config mechanism
-- [ ] **CFG-04**: XDG Base Directory compliance: config in `$XDG_CONFIG_HOME/cmux/`, data in `$XDG_DATA_HOME/cmux/`, socket in `$XDG_RUNTIME_DIR/cmux/`
+- [x] **CFG-01**: cmux config file loaded from `~/.config/cmux/config.toml` at startup
+- [x] **CFG-02**: Keyboard shortcuts are configurable via config file
+- [x] **CFG-03**: Ghostty config (colors, font, shell, etc.) is loaded via Ghostty's own config mechanism
+- [x] **CFG-04**: XDG Base Directory compliance: config in `$XDG_CONFIG_HOME/cmux/`, data in `$XDG_DATA_HOME/cmux/`, socket in `$XDG_RUNTIME_DIR/cmux/`
 
 ### Notification / Attention State
 
@@ -160,10 +160,10 @@
 | SSH-02 | Phase 4 | Complete |
 | SSH-03 | Phase 4 | Complete |
 | SSH-04 | Phase 4 | Complete |
-| CFG-01 | Phase 5 | Pending |
-| CFG-02 | Phase 5 | Pending |
-| CFG-03 | Phase 5 | Pending |
-| CFG-04 | Phase 5 | Pending |
+| CFG-01 | Phase 5 | Complete |
+| CFG-02 | Phase 5 | Complete |
+| CFG-03 | Phase 5 | Complete |
+| CFG-04 | Phase 5 | Complete |
 | DIST-01 | Phase 5 | Complete |
 | DIST-02 | Phase 5 | Complete |
 | DIST-03 | Phase 5 | Complete |
