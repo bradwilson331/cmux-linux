@@ -85,15 +85,35 @@ pub fn handle_socket_command(
             }
         }
 
-        SocketCommand::WorkspaceCreate { req_id, resp_tx } => {
-            // SOCK-05: create_workspace calls switch_to_index internally (existing behavior).
-            let id = state.borrow_mut().create_workspace();
-            let s = state.borrow();
-            let uuid_str = s.workspaces.iter()
-                .find(|ws| ws.id == id)
-                .map(|ws| ws.uuid.to_string())
-                .unwrap_or_default();
-            let _ = resp_tx.send(ok(req_id, json!({"uuid": uuid_str})));
+        SocketCommand::WorkspaceCreate { req_id, remote_target, resp_tx } => {
+            if let Some(target) = remote_target {
+                // SSH workspace creation per D-13, D-15
+                let id = state.borrow_mut().create_remote_workspace(target.clone());
+                let uuid_str = {
+                    let s = state.borrow();
+                    s.workspaces.iter()
+                        .find(|ws| ws.id == id)
+                        .map(|ws| ws.uuid.to_string())
+                        .unwrap_or_default()
+                };
+                // Spawn SSH lifecycle task using the runtime_handle stored on AppState
+                let ssh_tx = state.borrow().ssh_event_tx.clone();
+                let rt_handle = state.borrow().runtime_handle.clone();
+                if let (Some(tx), Some(rt)) = (ssh_tx, rt_handle) {
+                    let handle = rt.spawn(crate::ssh::tunnel::run_ssh_lifecycle(id, target, tx));
+                    state.borrow_mut().ssh_task_handles.insert(id, handle);
+                }
+                let _ = resp_tx.send(ok(req_id, json!({"uuid": uuid_str, "remote": true})));
+            } else {
+                // Local workspace (existing behavior)
+                let id = state.borrow_mut().create_workspace();
+                let s = state.borrow();
+                let uuid_str = s.workspaces.iter()
+                    .find(|ws| ws.id == id)
+                    .map(|ws| ws.uuid.to_string())
+                    .unwrap_or_default();
+                let _ = resp_tx.send(ok(req_id, json!({"uuid": uuid_str})));
+            }
         }
 
         SocketCommand::WorkspaceSelect { req_id, id, resp_tx } => {

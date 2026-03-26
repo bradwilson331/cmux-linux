@@ -151,7 +151,11 @@ async fn dispatch_line(
 
         "workspace.list" => commands::SocketCommand::WorkspaceList { req_id: req_id.clone(), resp_tx },
         "workspace.current" => commands::SocketCommand::WorkspaceCurrent { req_id: req_id.clone(), resp_tx },
-        "workspace.create" => commands::SocketCommand::WorkspaceCreate { req_id: req_id.clone(), resp_tx },
+        "workspace.create" => commands::SocketCommand::WorkspaceCreate {
+            req_id: req_id.clone(),
+            remote_target: params.get("remote_target").and_then(|v| v.as_str()).map(String::from),
+            resp_tx,
+        },
         "workspace.select" => commands::SocketCommand::WorkspaceSelect {
             req_id: req_id.clone(),
             id: params.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
