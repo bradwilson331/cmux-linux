@@ -36,19 +36,19 @@
 
 ### Socket API
 
-- [ ] **SOCK-01**: Unix socket server starts at `$XDG_RUNTIME_DIR/cmux/cmux.sock` (mode 0600)
-- [ ] **SOCK-02**: v2 JSON-RPC protocol is wire-compatible with macOS cmux (same request/response schema)
+- [x] **SOCK-01**: Unix socket server starts at `$XDG_RUNTIME_DIR/cmux/cmux.sock` (mode 0600)
+- [x] **SOCK-02**: v2 JSON-RPC protocol is wire-compatible with macOS cmux (same request/response schema)
 - [ ] **SOCK-03**: `cmux` CLI (macOS or Linux-native) can connect and control the Linux app
 - [ ] **SOCK-04**: `tests_v2/` Python protocol suite passes against the Linux socket server unmodified
-- [ ] **SOCK-05**: Socket command policy enforced: non-focus-intent commands never call `gtk_window_present()` or `ghostty_surface_set_focus()`
-- [ ] **SOCK-06**: Socket authentication: `SO_PEERCRED` uid validation on every connection accept
+- [x] **SOCK-05**: Socket command policy enforced: non-focus-intent commands never call `gtk_window_present()` or `ghostty_surface_set_focus()`
+- [x] **SOCK-06**: Socket authentication: `SO_PEERCRED` uid validation on every connection accept
 
 ### Session Persistence
 
-- [ ] **SESS-01**: Workspace and pane layout is saved to `~/.local/share/cmux/session.json` on each change (debounced)
-- [ ] **SESS-02**: Layout is fully restored on next app launch
-- [ ] **SESS-03**: Session file is written atomically (write `.tmp`, then `rename()`)
-- [ ] **SESS-04**: App launches cleanly if session file is missing or corrupted (graceful fallback)
+- [x] **SESS-01**: Workspace and pane layout is saved to `~/.local/share/cmux/session.json` on each change (debounced)
+- [x] **SESS-02**: Layout is fully restored on next app launch
+- [x] **SESS-03**: Session file is written atomically (write `.tmp`, then `rename()`)
+- [x] **SESS-04**: App launches cleanly if session file is missing or corrupted (graceful fallback)
 
 ### Configuration
 
@@ -141,16 +141,16 @@
 | SPLIT-05 | Phase 2 | Complete |
 | SPLIT-06 | Phase 2 | Complete |
 | SPLIT-07 | Phase 2 | Complete |
-| SOCK-01 | Phase 3 | Pending |
-| SOCK-02 | Phase 3 | Pending |
+| SOCK-01 | Phase 3 | Complete |
+| SOCK-02 | Phase 3 | Complete |
 | SOCK-03 | Phase 3 | Pending |
 | SOCK-04 | Phase 3 | Pending |
-| SOCK-05 | Phase 3 | Pending |
-| SOCK-06 | Phase 3 | Pending |
-| SESS-01 | Phase 3 | Pending |
-| SESS-02 | Phase 3 | Pending |
-| SESS-03 | Phase 3 | Pending |
-| SESS-04 | Phase 3 | Pending |
+| SOCK-05 | Phase 3 | Complete |
+| SOCK-06 | Phase 3 | Complete |
+| SESS-01 | Phase 3 | Complete |
+| SESS-02 | Phase 3 | Complete |
+| SESS-03 | Phase 3 | Complete |
+| SESS-04 | Phase 3 | Complete |
 | NOTF-01 | Phase 4 | Pending |
 | NOTF-02 | Phase 4 | Pending |
 | NOTF-03 | Phase 4 | Pending |

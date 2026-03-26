@@ -74,7 +74,7 @@ Plans:
   4. Killing the app mid-save (kill -9) does not corrupt the session file — next launch recovers cleanly
 **Plans**: 7 plans
 Plans:
-- [ ] 03-00-PLAN.md — Wave 0 scaffold: Cargo.toml deps (serde/serde_json/uuid/libc), module stubs with test scaffolds
+- [x] 03-00-PLAN.md — Wave 0 scaffold: Cargo.toml deps (serde/serde_json/uuid/libc), module stubs with test scaffolds
 - [ ] 03-01-PLAN.md — Data model: UUID fields in Workspace/SplitNode, SplitNodeData serde type, glib channel replaces mpsc polling
 - [ ] 03-02-PLAN.md — Socket server: SO_PEERCRED auth, XDG path setup, accept loop, cmux.py Linux path discovery
 - [ ] 03-03-PLAN.md — Tier-1 handlers (system/workspace/window/debug): full dispatch table + Tier-2 stubs

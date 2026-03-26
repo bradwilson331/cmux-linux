@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 02-08 UAT — cursor blink fixed (resize + split). Plan 08 DONE.
-last_updated: "2026-03-25T20:05:00Z"
+stopped_at: Completed 03-socket-api-session-persistence-00-PLAN.md
+last_updated: "2026-03-26T01:54:38.671Z"
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 18
+  total_plans: 25
   completed_plans: 18
 ---
 
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control — powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** Phase 02 — workspaces-pane-splits
+**Current focus:** Phase 03 — socket-api-session-persistence
 
 ## Current Position
 
-Phase: 02 (workspaces-pane-splits) — EXECUTING
-Plan: 2 of 9
+Phase: 03 (socket-api-session-persistence) — EXECUTING
+Plan: 2 of 7
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Plan: 2 of 9
 | Phase 02-workspaces-pane-splits P04 | 15 | 2 tasks | 2 files |
 | Phase 02-workspaces-pane-splits P07 | 2 | 3 tasks | 3 files |
 | Phase 02-workspaces-pane-splits PP08 | 10 | 4 tasks | 3 files |
+| Phase 03-socket-api-session-persistence P00 | 116 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,7 @@ Recent decisions affecting current work:
 - [Phase 02-workspaces-pane-splits]: Change Ctrl+Alt+Arrow to Ctrl+Shift+Arrow to avoid Linux compositor interception (GNOME/KDE)
 - [Phase 02-workspaces-pane-splits]: EventControllerFocus on GLArea keeps Ghostty focused state in sync with GTK focus routing after any widget-tree operation
 - [Phase 02-workspaces-pane-splits]: focus_active_surface() replaces grab_active_focus() for Ctrl+B to also sync Ghostty internal focus state
+- [Phase 03-socket-api-session-persistence]: cargo test --bin cmux-linux used for binary crate unit tests; cargo test --lib not applicable
 
 ### Pending Todos
 
@@ -104,6 +106,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-25T03:53:59.137Z
-Stopped at: Completed 02-workspaces-pane-splits-08-PLAN.md
+Last session: 2026-03-26T01:54:38.668Z
+Stopped at: Completed 03-socket-api-session-persistence-00-PLAN.md
 Resume file: None
