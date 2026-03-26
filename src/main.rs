@@ -52,15 +52,53 @@ fn main() {
 
     eprintln!("cmux: GtkApplication created, connecting activate signal");
 
+    // Try to restore session from previous run (SESS-02, SESS-04).
+    // load_session() returns None if file is missing or invalid -- that's fine.
+    let saved_session = crate::session::load_session();
+    if let Some(ref s) = saved_session {
+        eprintln!("cmux: restoring session ({} workspace(s))", s.workspaces.len());
+    }
+
+    // Session save infrastructure: Notify for debounce, channel for session snapshots.
+    let save_notify = std::sync::Arc::new(tokio::sync::Notify::new());
+    let (session_tx, session_rx) = tokio::sync::mpsc::unbounded_channel::<crate::session::SessionData>();
+
+    // Spawn debounce task in tokio. Waits for notify, debounces 500ms, then writes
+    // the latest session snapshot to disk atomically (SESS-01, SESS-03).
+    {
+        let notify = save_notify.clone();
+        let mut session_rx = session_rx;
+        runtime_handle.spawn(async move {
+            loop {
+                notify.notified().await;
+                // Debounce: 500ms window -- drain extra notifications that arrive.
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                // Drain all queued snapshots, keep only the latest.
+                let mut latest = None;
+                while let Ok(data) = session_rx.try_recv() {
+                    latest = Some(data);
+                }
+                if let Some(session) = latest {
+                    if let Err(e) = crate::session::save_session_atomic(&session) {
+                        eprintln!("cmux: session save failed: {e}");
+                    }
+                }
+            }
+        });
+    }
+
     // Move runtime_handle, cmd_tx, cmd_rx into the activate closure.
     // cmd_rx is wrapped in Mutex<Option<...>> so it can be taken once from a Fn closure.
-    // Note: save_notify and saved_session are added to this closure by Plan 05.
     let cmd_rx = std::sync::Mutex::new(Some(cmd_rx));
+    let saved_session = std::sync::Mutex::new(Some(saved_session));
     app.connect_activate({
         let runtime_handle = runtime_handle.clone();
+        let save_notify = save_notify.clone();
+        let session_tx = session_tx.clone();
         move |app| {
             let rx = cmd_rx.lock().unwrap().take().expect("activate called more than once");
-            build_ui(app, runtime_handle.clone(), cmd_tx.clone(), rx);
+            let session = saved_session.lock().unwrap().take().flatten();
+            build_ui(app, runtime_handle.clone(), cmd_tx.clone(), rx, save_notify.clone(), session_tx.clone(), session);
         }
     });
 
@@ -77,6 +115,9 @@ fn build_ui(
     runtime_handle: tokio::runtime::Handle,
     cmd_tx: tokio::sync::mpsc::UnboundedSender<crate::socket::commands::SocketCommand>,
     mut cmd_rx: tokio::sync::mpsc::UnboundedReceiver<crate::socket::commands::SocketCommand>,
+    save_notify: std::sync::Arc<tokio::sync::Notify>,
+    session_tx: tokio::sync::mpsc::UnboundedSender<crate::session::SessionData>,
+    saved_session: Option<crate::session::SessionData>,
 ) {
     // 1. Initialize Ghostty once
     let ghostty_app = unsafe {
@@ -154,9 +195,31 @@ fn build_ui(
     // Wire sidebar click-to-switch.
     crate::sidebar::wire_sidebar_clicks(&sidebar_list, state.clone());
 
-    // Create the first workspace.
+    // Set save_notify and session_tx on AppState so trigger_session_save() works.
     {
-        state.borrow_mut().create_workspace();
+        let mut s = state.borrow_mut();
+        s.save_notify = Some(save_notify);
+        s.session_tx = Some(session_tx);
+    }
+
+    // Restore session if available (SESS-02), otherwise create default workspace.
+    // For Phase 3, we restore workspace names. Full layout (pane splits) restore
+    // requires Ghostty surface reconstruction -- deferred to Phase 4.
+    {
+        let has_session = saved_session.as_ref().map(|s| !s.workspaces.is_empty()).unwrap_or(false);
+        if has_session {
+            let session = saved_session.unwrap();
+            for ws_session in &session.workspaces {
+                state.borrow_mut().create_workspace();
+                state.borrow_mut().rename_active(ws_session.name.clone());
+            }
+            // Restore active workspace index.
+            let active = session.active_index.min(session.workspaces.len().saturating_sub(1));
+            state.borrow_mut().switch_to_index(active);
+        } else {
+            // No session -- create the default first workspace.
+            state.borrow_mut().create_workspace();
+        }
     }
 
     // Attach command receiver to GTK main loop via glib::MainContext::default().spawn_local.

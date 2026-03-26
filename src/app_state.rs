@@ -24,6 +24,11 @@ pub struct AppState {
     next_id: u64,
     /// Next display number for default names ("Workspace N").
     next_display_number: usize,
+    /// Notified after any workspace/pane mutation to trigger a debounced session save.
+    pub save_notify: Option<std::sync::Arc<tokio::sync::Notify>>,
+    /// Sender for session snapshots to the debounce task.
+    /// Each mutation snapshots SessionData on the main thread and sends it here.
+    pub session_tx: Option<tokio::sync::mpsc::UnboundedSender<crate::session::SessionData>>,
 }
 
 impl AppState {
@@ -45,6 +50,8 @@ impl AppState {
             gtk_app,
             next_id: 1,
             next_display_number: 1,
+            save_notify: None, // Set to Some(...) after tokio runtime is available in main.rs
+            session_tx: None,
         };
         Rc::new(RefCell::new(state))
     }
@@ -99,6 +106,7 @@ impl AppState {
         let new_index = self.workspaces.len() - 1;
         self.switch_to_index(new_index);
 
+        self.trigger_session_save();
         id
     }
 
@@ -147,6 +155,7 @@ impl AppState {
         }
 
         self.switch_to_index(self.active_index);
+        self.trigger_session_save();
         true
     }
 
@@ -219,11 +228,42 @@ impl AppState {
                     label.set_text(&new_name);
                 }
             }
+            self.trigger_session_save();
         }
     }
 
     /// Returns the active workspace, if any.
     pub fn active_workspace(&self) -> Option<&Workspace> {
         self.workspaces.get(self.active_index)
+    }
+
+    /// Trigger a debounced session save. Call after any workspace/pane mutation.
+    /// Snapshots SessionData on the main thread (safe for Rc) and sends to the
+    /// tokio debounce task which handles the file I/O.
+    pub fn trigger_session_save(&self) {
+        if let Some(ref notify) = self.save_notify {
+            // Snapshot session data on main thread where Rc<RefCell<AppState>> is safe.
+            if let Some(ref tx) = self.session_tx {
+                let session = crate::session::SessionData {
+                    version: 1,
+                    active_index: self.active_index,
+                    workspaces: self.workspaces.iter().map(|ws| {
+                        crate::session::WorkspaceSession {
+                            uuid: ws.uuid.to_string(),
+                            name: ws.name.clone(),
+                            active_pane_uuid: None, // Phase 4: fill from split engine
+                            layout: crate::split_engine::SplitNodeData::Leaf {
+                                pane_id: 0,
+                                surface_uuid: uuid::Uuid::nil(),
+                                shell: String::new(),
+                                cwd: String::new(),
+                            },
+                        }
+                    }).collect(),
+                };
+                let _ = tx.send(session);
+            }
+            notify.notify_one();
+        }
     }
 }
