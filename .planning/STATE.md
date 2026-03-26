@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-26T19:14:47.122Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-03-26T19:19:36.947Z"
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 35
-  completed_plans: 34
+  completed_plans: 35
 ---
 
 # Project State
@@ -74,6 +74,7 @@ Plan: 2 of 2
 | Phase 05 P02 | 2 | 2 tasks | 4 files |
 | Phase 05 P01 | 4 | 2 tasks | 4 files |
 | Phase 06 P01 | 3 | 2 tasks | 3 files |
+| Phase 06 P02 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -128,6 +129,8 @@ Recent decisions affecting current work:
 - [Phase 05]: GTK4 accelerator_parse validates shortcut strings natively; ModifierType mask ignores Caps Lock/Num Lock
 - [Phase 06]: CWD capture scans /proc for child processes since no Ghostty FFI for PTY fd
 - [Phase 06]: serde default_ratio for v1 backward-compat session schema evolution
+- [Phase 06]: Reuse find_pane_id_by_uuid instead of adding duplicate find_pane_id_by_uuid_str
+- [Phase 06]: sync_surfaces_from_registry deferred via idle_add_local_once to let GTK realize all widgets first
 
 ### Pending Todos
 
@@ -141,6 +144,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T19:14:47.119Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-03-26T19:19:36.944Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None

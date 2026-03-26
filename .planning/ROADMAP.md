@@ -130,7 +130,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 06-01-PLAN.md — Session save upgrade: ratio field, CWD capture, real tree serialization, version 2
-- [ ] 06-02-PLAN.md — Session restore: from_data() tree rebuild, recursive surface wiring, main.rs version-aware restore
+- [x] 06-02-PLAN.md — Session restore: from_data() tree rebuild, recursive surface wiring, main.rs version-aware restore
 
 ### Phase 7: SSH Terminal I/O
 **Goal**: SSH workspace terminal sessions execute on the remote host via bidirectional I/O proxying through the SSH tunnel
