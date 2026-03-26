@@ -108,15 +108,14 @@ fn main() {
         });
     }
 
-    // Load config once at startup (D-06). Shortcut map built before activate.
+    // Load config once at startup (D-06). ShortcutMap must be built inside
+    // activate (after GTK init) because accelerator_parse requires GTK.
     let config = crate::config::load_config();
-    let shortcut_map = crate::config::ShortcutMap::from_config(&config.shortcuts);
 
     // Move runtime_handle, cmd_tx, cmd_rx into the activate closure.
     // cmd_rx is wrapped in Mutex<Option<...>> so it can be taken once from a Fn closure.
     let cmd_rx = std::sync::Mutex::new(Some(cmd_rx));
     let saved_session = std::sync::Mutex::new(Some(saved_session));
-    let shortcut_map = std::sync::Mutex::new(Some(shortcut_map));
     app.connect_activate({
         let runtime_handle = runtime_handle.clone();
         let save_notify = save_notify.clone();
@@ -124,7 +123,7 @@ fn main() {
         move |app| {
             let rx = cmd_rx.lock().unwrap().take().expect("activate called more than once");
             let session = saved_session.lock().unwrap().take().flatten();
-            let smap = shortcut_map.lock().unwrap().take().expect("activate called more than once");
+            let smap = crate::config::ShortcutMap::from_config(&config.shortcuts);
             build_ui(app, runtime_handle.clone(), cmd_tx.clone(), rx, save_notify.clone(), session_tx.clone(), session, smap);
         }
     });

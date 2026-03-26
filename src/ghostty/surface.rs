@@ -97,10 +97,16 @@ pub fn create_surface(
             // triggering Ghostty's early-return guard on the new pane's subsequent focus calls.
             if let Some(existing_surface) = *cell.borrow() {
                 eprintln!(
-                    "cmux: GLArea {:p} re-realized — reusing existing surface {:p}",
+                    "cmux: GLArea {:p} re-realized — reinitializing GL resources for surface {:p}",
                     area.as_ptr(),
                     existing_surface
                 );
+                // Reinitialize renderer GL resources (shaders, swap chain) for the
+                // new GL context. This matches Ghostty's own GTK apprt glareaRealize
+                // which calls displayRealized() after reparent/display-move.
+                unsafe {
+                    ffi::ghostty_surface_display_realized(existing_surface);
+                }
                 let scale = area.scale_factor() as f64;
                 let w = area.width();
                 let h = area.height();
@@ -109,22 +115,8 @@ pub fn create_surface(
                     let phys_h = (h as f64 * scale) as u32;
                     if phys_w > 0 && phys_h > 0 {
                         ffi::ghostty_surface_set_size(existing_surface, phys_w, phys_h);
-                        eprintln!(
-                            "cmux: re-realize — set_size({}, {}) for surface {:p}",
-                            phys_w, phys_h, existing_surface
-                        );
-                    } else {
-                        eprintln!(
-                            "cmux: re-realize — skipping set_size(0,0) at realize time for surface {:p}; resize signal will follow",
-                            existing_surface
-                        );
                     }
                     ffi::ghostty_surface_set_content_scale(existing_surface, scale, scale);
-                    eprintln!(
-                        "cmux: re-realize — skipping set_focus(true) for surface {:p} (EventControllerFocus handles restoration)",
-                        existing_surface
-                    );
-                    // Refresh to kick Ghostty's render loop after GL context change
                     ffi::ghostty_surface_refresh(existing_surface);
                 }
                 area.queue_render();
@@ -239,17 +231,27 @@ pub fn create_surface(
         }
     });
 
-    // ── GtkGLArea::unrealize — detect unexpected unrealize during drag/resize
+    // ── GtkGLArea::unrealize — free renderer GL resources before context dies
     {
         let pane_id_unrealize = pane_id;
+        let cell_unrealize = surface_cell.clone();
         gl_area.connect_unrealize(move |area| {
             eprintln!(
-                "cmux: WARNING — GLArea {:p} pane={} UNREALIZED! mapped={} visible={}",
+                "cmux: GLArea {:p} pane={} UNREALIZE — freeing GL resources",
                 area.as_ptr(),
                 pane_id_unrealize,
-                area.is_mapped(),
-                area.is_visible()
             );
+            // Make GL context current so Ghostty can properly free GL objects.
+            area.make_current();
+            if let Some(surface) = *cell_unrealize.borrow() {
+                unsafe {
+                    ffi::ghostty_surface_display_unrealized(surface);
+                }
+                eprintln!(
+                    "cmux: display_unrealized called for surface {:p}",
+                    surface
+                );
+            }
         });
     }
 

@@ -190,9 +190,13 @@ impl ShortcutMap {
 
     /// Look up a shortcut action for the given modifier+key combination.
     /// Masks modifiers to ignore Caps Lock, Num Lock, etc.
+    /// Normalizes keyval to lowercase because GTK4 key events give uppercase
+    /// when Shift is held (e.g. Key::R), but accelerator_parse stores lowercase
+    /// with the Shift modifier flag (e.g. Key::r + SHIFT_MASK).
     pub fn lookup(&self, mods: ModifierType, key: Key) -> Option<ShortcutAction> {
         let masked = mods & MOD_MASK;
-        self.map.get(&(masked, key)).copied()
+        let lower_key = key.to_lower();
+        self.map.get(&(masked, lower_key)).copied()
     }
 }
 

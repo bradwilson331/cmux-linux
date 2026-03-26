@@ -143,31 +143,26 @@ fn handle_close_workspace(state: &Rc<RefCell<AppState>>, app: &gtk4::Application
         return; // No-op: cannot close the last workspace
     }
 
-    // Use AlertDialog for close confirmation (per UI-SPEC copywriting contract).
-    // let dialog = gtk4::AlertDialog::builder()
-    //     .message("Close Workspace?")
-    //     .detail("All panes in this workspace will be closed. This cannot be undone.")
-    //     .modal(true)
-    //     .build();
-    // dialog.set_buttons(&["Keep Workspace", "Close Workspace"]);
-    // dialog.set_default_button(0);
-    // dialog.set_cancel_button(0);
+    let dialog = gtk4::AlertDialog::builder()
+        .message("Close Workspace?")
+        .detail("All panes in this workspace will be closed. This cannot be undone.")
+        .modal(true)
+        .build();
+    dialog.set_buttons(&["Keep Workspace", "Close Workspace"]);
+    dialog.set_default_button(0);
+    dialog.set_cancel_button(0);
 
-    // // Get the window to attach the dialog to.
-    // let window = app.windows().into_iter().next();
+    let window = app.windows().into_iter().next();
 
-    // dialog.choose(window.as_ref(), None::<&gio::Cancellable>, {
-    //     let state = state.clone();
-    //     move |result| {
-    //         // Button index 1 = "Close Workspace" (destructive)
-    //         if let Ok(1) = result {
-    //             // Free all surfaces in the workspace before closing.
-    //             // Full surface cleanup is deferred to SplitEngine integration in later phase.
-    //             state.borrow_mut().close_workspace(active_index);
-    //         }
-    //     }
-    // });
-    state.borrow_mut().close_workspace(active_index);
+    dialog.choose(window.as_ref(), None::<&gtk4::gio::Cancellable>, {
+        let state = state.clone();
+        move |result| {
+            // Button index 1 = "Close Workspace" (destructive)
+            if let Ok(1) = result {
+                state.borrow_mut().close_workspace(active_index);
+            }
+        }
+    });
 }
 
 /// Split the active pane. `vertical=false` -> split right (Ctrl+D), `vertical=true` -> split down.
