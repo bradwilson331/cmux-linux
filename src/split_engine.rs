@@ -1,5 +1,6 @@
 use crate::ghostty::ffi;
 use gtk4::prelude::*;
+use uuid::Uuid;
 
 /// Direction for pane focus navigation (Ctrl+Shift+arrows per D-10).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -22,6 +23,8 @@ pub enum SplitNode {
         pane_id: u64,
         gl_area: gtk4::GLArea,
         surface: ffi::ghostty_surface_t,
+        /// Stable UUID for session persistence and v2 socket protocol pane identity.
+        uuid: Uuid,
     },
     Split {
         orientation: gtk4::Orientation,
@@ -132,6 +135,7 @@ impl SplitEngine {
             pane_id,
             gl_area: initial_gl_area,
             surface: surface_placeholder,
+            uuid: Uuid::new_v4(),
         };
         SplitEngine {
             root,
@@ -285,6 +289,7 @@ impl SplitEngine {
             pane_id: new_pane_id,
             gl_area: new_gl_area.clone(),
             surface: new_surface_placeholder, // updated after realize via SURFACE_REGISTRY
+            uuid: Uuid::new_v4(),
         };
 
         let _replaced = self.replace_leaf_with_split(active_id, new_leaf, orientation)?;
@@ -601,6 +606,7 @@ where
                         pane_id: 0,
                         gl_area: gtk4::GLArea::new(),
                         surface: std::ptr::null_mut(),
+                        uuid: Uuid::new_v4(),
                     },
                 );
                 *node = r(old);
@@ -920,6 +926,127 @@ fn collect_leaves_in_order(node: &SplitNode, out: &mut Vec<u64>) {
         SplitNode::Split { start, end, .. } => {
             collect_leaves_in_order(start, out);
             collect_leaves_in_order(end, out);
+        }
+    }
+}
+
+/// Serde-friendly mirror of SplitNode for session persistence.
+/// GTK widget references (GLArea, Paned) cannot be serialized — this parallel type holds
+/// only the data needed to reconstruct the tree on restore.
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+#[serde(tag = "type")]
+pub enum SplitNodeData {
+    Leaf {
+        pane_id: u64,
+        surface_uuid: Uuid,
+        /// Shell executable path, e.g. "/bin/zsh" or "/bin/bash"
+        shell: String,
+        /// Absolute working directory path (best-effort; may be empty if /proc unavailable)
+        cwd: String,
+    },
+    Split {
+        /// "horizontal" or "vertical"
+        orientation: String,
+        start: Box<SplitNodeData>,
+        end: Box<SplitNodeData>,
+    },
+}
+
+impl SplitNode {
+    /// Produce a serializable snapshot of this node's tree structure.
+    /// `shell` and `cwd` are best-effort: Plan 05 fills these via /proc.
+    /// Falls back to empty strings if /proc is unavailable or the pid is unknown.
+    pub fn to_data(&self) -> SplitNodeData {
+        match self {
+            SplitNode::Leaf { pane_id, uuid, .. } => SplitNodeData::Leaf {
+                pane_id: *pane_id,
+                surface_uuid: *uuid,
+                // Best-effort CWD: not yet implemented — Plan 05 fills this via /proc.
+                shell: String::new(),
+                cwd: String::new(),
+            },
+            SplitNode::Split { orientation, start, end, .. } => SplitNodeData::Split {
+                orientation: match orientation {
+                    gtk4::Orientation::Horizontal => "horizontal".to_string(),
+                    gtk4::Orientation::Vertical => "vertical".to_string(),
+                    _ => "horizontal".to_string(),
+                },
+                start: Box::new(start.to_data()),
+                end: Box::new(end.to_data()),
+            },
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn split_node_data_leaf_has_surface_uuid() {
+        // Build a minimal SplitNodeData::Leaf directly and verify surface_uuid field exists.
+        let id = Uuid::new_v4();
+        let data = SplitNodeData::Leaf {
+            pane_id: 42,
+            surface_uuid: id,
+            shell: "/bin/bash".to_string(),
+            cwd: "/home/user".to_string(),
+        };
+        if let SplitNodeData::Leaf { surface_uuid, pane_id, .. } = data {
+            assert_eq!(surface_uuid, id);
+            assert_eq!(pane_id, 42);
+        } else {
+            panic!("Expected SplitNodeData::Leaf");
+        }
+    }
+
+    #[test]
+    fn split_node_data_roundtrip_json() {
+        // Verify SplitNodeData serializes and deserializes via serde_json.
+        let leaf = SplitNodeData::Leaf {
+            pane_id: 1,
+            surface_uuid: Uuid::new_v4(),
+            shell: "/bin/zsh".to_string(),
+            cwd: "/tmp".to_string(),
+        };
+        let json = serde_json::to_string(&leaf).expect("serialize failed");
+        let restored: SplitNodeData = serde_json::from_str(&json).expect("deserialize failed");
+        if let (
+            SplitNodeData::Leaf { pane_id: p1, surface_uuid: u1, .. },
+            SplitNodeData::Leaf { pane_id: p2, surface_uuid: u2, .. },
+        ) = (&leaf, &restored)
+        {
+            assert_eq!(p1, p2);
+            assert_eq!(u1, u2);
+        } else {
+            panic!("Roundtrip changed variant");
+        }
+    }
+
+    #[test]
+    fn split_node_data_split_roundtrip_json() {
+        // Verify nested SplitNodeData serializes correctly.
+        let split = SplitNodeData::Split {
+            orientation: "horizontal".to_string(),
+            start: Box::new(SplitNodeData::Leaf {
+                pane_id: 1,
+                surface_uuid: Uuid::new_v4(),
+                shell: String::new(),
+                cwd: String::new(),
+            }),
+            end: Box::new(SplitNodeData::Leaf {
+                pane_id: 2,
+                surface_uuid: Uuid::new_v4(),
+                shell: String::new(),
+                cwd: String::new(),
+            }),
+        };
+        let json = serde_json::to_string(&split).expect("serialize failed");
+        let restored: SplitNodeData = serde_json::from_str(&json).expect("deserialize failed");
+        if let SplitNodeData::Split { orientation, .. } = restored {
+            assert_eq!(orientation, "horizontal");
+        } else {
+            panic!("Roundtrip changed variant to non-Split");
         }
     }
 }
