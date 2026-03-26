@@ -35,6 +35,12 @@ __pycache__/
 # Zig
 .zig-cache/
 zig-out/
+zig-x86_64-linux-0.15.2/
+
+# Rust
+target/
+Cargo.lock
+agent-browser/
 
 # Node
 node_modules/

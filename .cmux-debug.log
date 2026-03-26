@@ -1,0 +1,462 @@
+warning: unused import: `StyleContext`
+ --> src/main.rs:3:62
+  |
+3 | use gtk4::{Application, ApplicationWindow, gio, CssProvider, StyleContext};
+  |                                                              ^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `gtk4::gio`
+ --> src/shortcuts.rs:3:5
+  |
+3 | use gtk4::gio;
+  |     ^^^^^^^^^
+
+warning: unnecessary `unsafe` block
+  --> src/ghostty/surface.rs:89:21
+   |
+77 |             let surface = unsafe {
+   |                           ------ because it's nested under this `unsafe` block
+...
+89 |                     unsafe { ffi::ghostty_surface_config_new() }
+   |                     ^^^^^^ unnecessary `unsafe` block
+   |
+   = note: `#[warn(unused_unsafe)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `initial_surface_cell`
+   --> src/split_engine.rs:123:9
+    |
+123 |         initial_surface_cell: std::rc::Rc<std::cell::RefCell<Option<ffi::ghostty_surface_t>>>,
+    |         ^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_initial_surface_cell`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `app`
+   --> src/shortcuts.rs:185:58
+    |
+185 | fn handle_close_workspace(state: &Rc<RefCell<AppState>>, app: &gtk4::Application) {
+    |                                                          ^^^ help: if this is intentional, prefix it with an underscore: `_app`
+
+warning: unused variable: `active_index`
+   --> src/shortcuts.rs:238:27
+    |
+238 |     let (close_workspace, active_index) = {
+    |                           ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_active_index`
+
+warning: fields `id` and `display_number` are never read
+  --> src/workspace.rs:7:9
+   |
+ 5 | pub struct Workspace {
+   |            --------- fields in this struct
+ 6 |     /// Unique workspace ID — used as the GtkStack page name.
+ 7 |     pub id: u64,
+   |         ^^
+...
+14 |     pub display_number: usize,
+   |         ^^^^^^^^^^^^^^
+   |
+   = note: `Workspace` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `orientation` is never read
+  --> src/split_engine.rs:27:9
+   |
+26 |     Split {
+   |     ----- field in this variant
+27 |         orientation: gtk4::Orientation,
+   |         ^^^^^^^^^^^
+   |
+   = note: `SplitNode` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: method `collect_pane_ids` is never used
+  --> src/split_engine.rs:82:12
+   |
+34 | impl SplitNode {
+   | -------------- method in this implementation
+...
+82 |     pub fn collect_pane_ids(&self, out: &mut Vec<u64>) {
+   |            ^^^^^^^^^^^^^^^^
+
+warning: methods `set_initial_surface` and `update_surface` are never used
+   --> src/split_engine.rs:147:12
+    |
+116 | impl SplitEngine {
+    | ---------------- methods in this implementation
+...
+147 |     pub fn set_initial_surface(&mut self, pane_id: u64, surface: ffi::ghostty_surface_t) {
+    |            ^^^^^^^^^^^^^^^^^^^
+...
+452 |     pub fn update_surface(&mut self, pane_id: u64, surface: ffi::ghostty_surface_t) {
+    |            ^^^^^^^^^^^^^^
+
+warning: function `update_surface_in_tree` is never used
+   --> src/split_engine.rs:652:4
+    |
+652 | fn update_surface_in_tree(node: &mut SplitNode, pane_id: u64, surface: ffi::ghostty_surface_t) {
+    |    ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `active_workspace` is never used
+   --> src/app_state.rs:222:12
+    |
+ 29 | impl AppState {
+    | ------------- method in this implementation
+...
+222 |     pub fn active_workspace(&self) -> Option<&Workspace> {
+    |            ^^^^^^^^^^^^^^^^
+
+warning: `cmux-linux` (bin "cmux-linux") generated 12 warnings (run `cargo fix --bin "cmux-linux"` to apply 2 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running `target/debug/cmux-linux`
+Tokio runtime started successfully
+cmux: GtkApplication created, connecting activate signal
+cmux: calling app.run()
+cmux: GLArea realize — making GL context current
+cmux: GL context made current, no error
+cmux: GL area size at realize: 0x0
+cmux: GL scale factor at realize: 1
+cmux: GL context version: 4.6
+cmux: GL context is_legacy: false
+cmux: calling ghostty_surface_new
+cmux: ghostty_surface_new succeeded: 0x5b84df106dc0
+cmux: GL error state after ghostty_surface_new: OK
+cmux: ghostty_surface_set_size(0, 0)
+cmux: ghostty_surface_set_content_scale(1)
+cmux: ghostty_surface_set_focus(true)
+cmux: resize signal: logical=640x600, scale=1, physical=640x600
+cmux: render #1 for area 0x5b84deec92f0, size=640x600
+cmux: resize idle firing: setting surface size to 640x600
+cmux: ghostty_surface_set_size called successfully
+Tokio task completed - message sent to GLib main thread
+Received from tokio: Tokio runtime successfully bridged to GLib main loop
+cmux: GLArea realize — making GL context current
+cmux: GL context made current, no error
+cmux: GL area size at realize: 0x0
+cmux: GL scale factor at realize: 1
+cmux: GL context version: 4.6
+cmux: GL context is_legacy: false
+cmux: calling ghostty_surface_new
+cmux: ghostty_surface_new succeeded: 0x5b84df035e80
+cmux: GL error state after ghostty_surface_new: OK
+cmux: ghostty_surface_set_size(0, 0)
+cmux: ghostty_surface_set_content_scale(1)
+cmux: ghostty_surface_set_focus(true)
+cmux: GLArea realize — making GL context current
+cmux: GL context made current, no error
+cmux: GL area size at realize: 0x0
+cmux: GL scale factor at realize: 1
+cmux: GL context version: 4.6
+cmux: GL context is_legacy: false
+cmux: calling ghostty_surface_new
+cmux: ghostty_surface_new succeeded: 0x5b84e03e33d0
+cmux: GL error state after ghostty_surface_new: OK
+cmux: ghostty_surface_set_size(0, 0)
+cmux: ghostty_surface_set_content_scale(1)
+cmux: ghostty_surface_set_focus(true)
+cmux: resize signal: logical=634x598, scale=1, physical=634x598
+cmux: render #1 for area 0x5b84dfea9d70, size=634x598
+cmux: resize idle firing: setting surface size to 634x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=320x600, scale=1, physical=320x600
+cmux: resize signal: logical=314x598, scale=1, physical=314x598
+cmux: resize idle firing: setting surface size to 320x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 314x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=319x600, scale=1, physical=319x600
+cmux: resize signal: logical=315x598, scale=1, physical=315x598
+cmux: resize idle firing: setting surface size to 319x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 315x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=318x600, scale=1, physical=318x600
+cmux: resize signal: logical=316x598, scale=1, physical=316x598
+cmux: resize idle firing: setting surface size to 318x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 316x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=317x600, scale=1, physical=317x600
+cmux: resize signal: logical=317x598, scale=1, physical=317x598
+cmux: resize idle firing: setting surface size to 317x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 317x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=316x600, scale=1, physical=316x600
+cmux: resize signal: logical=318x598, scale=1, physical=318x598
+cmux: resize idle firing: setting surface size to 316x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 318x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=314x600, scale=1, physical=314x600
+cmux: resize signal: logical=320x598, scale=1, physical=320x598
+cmux: resize idle firing: setting surface size to 314x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 320x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=310x600, scale=1, physical=310x600
+cmux: resize signal: logical=324x598, scale=1, physical=324x598
+cmux: resize idle firing: setting surface size to 310x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 324x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=308x600, scale=1, physical=308x600
+cmux: resize signal: logical=326x598, scale=1, physical=326x598
+cmux: resize idle firing: setting surface size to 308x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 326x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=306x600, scale=1, physical=306x600
+cmux: resize signal: logical=328x598, scale=1, physical=328x598
+cmux: resize idle firing: setting surface size to 306x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 328x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=302x600, scale=1, physical=302x600
+cmux: resize signal: logical=332x598, scale=1, physical=332x598
+cmux: resize idle firing: setting surface size to 302x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 332x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=299x600, scale=1, physical=299x600
+cmux: resize signal: logical=335x598, scale=1, physical=335x598
+cmux: resize idle firing: setting surface size to 299x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 335x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=295x600, scale=1, physical=295x600
+cmux: resize signal: logical=339x598, scale=1, physical=339x598
+cmux: resize idle firing: setting surface size to 295x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 339x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=293x600, scale=1, physical=293x600
+cmux: resize signal: logical=341x598, scale=1, physical=341x598
+cmux: resize idle firing: setting surface size to 293x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 341x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=288x600, scale=1, physical=288x600
+cmux: resize signal: logical=346x598, scale=1, physical=346x598
+cmux: resize idle firing: setting surface size to 288x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 346x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=286x600, scale=1, physical=286x600
+cmux: resize signal: logical=348x598, scale=1, physical=348x598
+cmux: resize idle firing: setting surface size to 286x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 348x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=281x600, scale=1, physical=281x600
+cmux: resize signal: logical=353x598, scale=1, physical=353x598
+cmux: resize idle firing: setting surface size to 281x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 353x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=280x600, scale=1, physical=280x600
+cmux: resize signal: logical=354x598, scale=1, physical=354x598
+cmux: resize idle firing: setting surface size to 280x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 354x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=277x600, scale=1, physical=277x600
+cmux: resize signal: logical=357x598, scale=1, physical=357x598
+cmux: resize idle firing: setting surface size to 277x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 357x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=276x600, scale=1, physical=276x600
+cmux: resize signal: logical=358x598, scale=1, physical=358x598
+cmux: resize idle firing: setting surface size to 276x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 358x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=274x600, scale=1, physical=274x600
+cmux: resize signal: logical=360x598, scale=1, physical=360x598
+cmux: resize idle firing: setting surface size to 274x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 360x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=273x600, scale=1, physical=273x600
+cmux: resize signal: logical=361x598, scale=1, physical=361x598
+cmux: resize idle firing: setting surface size to 273x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 361x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=271x600, scale=1, physical=271x600
+cmux: resize signal: logical=363x598, scale=1, physical=363x598
+cmux: resize idle firing: setting surface size to 271x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 363x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=269x600, scale=1, physical=269x600
+cmux: resize signal: logical=365x598, scale=1, physical=365x598
+cmux: resize idle firing: setting surface size to 269x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 365x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=267x600, scale=1, physical=267x600
+cmux: resize signal: logical=367x598, scale=1, physical=367x598
+cmux: resize idle firing: setting surface size to 267x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 367x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=265x600, scale=1, physical=265x600
+cmux: resize signal: logical=369x598, scale=1, physical=369x598
+cmux: resize idle firing: setting surface size to 265x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 369x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=264x600, scale=1, physical=264x600
+cmux: resize signal: logical=370x598, scale=1, physical=370x598
+cmux: resize idle firing: setting surface size to 264x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 370x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=263x600, scale=1, physical=263x600
+cmux: resize signal: logical=371x598, scale=1, physical=371x598
+cmux: resize idle firing: setting surface size to 263x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 371x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=262x600, scale=1, physical=262x600
+cmux: resize signal: logical=372x598, scale=1, physical=372x598
+cmux: resize idle firing: setting surface size to 262x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 372x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=261x600, scale=1, physical=261x600
+cmux: resize signal: logical=373x598, scale=1, physical=373x598
+cmux: resize idle firing: setting surface size to 261x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 373x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=260x600, scale=1, physical=260x600
+cmux: render #61 for area 0x5b84deec92f0, size=260x600
+cmux: resize signal: logical=374x598, scale=1, physical=374x598
+cmux: resize idle firing: setting surface size to 260x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 374x598
+cmux: ghostty_surface_set_size called successfully
+cmux: render #61 for area 0x5b84dfea9d70, size=374x598
+cmux: resize signal: logical=259x600, scale=1, physical=259x600
+cmux: resize signal: logical=375x598, scale=1, physical=375x598
+cmux: resize idle firing: setting surface size to 259x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 375x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=255x600, scale=1, physical=255x600
+cmux: resize signal: logical=379x598, scale=1, physical=379x598
+cmux: resize idle firing: setting surface size to 255x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 379x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=253x600, scale=1, physical=253x600
+cmux: resize signal: logical=381x598, scale=1, physical=381x598
+cmux: resize idle firing: setting surface size to 253x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 381x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=251x600, scale=1, physical=251x600
+cmux: resize signal: logical=383x598, scale=1, physical=383x598
+cmux: resize idle firing: setting surface size to 251x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 383x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=246x600, scale=1, physical=246x600
+cmux: resize signal: logical=388x598, scale=1, physical=388x598
+cmux: resize idle firing: setting surface size to 246x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 388x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=243x600, scale=1, physical=243x600
+cmux: resize signal: logical=391x598, scale=1, physical=391x598
+cmux: resize idle firing: setting surface size to 243x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 391x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=242x600, scale=1, physical=242x600
+cmux: resize signal: logical=392x598, scale=1, physical=392x598
+cmux: resize idle firing: setting surface size to 242x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 392x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=238x600, scale=1, physical=238x600
+cmux: resize signal: logical=396x598, scale=1, physical=396x598
+cmux: resize idle firing: setting surface size to 238x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 396x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=237x600, scale=1, physical=237x600
+cmux: resize signal: logical=397x598, scale=1, physical=397x598
+cmux: resize idle firing: setting surface size to 237x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 397x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=235x600, scale=1, physical=235x600
+cmux: resize signal: logical=399x598, scale=1, physical=399x598
+cmux: resize idle firing: setting surface size to 235x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 399x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=234x600, scale=1, physical=234x600
+cmux: resize signal: logical=400x598, scale=1, physical=400x598
+cmux: resize idle firing: setting surface size to 234x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 400x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=233x600, scale=1, physical=233x600
+cmux: resize signal: logical=401x598, scale=1, physical=401x598
+cmux: resize idle firing: setting surface size to 233x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 401x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=231x600, scale=1, physical=231x600
+cmux: resize signal: logical=403x598, scale=1, physical=403x598
+cmux: resize idle firing: setting surface size to 231x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 403x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=230x600, scale=1, physical=230x600
+cmux: resize signal: logical=404x598, scale=1, physical=404x598
+cmux: resize idle firing: setting surface size to 230x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 404x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=229x600, scale=1, physical=229x600
+cmux: resize signal: logical=405x598, scale=1, physical=405x598
+cmux: resize idle firing: setting surface size to 229x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 405x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=228x600, scale=1, physical=228x600
+cmux: resize signal: logical=406x598, scale=1, physical=406x598
+cmux: resize idle firing: setting surface size to 228x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 406x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=227x600, scale=1, physical=227x600
+cmux: resize signal: logical=407x598, scale=1, physical=407x598
+cmux: resize idle firing: setting surface size to 227x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 407x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=226x600, scale=1, physical=226x600
+cmux: resize signal: logical=408x598, scale=1, physical=408x598
+cmux: resize idle firing: setting surface size to 226x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 408x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=225x600, scale=1, physical=225x600
+cmux: resize signal: logical=409x598, scale=1, physical=409x598
+cmux: resize idle firing: setting surface size to 225x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 409x598
+cmux: ghostty_surface_set_size called successfully
+cmux: resize signal: logical=224x600, scale=1, physical=224x600
+cmux: resize signal: logical=410x598, scale=1, physical=410x598
+cmux: resize idle firing: setting surface size to 224x600
+cmux: ghostty_surface_set_size called successfully
+cmux: resize idle firing: setting surface size to 410x598
+cmux: ghostty_surface_set_size called successfully
+cmux: render #121 for area 0x5b84deec92f0, size=224x600
+cmux: app.run() returned

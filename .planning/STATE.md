@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 02-workspaces-pane-splits-08-PLAN.md
-last_updated: "2026-03-25T03:53:59.140Z"
+stopped_at: Completed 02-08 UAT — cursor blink fixed (resize + split). Plan 08 DONE.
+last_updated: "2026-03-25T20:05:00Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 18
-  completed_plans: 17
+  completed_plans: 18
 ---
 
 # Project State

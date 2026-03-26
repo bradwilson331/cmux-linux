@@ -2,29 +2,33 @@
 phase: 02-workspaces-pane-splits
 plan: 08
 subsystem: ghostty-focus-sync
-tags: [bug-fix, focus, render, ghostty, gtk4]
+tags: [bug-fix, focus, render, ghostty, gtk4, cursor-blink]
 dependency_graph:
   requires: []
-  provides: [unified-focus-render-fix]
-  affects: [src/ghostty/surface.rs, src/split_engine.rs, src/shortcuts.rs]
+  provides: [unified-focus-render-fix, cursor-blink-fix]
+  affects: [src/ghostty/surface.rs, src/split_engine.rs, src/shortcuts.rs, ghostty/src/renderer/Thread.zig, ghostty/src/renderer/generic.zig]
 tech_stack:
   added: []
-  patterns: [EventControllerFocus, active-pane CSS class check, focus_active_surface]
+  patterns: [EventControllerFocus, active-pane CSS class check, focus_active_surface, xev-timer-cancel-race, drawFrame-sync-guard]
 key_files:
   created: []
   modified:
     - src/ghostty/surface.rs
     - src/split_engine.rs
     - src/shortcuts.rs
+    - ghostty/src/renderer/Thread.zig
+    - ghostty/src/renderer/generic.zig
 decisions:
   - EventControllerFocus on GLArea keeps Ghostty's focused state in sync with GTK focus routing after any widget-tree operation
   - restore_active_pane_focus conditions set_focus on CSS class rather than toggle-all pattern
   - focus_active_surface() replaces grab_active_focus() in Ctrl+B to also call ghostty_surface_set_focus(true)
+  - Fix the cancel race in Ghostty Thread.zig cursorCancelCallback not in cmux Rust code
+  - Guard macOS sync/resize early return in generic.zig drawFrame with comptime isDarwin() — Linux embedded must not skip this path
 metrics:
-  duration: ~10 minutes
-  completed_date: "2026-03-25T03:52:56Z"
-  tasks: 4
-  files: 3
+  duration: ~2 sessions
+  completed_date: "2026-03-25T20:05:00Z"
+  tasks: 6
+  files: 5
 ---
 
 # Phase 02 Plan 08: Unified Focus/Render Regression Fix Summary
@@ -39,8 +43,11 @@ metrics:
 | 2 | Fix restore_active_pane_focus to set focus only on the active surface | 8956eca9 | src/split_engine.rs |
 | 3 | Fix sidebar toggle — call focus_active_surface after grab_active_focus | af448ae1 | src/shortcuts.rs |
 | 4 | Guard initial realize set_size(0,0) — fresh-launch window resize | 5e262c65 | src/ghostty/surface.rs |
+| 5 | Fix cursor cancel-race in Thread.zig cursorCancelCallback | 36e8d2a5 | ghostty/src/renderer/Thread.zig |
+| 6 | Guard macOS sync/resize early return to Darwin-only in generic.zig | 36e8d2a5 | ghostty/src/renderer/generic.zig |
 
 Note: Tasks 1 and 4 both modify surface.rs; they were committed together in 5e262c65.
+Note: Tasks 5 and 6 are ghostty fork changes; committed together in 36e8d2a5.
 
 ## What Was Built
 
@@ -60,11 +67,31 @@ Added `focus_active_surface()` method to `SplitEngine`. It grabs GTK focus via `
 
 Added the same `phys_w > 0 && phys_h > 0` guard to the initial surface creation path in `connect_realize`. At realize time `area.width()` is 0, so the old code called `ghostty_surface_set_size(surface, 0, 0)`, which could trigger Ghostty's anti-flicker guard. The `connect_resize` signal fires after GTK allocates real size.
 
+## Additional Root Cause Fixes (UAT revealed deeper bugs)
+
+UAT of the original 4 tasks revealed cursor blink was still frozen after window resize and after split-pane divider drag. Investigation found two more root causes in the Ghostty fork itself:
+
+### Bug 5 Fixed: Cursor cancel-race in Thread.zig (split-pane focus bounce)
+
+When `set_focus(false)` + `set_focus(true)` were drained in one mailbox pass, the cancel completion was still in flight when the re-focus arrived. The re-focus saw `cursor_c.state() == .active` and skipped restart; then `cursorCancelCallback` fired with `flags.focused=false` → timer stayed permanently dead.
+
+Fix: `cursorCancelCallback` now receives `Thread*` as userdata (changed from `?*void`). On cancel completion, if `self.flags.focused == true` and `cursor_c` is not active, restart the blink timer immediately.
+
+### Bug 6 Fixed: macOS sync/resize early return in generic.zig (resize freeze)
+
+The macOS CoreAnimation anti-blank-flash guard in `drawFrame` was platform-unconditional:
+```zig
+if (sync and size_changed and has_presented) { presentLastTarget(); return; }
+```
+On Linux embedded (our `ghostty_surface_draw` path uses `sync=true`): after any resize, `size_changed=true` because `self.size.screen` is only updated PAST this guard, which never ran. Every frame hit the early return, permanently re-presenting the last frame. Cursor blink state from `updateFrame` was never visible.
+
+Fix: Wrapped in `comptime builtin.os.tag.isDarwin()` — the guard is a no-op on Linux.
+
 ## Deviations from Plan
 
-None — plan executed exactly as written.
+The original plan was executed exactly as written for tasks 1-4. Tasks 5-6 were unplanned ghostty fork fixes discovered during UAT.
 
-The plan referenced `self.find_surface(self.active_pane_id)` in `focus_active_surface()`, which doesn't exist on `SplitEngine`. I implemented the method using `GL_AREA_REGISTRY` + `GL_TO_SURFACE` lookup with `has_css_class("active-pane")` check instead — consistent with how `restore_active_pane_focus` already works, achieving the same outcome without adding a new `find_surface` traversal helper.
+The plan referenced `self.find_surface(self.active_pane_id)` in `focus_active_surface()`, which doesn't exist on `SplitEngine`. Implemented using `GL_AREA_REGISTRY` + `GL_TO_SURFACE` lookup with `has_css_class("active-pane")` check — consistent with how `restore_active_pane_focus` already works.
 
 ## Verification
 
@@ -77,7 +104,13 @@ focus_active_surface in shortcuts: 1 ✓
 grab_active_focus in shortcuts: 0 (replaced) ✓
 has_css_class("active-pane") in split_engine: 5 ✓
 cargo build errors: 0 ✓
+isDarwin() guard in generic.zig: 1 ✓
+Thread* userdata in cursorCancelCallback: 1 ✓
 ```
+
+UAT (human):
+- Resize window → cursor blinks ✓
+- Ctrl+D split + drag divider → cursor blinks in active pane ✓
 
 ## Known Stubs
 
@@ -88,4 +121,5 @@ None.
 - src/ghostty/surface.rs: modified (committed 5e262c65)
 - src/split_engine.rs: modified (committed 8956eca9)
 - src/shortcuts.rs: modified (committed af448ae1)
-- git log confirms all three commits exist
+- ghostty/src/renderer/Thread.zig: modified (committed 36e8d2a5 in ghostty submodule + parent)
+- ghostty/src/renderer/generic.zig: modified (committed 36e8d2a5 in ghostty submodule + parent)
