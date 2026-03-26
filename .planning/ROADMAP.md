@@ -80,8 +80,8 @@ Plans:
 - [x] 03-03-PLAN.md — Tier-1 handlers (system/workspace/window/debug): full dispatch table + Tier-2 stubs
 - [x] 03-04-PLAN.md — Tier-1 handlers (surface/pane): send_text/send_key/focus/close with SOCK-05 focus policy
 - [x] 03-05-PLAN.md — Session persistence: SessionData serde, atomic save, 500ms debounce, restore on relaunch
-- [ ] 03-06-PLAN.md — Human verification: socket connectivity, workspace control, session restore, test_ctrl_socket.py
-- [ ] 03-07-PLAN.md — Gap closure: cmux-cli wrapper script for SOCK-03
+- [x] 03-06-PLAN.md — Human verification: socket connectivity, workspace control, session restore, test_ctrl_socket.py
+- [x] 03-07-PLAN.md — Gap closure: cmux-cli wrapper script for SOCK-03
 
 ### Phase 4: Notifications + HiDPI + SSH
 **Goal**: Users see per-pane activity indicators and desktop notifications; the app renders correctly at any display scale; SSH workspaces connect to remote hosts

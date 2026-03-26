@@ -38,7 +38,7 @@
 
 - [x] **SOCK-01**: Unix socket server starts at `$XDG_RUNTIME_DIR/cmux/cmux.sock` (mode 0600)
 - [x] **SOCK-02**: v2 JSON-RPC protocol is wire-compatible with macOS cmux (same request/response schema)
-- [ ] **SOCK-03**: `cmux` CLI (macOS or Linux-native) can connect and control the Linux app
+- [x] **SOCK-03**: `cmux` CLI (macOS or Linux-native) can connect and control the Linux app
 - [x] **SOCK-04**: `tests_v2/` Python protocol suite passes against the Linux socket server unmodified
 - [x] **SOCK-05**: Socket command policy enforced: non-focus-intent commands never call `gtk_window_present()` or `ghostty_surface_set_focus()`
 - [x] **SOCK-06**: Socket authentication: `SO_PEERCRED` uid validation on every connection accept
@@ -143,7 +143,7 @@
 | SPLIT-07 | Phase 2 | Complete |
 | SOCK-01 | Phase 3 | Complete |
 | SOCK-02 | Phase 3 | Complete |
-| SOCK-03 | Phase 3 | Pending |
+| SOCK-03 | Phase 3 | Complete |
 | SOCK-04 | Phase 3 | Complete |
 | SOCK-05 | Phase 3 | Complete |
 | SOCK-06 | Phase 3 | Complete |
