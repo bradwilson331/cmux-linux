@@ -59,9 +59,10 @@ pub fn handle_socket_command(
             let s = state.borrow();
             let list: Vec<Value> = s.workspaces.iter().enumerate().map(|(i, ws)| {
                 json!({
-                    "uuid": ws.uuid.to_string(),
-                    "name": ws.name,
-                    "active": i == s.active_index,
+                    "index": i,
+                    "id": ws.uuid.to_string(),
+                    "title": ws.name,
+                    "selected": i == s.active_index,
                 })
             }).collect();
             let _ = resp_tx.send(ok(req_id, json!({"workspaces": list})));
