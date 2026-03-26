@@ -110,7 +110,10 @@ Plans:
   2. GitHub Actions CI pipeline builds, runs clippy, and executes unit tests on ubuntu-latest for every push
   3. An AppImage artifact is produced and downloadable from each release tag
   4. App launches and runs correctly on both Wayland and X11/XWayland sessions
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 05-01-PLAN.md — TOML config system: config.rs with XDG path, ShortcutMap HashMap lookup, refactored shortcuts.rs
+- [ ] 05-02-PLAN.md — Linux CI and AppImage: ci.yml linux-build job, release.yml AppImage job, .desktop file and icon
 
 ## Progress
 
@@ -123,4 +126,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Workspaces + Pane Splits | 5/8 | In Progress|  |
 | 3. Socket API + Session Persistence | 2/7 | In Progress|  |
 | 4. Notifications + HiDPI + SSH | 0/5 | Not started | - |
-| 5. Config + Distribution | 0/? | Not started | - |
+| 5. Config + Distribution | 0/2 | Not started | - |
