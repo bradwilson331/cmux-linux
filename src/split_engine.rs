@@ -280,7 +280,7 @@ impl SplitEngine {
         self.split_active(gtk4::Orientation::Vertical)
     }
 
-    fn split_active(&mut self, orientation: gtk4::Orientation) -> Option<u64> {
+    pub fn split_active(&mut self, orientation: gtk4::Orientation) -> Option<u64> {
         let active_id = self.active_pane_id;
         let new_pane_id = self.next_pane_id;
         self.next_pane_id += 1;
@@ -655,6 +655,11 @@ impl SplitEngine {
     /// Look up a pane_id by its UUID string.
     pub fn find_pane_id_by_uuid(&self, target_uuid: &str) -> Option<u64> {
         self.root.find_pane_id_by_uuid(target_uuid)
+    }
+
+    /// Look up a GLArea by pane_id (public wrapper for socket handlers).
+    pub fn gl_area_for_pane(&self, pane_id: u64) -> Option<gtk4::GLArea> {
+        find_gl_area_in_tree(&self.root, pane_id)
     }
 }
 
