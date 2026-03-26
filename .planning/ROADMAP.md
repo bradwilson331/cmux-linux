@@ -127,6 +127,10 @@ Plans:
   2. On relaunch, each workspace restores its exact split layout with new Ghostty surfaces
   3. `set_initial_surface()` is called for every SplitNode::Leaf, making socket text injection functional
   4. `surface.send_text` via socket actually types into the target pane
+**Plans**: 2 plans
+Plans:
+- [ ] 06-01-PLAN.md — Session save upgrade: ratio field, CWD capture, real tree serialization, version 2
+- [ ] 06-02-PLAN.md — Session restore: from_data() tree rebuild, recursive surface wiring, main.rs version-aware restore
 
 ### Phase 7: SSH Terminal I/O
 **Goal**: SSH workspace terminal sessions execute on the remote host via bidirectional I/O proxying through the SSH tunnel
@@ -141,7 +145,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -150,5 +154,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. Socket API + Session Persistence | 2/7 | In Progress|  |
 | 4. Notifications + HiDPI + SSH | 0/5 | Not started | - |
 | 5. Config + Distribution | 0/2 | Not started | - |
-| 6. Session Layout Restore + Surface Wiring | 0/0 | Not started | - |
+| 6. Session Layout Restore + Surface Wiring | 0/2 | Not started | - |
 | 7. SSH Terminal I/O | 0/0 | Not started | - |
