@@ -76,8 +76,8 @@ Plans:
 Plans:
 - [x] 03-00-PLAN.md — Wave 0 scaffold: Cargo.toml deps (serde/serde_json/uuid/libc), module stubs with test scaffolds
 - [x] 03-01-PLAN.md — Data model: UUID fields in Workspace/SplitNode, SplitNodeData serde type, glib channel replaces mpsc polling
-- [ ] 03-02-PLAN.md — Socket server: SO_PEERCRED auth, XDG path setup, accept loop, cmux.py Linux path discovery
-- [ ] 03-03-PLAN.md — Tier-1 handlers (system/workspace/window/debug): full dispatch table + Tier-2 stubs
+- [x] 03-02-PLAN.md — Socket server: SO_PEERCRED auth, XDG path setup, accept loop, cmux.py Linux path discovery
+- [x] 03-03-PLAN.md — Tier-1 handlers (system/workspace/window/debug): full dispatch table + Tier-2 stubs
 - [ ] 03-04-PLAN.md — Tier-1 handlers (surface/pane): send_text/send_key/focus/close with SOCK-05 focus policy
 - [ ] 03-05-PLAN.md — Session persistence: SessionData serde, atomic save, 500ms debounce, restore on relaunch
 - [ ] 03-06-PLAN.md — Human verification: socket connectivity, workspace control, session restore, test_ctrl_socket.py

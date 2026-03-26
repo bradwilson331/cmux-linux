@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 03-socket-api-session-persistence-01-PLAN.md
-last_updated: "2026-03-26T02:04:28.071Z"
+stopped_at: Completed 03-socket-api-session-persistence-03-PLAN.md
+last_updated: "2026-03-26T02:40:17.826Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 25
-  completed_plans: 19
+  completed_plans: 21
 ---
 
 # Project State
@@ -62,6 +62,8 @@ Plan: 3 of 7
 | Phase 02-workspaces-pane-splits PP08 | 10 | 4 tasks | 3 files |
 | Phase 03-socket-api-session-persistence P00 | 116 | 2 tasks | 6 files |
 | Phase 03-socket-api-session-persistence P01 | 18 | 2 tasks | 5 files |
+| Phase 03 P02 | 3 | 2 tasks | 4 files |
+| Phase 03 P03 | 4 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -96,6 +98,9 @@ Recent decisions affecting current work:
 - [Phase 03-socket-api-session-persistence]: cargo test --bin cmux-linux used for binary crate unit tests; cargo test --lib not applicable
 - [Phase 03-socket-api-session-persistence]: glib::MainContext::channel removed in glib 0.18+; use tokio::sync::mpsc::unbounded_channel + glib::MainContext::default().spawn_local() as equivalent bridge pattern
 - [Phase 03-socket-api-session-persistence]: Mutex<Option<UnboundedReceiver<...>>> wraps cmd_rx so it can be moved into a Fn connect_activate closure (receiver is not Clone)
+- [Phase 03]: Used tokio::sync::mpsc::UnboundedSender instead of glib::MainContext::channel (removed in glib 0.18+) -- pass cmd_tx into start_socket_server from main.rs
+- [Phase 03]: Used ghostty_surface_text FFI (not ghostty_surface_input_text) for debug.type text injection
+- [Phase 03]: workspace.rename saves/restores active_index to avoid SOCK-05 focus side effect
 
 ### Pending Todos
 
@@ -109,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T02:04:28.068Z
-Stopped at: Completed 03-socket-api-session-persistence-01-PLAN.md
+Last session: 2026-03-26T02:40:17.823Z
+Stopped at: Completed 03-socket-api-session-persistence-03-PLAN.md
 Resume file: None
