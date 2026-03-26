@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# cmux CLI wrapper — invokes tests_v2/cmux.py as a command-line tool.
+# Per D-04: the Python client IS the Phase 3 CLI; a native Rust CLI comes in Phase 5.
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+exec python3 "$REPO_ROOT/tests_v2/cmux.py" "$@"
