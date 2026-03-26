@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 03-socket-api-session-persistence-03-PLAN.md
-last_updated: "2026-03-26T02:40:17.826Z"
+stopped_at: Completed 03-socket-api-session-persistence-04-PLAN.md
+last_updated: "2026-03-26T02:47:26.663Z"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 25
-  completed_plans: 21
+  completed_plans: 22
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 03 (socket-api-session-persistence) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Plan: 3 of 7
 | Phase 03-socket-api-session-persistence P01 | 18 | 2 tasks | 5 files |
 | Phase 03 P02 | 3 | 2 tasks | 4 files |
 | Phase 03 P03 | 4 | 2 tasks | 4 files |
+| Phase 03 P04 | 5 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,9 @@ Recent decisions affecting current work:
 - [Phase 03]: Used tokio::sync::mpsc::UnboundedSender instead of glib::MainContext::channel (removed in glib 0.18+) -- pass cmd_tx into start_socket_server from main.rs
 - [Phase 03]: Used ghostty_surface_text FFI (not ghostty_surface_input_text) for debug.type text injection
 - [Phase 03]: workspace.rename saves/restores active_index to avoid SOCK-05 focus side effect
+- [Phase 03]: Used ghostty_surface_text for send_text/send_key — matches existing debug.type pattern
+- [Phase 03]: surface.close adapts close_active() by setting target as active first — no direct close-by-uuid API
+- [Phase 03]: surface.refresh uses GTK4 queue_render() on GLArea instead of direct ghostty_surface_draw
 
 ### Pending Todos
 
@@ -114,6 +118,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T02:40:17.823Z
-Stopped at: Completed 03-socket-api-session-persistence-03-PLAN.md
+Last session: 2026-03-26T02:47:26.661Z
+Stopped at: Completed 03-socket-api-session-persistence-04-PLAN.md
 Resume file: None
