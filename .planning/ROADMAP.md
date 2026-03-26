@@ -72,7 +72,15 @@ Plans:
   2. Non-focus-intent socket commands (new_split, workspace.list, send) never steal window focus or call gtk_window_present()
   3. App relaunches and fully restores the previous workspace + pane layout
   4. Killing the app mid-save (kill -9) does not corrupt the session file — next launch recovers cleanly
-**Plans**: TBD
+**Plans**: 7 plans
+Plans:
+- [ ] 03-00-PLAN.md — Wave 0 scaffold: Cargo.toml deps (serde/serde_json/uuid/libc), module stubs with test scaffolds
+- [ ] 03-01-PLAN.md — Data model: UUID fields in Workspace/SplitNode, SplitNodeData serde type, glib channel replaces mpsc polling
+- [ ] 03-02-PLAN.md — Socket server: SO_PEERCRED auth, XDG path setup, accept loop, cmux.py Linux path discovery
+- [ ] 03-03-PLAN.md — Tier-1 handlers (system/workspace/window/debug): full dispatch table + Tier-2 stubs
+- [ ] 03-04-PLAN.md — Tier-1 handlers (surface/pane): send_text/send_key/focus/close with SOCK-05 focus policy
+- [ ] 03-05-PLAN.md — Session persistence: SessionData serde, atomic save, 500ms debounce, restore on relaunch
+- [ ] 03-06-PLAN.md — Human verification: socket connectivity, workspace control, session restore, test_ctrl_socket.py
 
 ### Phase 4: Notifications + HiDPI + SSH
 **Goal**: Users see per-pane activity indicators and desktop notifications; the app renders correctly at any display scale; SSH workspaces connect to remote hosts
@@ -106,6 +114,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Ghostty Foundation | 8/9 | In Progress|  |
 | 2. Workspaces + Pane Splits | 5/8 | In Progress|  |
-| 3. Socket API + Session Persistence | 0/? | Not started | - |
+| 3. Socket API + Session Persistence | 0/7 | Not started | - |
 | 4. Notifications + HiDPI + SSH | 0/? | Not started | - |
 | 5. Config + Distribution | 0/? | Not started | - |
