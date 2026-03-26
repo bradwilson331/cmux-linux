@@ -266,17 +266,143 @@ impl SplitEngine {
         }
     }
 
-    /// Update the surface pointer for the initial leaf after realize.
-    /// Called by Plan 04 in the GLArea realize callback.
+    /// Update the surface pointer for a leaf after realize.
+    /// Recursively searches the tree (D-10: works for ALL leaves, not just root).
     pub fn set_initial_surface(&mut self, pane_id: u64, surface: ffi::ghostty_surface_t) {
-        if let SplitNode::Leaf {
-            pane_id: id,
-            surface: s,
-            ..
-        } = &mut self.root
-        {
-            if *id == pane_id {
-                *s = surface;
+        Self::set_surface_recursive(&mut self.root, pane_id, surface);
+    }
+
+    fn set_surface_recursive(node: &mut SplitNode, target_pane_id: u64, surface: ffi::ghostty_surface_t) {
+        match node {
+            SplitNode::Leaf { pane_id, surface: s, .. } => {
+                if *pane_id == target_pane_id {
+                    *s = surface;
+                }
+            }
+            SplitNode::Split { start, end, .. } => {
+                Self::set_surface_recursive(start, target_pane_id, surface);
+                Self::set_surface_recursive(end, target_pane_id, surface);
+            }
+        }
+    }
+
+    /// Reconstruct a SplitEngine from serialized SplitNodeData (D-05).
+    /// Creates GTK widgets (GLArea for leaves, Paned for splits) and Ghostty surfaces.
+    /// Fresh pane_ids are generated (D-06), but UUIDs are preserved from session.
+    /// Returns None if tree_depth > 16 (D-14).
+    pub fn from_data(
+        app: gtk4::Application,
+        ghostty_app: ffi::ghostty_app_t,
+        data: &SplitNodeData,
+        active_pane_uuid: Option<&str>,
+    ) -> Option<Self> {
+        let mut next_pane_id: u64 = 1;
+        let root = Self::node_from_data(&app, ghostty_app, data, &mut next_pane_id, 0)?;
+        // Find active pane by saved UUID, or fall back to first leaf
+        let active_id = active_pane_uuid
+            .and_then(|uuid_str| root.find_pane_id_by_uuid(uuid_str))
+            .unwrap_or_else(|| {
+                let mut leaves = Vec::new();
+                collect_leaves_in_order(&root, &mut leaves);
+                leaves.first().copied().unwrap_or(1)
+            });
+        Some(SplitEngine {
+            root,
+            active_pane_id: active_id,
+            next_pane_id,
+            app,
+            ghostty_app,
+        })
+    }
+
+    fn node_from_data(
+        app: &gtk4::Application,
+        ghostty_app: ffi::ghostty_app_t,
+        data: &SplitNodeData,
+        next_pane_id: &mut u64,
+        depth: u32,
+    ) -> Option<SplitNode> {
+        if depth > 16 {
+            eprintln!("cmux: session restore tree depth > 16, falling back (D-14)");
+            return None;
+        }
+        match data {
+            SplitNodeData::Leaf { surface_uuid, .. } => {
+                let pane_id = *next_pane_id;
+                *next_pane_id += 1;
+                // Create surface — realize callback will create Ghostty surface and wire registries
+                let (gl_area, _surface_cell) =
+                    crate::ghostty::surface::create_surface(app, ghostty_app, None, pane_id);
+                // D-06: preserve UUID from session
+                let uuid = *surface_uuid;
+                let surface_placeholder: ffi::ghostty_surface_t = std::ptr::null_mut();
+                Some(SplitNode::Leaf {
+                    pane_id,
+                    gl_area,
+                    surface: surface_placeholder,
+                    uuid,
+                    has_attention: false,
+                })
+            }
+            SplitNodeData::Split { orientation, ratio, start, end } => {
+                let start_node = Self::node_from_data(app, ghostty_app, start, next_pane_id, depth + 1)?;
+                let end_node = Self::node_from_data(app, ghostty_app, end, next_pane_id, depth + 1)?;
+                let gtk_orientation = match orientation.as_str() {
+                    "vertical" => gtk4::Orientation::Vertical,
+                    _ => gtk4::Orientation::Horizontal,
+                };
+                let paned = gtk4::Paned::new(gtk_orientation);
+                paned.set_resize_start_child(true);
+                paned.set_resize_end_child(true);
+                paned.set_shrink_start_child(false);
+                paned.set_shrink_end_child(false);
+                paned.set_wide_handle(true);
+                paned.set_start_child(Some(&start_node.widget()));
+                paned.set_end_child(Some(&end_node.widget()));
+                // D-03: restore ratio after layout pass
+                let saved_ratio = *ratio;
+                let paned_ref = paned.clone();
+                let orient = gtk_orientation;
+                gtk4::glib::idle_add_local_once(move || {
+                    let size = if orient == gtk4::Orientation::Horizontal {
+                        paned_ref.width()
+                    } else {
+                        paned_ref.height()
+                    };
+                    if size > 0 {
+                        paned_ref.set_position((size as f64 * saved_ratio) as i32);
+                    }
+                });
+                Some(SplitNode::Split {
+                    orientation: gtk_orientation,
+                    paned,
+                    start: Box::new(start_node),
+                    end: Box::new(end_node),
+                })
+            }
+        }
+    }
+
+    /// Sync null surface pointers in the tree from GL_TO_SURFACE registry.
+    /// Called after restore to wire surfaces that were created during GLArea realize.
+    pub fn sync_surfaces_from_registry(&mut self) {
+        Self::sync_surfaces_recursive(&mut self.root);
+    }
+
+    fn sync_surfaces_recursive(node: &mut SplitNode) {
+        match node {
+            SplitNode::Leaf { gl_area, surface, .. } => {
+                if surface.is_null() {
+                    if let Ok(gl_to_surface) = crate::ghostty::callbacks::GL_TO_SURFACE.lock() {
+                        if let Some(&s) = gl_to_surface.get(&(gl_area.as_ptr() as usize)) {
+                            *surface = s as ffi::ghostty_surface_t;
+                        }
+                    }
+                }
+            }
+            SplitNode::Split { start, end, .. } => {
+                Self::sync_surfaces_recursive(start);
+                Self::sync_surfaces_recursive(end);
             }
         }
     }
