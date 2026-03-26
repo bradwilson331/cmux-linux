@@ -437,19 +437,32 @@ impl AppState {
             // Snapshot session data on main thread where Rc<RefCell<AppState>> is safe.
             if let Some(ref tx) = self.session_tx {
                 let session = crate::session::SessionData {
-                    version: 1,
+                    version: 2, // D-01: bump to version 2 for full tree serialization
                     active_index: self.active_index,
-                    workspaces: self.workspaces.iter().map(|ws| {
-                        crate::session::WorkspaceSession {
-                            uuid: ws.uuid.to_string(),
-                            name: ws.name.clone(),
-                            active_pane_uuid: None, // Phase 4: fill from split engine
-                            layout: crate::split_engine::SplitNodeData::Leaf {
+                    workspaces: self.workspaces.iter().enumerate().map(|(i, ws)| {
+                        // D-02: save full split tree for ALL workspaces
+                        let layout = if i < self.split_engines.len() {
+                            self.split_engines[i].root.to_data()
+                        } else {
+                            // Fallback: shouldn't happen, but be safe
+                            crate::split_engine::SplitNodeData::Leaf {
                                 pane_id: 0,
                                 surface_uuid: uuid::Uuid::nil(),
                                 shell: String::new(),
                                 cwd: String::new(),
-                            },
+                            }
+                        };
+                        // D-04: save active_pane_uuid per workspace
+                        let active_pane_uuid = if i < self.split_engines.len() {
+                            self.split_engines[i].active_pane_uuid()
+                        } else {
+                            None
+                        };
+                        crate::session::WorkspaceSession {
+                            uuid: ws.uuid.to_string(),
+                            name: ws.name.clone(),
+                            active_pane_uuid,
+                            layout,
                         }
                     }).collect(),
                 };

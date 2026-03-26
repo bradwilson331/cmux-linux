@@ -63,6 +63,23 @@ impl SplitNode {
         }
     }
 
+    /// Find the UUID for a pane by pane_id. Returns None if not found.
+    pub fn find_uuid_for_pane(&self, target_id: u64) -> Option<String> {
+        match self {
+            SplitNode::Leaf { pane_id, uuid, .. } => {
+                if *pane_id == target_id {
+                    Some(uuid.to_string())
+                } else {
+                    None
+                }
+            }
+            SplitNode::Split { start, end, .. } => {
+                start.find_uuid_for_pane(target_id)
+                    .or_else(|| end.find_uuid_for_pane(target_id))
+            }
+        }
+    }
+
     /// Apply the active-pane CSS class to the leaf matching active_pane_id.
     /// Removes the class from all other leaves.
     pub fn update_focus_css(&self, active_pane_id: u64) {
@@ -275,6 +292,11 @@ impl SplitEngine {
         if let Some(gl_area) = self.find_gl_area(self.active_pane_id) {
             gl_area.grab_focus();
         }
+    }
+
+    /// Returns the UUID of the currently active pane, if found.
+    pub fn active_pane_uuid(&self) -> Option<String> {
+        self.root.find_uuid_for_pane(self.active_pane_id)
     }
 
     /// Grab GTK keyboard focus AND notify Ghostty of focus for the active pane.

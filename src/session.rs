@@ -74,7 +74,7 @@ pub fn load_session_from(path: &Path) -> Option<SessionData> {
     };
     match serde_json::from_str::<SessionData>(&content) {
         Ok(data) => {
-            if data.version != 1 {
+            if data.version != 1 && data.version != 2 {
                 eprintln!("cmux: session version {} not supported, ignoring", data.version);
                 return None;
             }
