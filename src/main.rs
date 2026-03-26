@@ -236,6 +236,22 @@ fn build_ui(
         });
     }
 
+    // Phase 4: Process pending bell notifications on the GTK main thread.
+    // action_cb sets BELL_PENDING from within ghostty_app_tick (already on main thread).
+    // This idle-driven check runs after each tick to dispatch to AppState::set_pane_attention.
+    {
+        let state = state.clone();
+        glib::timeout_add_local(std::time::Duration::from_millis(100), move || {
+            if crate::ghostty::callbacks::BELL_PENDING.swap(false, std::sync::atomic::Ordering::SeqCst) {
+                let pane_id = crate::ghostty::callbacks::BELL_PANE_ID.load(std::sync::atomic::Ordering::SeqCst);
+                if pane_id != 0 {
+                    state.borrow_mut().set_pane_attention(pane_id);
+                }
+            }
+            glib::ControlFlow::Continue
+        });
+    }
+
     // Start socket server (tokio accept loop + XDG path setup).
     // cmd_tx is passed in so the socket server dispatches commands through the
     // existing tokio mpsc bridge to the GTK main thread (spawn_local above).

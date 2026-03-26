@@ -16,6 +16,10 @@ pub struct Workspace {
     pub display_number: usize,
     /// Stable UUID for session persistence and v2 socket protocol identity.
     pub uuid: Uuid,
+    /// Phase 4 NOTF-01: true when any pane in this workspace has unread bell activity.
+    pub has_attention: bool,
+    /// Phase 4: rate-limit desktop notifications to 1 per workspace per 5 seconds.
+    pub last_notification: Option<std::time::Instant>,
 }
 
 impl Workspace {
@@ -29,6 +33,8 @@ impl Workspace {
             stack_page_name,
             display_number,
             uuid: Uuid::new_v4(),
+            has_attention: false,
+            last_notification: None,
         }
     }
 

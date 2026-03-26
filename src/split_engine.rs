@@ -25,6 +25,8 @@ pub enum SplitNode {
         surface: ffi::ghostty_surface_t,
         /// Stable UUID for session persistence and v2 socket protocol pane identity.
         uuid: Uuid,
+        /// Phase 4 NOTF-01: true when this pane has unread bell activity.
+        has_attention: bool,
     },
     Split {
         orientation: gtk4::Orientation,
@@ -154,6 +156,42 @@ impl SplitNode {
             }
         }
     }
+
+    /// Set has_attention on the leaf matching pane_id. Returns true if found.
+    pub fn set_attention(&mut self, target_pane_id: u64, value: bool) -> bool {
+        match self {
+            SplitNode::Leaf { pane_id, has_attention, .. } => {
+                if *pane_id == target_pane_id {
+                    *has_attention = value;
+                    true
+                } else {
+                    false
+                }
+            }
+            SplitNode::Split { start, end, .. } => {
+                start.set_attention(target_pane_id, value) || end.set_attention(target_pane_id, value)
+            }
+        }
+    }
+
+    /// Returns true if any leaf in this subtree has attention.
+    pub fn any_attention(&self) -> bool {
+        match self {
+            SplitNode::Leaf { has_attention, .. } => *has_attention,
+            SplitNode::Split { start, end, .. } => start.any_attention() || end.any_attention(),
+        }
+    }
+
+    /// Clear attention on all leaves in this subtree.
+    pub fn clear_all_attention(&mut self) {
+        match self {
+            SplitNode::Leaf { has_attention, .. } => *has_attention = false,
+            SplitNode::Split { start, end, .. } => {
+                start.clear_all_attention();
+                end.clear_all_attention();
+            }
+        }
+    }
 }
 
 /// SplitEngine manages one workspace's pane layout tree.
@@ -188,6 +226,7 @@ impl SplitEngine {
             gl_area: initial_gl_area,
             surface: surface_placeholder,
             uuid: Uuid::new_v4(),
+            has_attention: false,
         };
         SplitEngine {
             root,
@@ -342,6 +381,7 @@ impl SplitEngine {
             gl_area: new_gl_area.clone(),
             surface: new_surface_placeholder, // updated after realize via SURFACE_REGISTRY
             uuid: Uuid::new_v4(),
+            has_attention: false,
         };
 
         let _replaced = self.replace_leaf_with_split(active_id, new_leaf, orientation)?;
@@ -681,6 +721,7 @@ where
                         gl_area: gtk4::GLArea::new(),
                         surface: std::ptr::null_mut(),
                         uuid: Uuid::new_v4(),
+                        has_attention: false,
                     },
                 );
                 *node = r(old);

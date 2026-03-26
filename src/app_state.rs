@@ -165,6 +165,8 @@ impl AppState {
         if index >= self.workspaces.len() {
             return;
         }
+        // Phase 4: clear attention when user switches to a workspace (D-05).
+        self.clear_workspace_attention(index);
         self.active_index = index;
         let page_name = self.workspaces[index].stack_page_name.clone();
         self.stack.set_visible_child_name(&page_name);
@@ -237,6 +239,58 @@ impl AppState {
         self.workspaces.get(self.active_index)
     }
 
+    /// Set attention on a specific pane. Called from bell handler.
+    /// Updates workspace has_attention and sidebar dot.
+    pub fn set_pane_attention(&mut self, pane_id: u64) {
+        for (idx, engine) in self.split_engines.iter_mut().enumerate() {
+            if engine.root.set_attention(pane_id, true) {
+                self.workspaces[idx].has_attention = engine.root.any_attention();
+                self.update_sidebar_attention(idx);
+
+                // Desktop notification when window is unfocused (NOTF-03)
+                let window_focused = self.gtk_app.active_window()
+                    .map(|w| w.is_active())
+                    .unwrap_or(false);
+                if !window_focused && self.workspaces[idx].has_attention {
+                    let should_notify = self.workspaces[idx].last_notification
+                        .map(|t| t.elapsed() >= std::time::Duration::from_secs(5))
+                        .unwrap_or(true);
+                    if should_notify {
+                        self.workspaces[idx].last_notification = Some(std::time::Instant::now());
+                        send_bell_notification(&self.gtk_app, &self.workspaces[idx].name, idx);
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    /// Clear all attention in the workspace at `index`.
+    pub fn clear_workspace_attention(&mut self, index: usize) {
+        if let Some(engine) = self.split_engines.get_mut(index) {
+            engine.root.clear_all_attention();
+        }
+        if let Some(ws) = self.workspaces.get_mut(index) {
+            ws.has_attention = false;
+        }
+        self.update_sidebar_attention(index);
+    }
+
+    /// Update the sidebar dot visibility for workspace at `index`.
+    fn update_sidebar_attention(&self, index: usize) {
+        if let Some(row) = self.sidebar_list.row_at_index(index as i32) {
+            let has_attention = self.workspaces.get(index)
+                .map(|ws| ws.has_attention)
+                .unwrap_or(false);
+            // Row layout: GtkBox(H) > [GtkBox(V) > [GtkLabel(name)], GtkLabel(dot)]
+            if let Some(hbox) = row.child().and_downcast::<gtk4::Box>() {
+                if let Some(dot) = hbox.last_child() {
+                    dot.set_visible(has_attention);
+                }
+            }
+        }
+    }
+
     /// Trigger a debounced session save. Call after any workspace/pane mutation.
     /// Snapshots SessionData on the main thread (safe for Rc) and sends to the
     /// tokio debounce task which handles the file I/O.
@@ -266,4 +320,15 @@ impl AppState {
             notify.notify_one();
         }
     }
+}
+
+/// Send a desktop notification for a bell in the given workspace.
+/// Uses GNotification via gio. Rate limiting is handled by the caller.
+fn send_bell_notification(app: &gtk4::Application, workspace_name: &str, workspace_index: usize) {
+    use gtk4::gio;
+    let notification = gio::Notification::new("Terminal Bell");
+    notification.set_body(Some(&format!("{} - Terminal bell", workspace_name)));
+    notification.set_priority(gio::NotificationPriority::Normal);
+    let notif_id = format!("bell-{}", workspace_index);
+    app.send_notification(Some(&notif_id), &notification);
 }

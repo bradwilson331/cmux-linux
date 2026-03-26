@@ -34,6 +34,11 @@ pub static GL_AREA_REGISTRY: Mutex<Vec<GtkGLAreaPtr>> = Mutex::new(Vec::new());
 pub static SURFACE_REGISTRY: LazyLock<Mutex<HashMap<usize, u64>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
+/// Phase 4: Pane ID that most recently received a bell. Read by wakeup_cb to update attention state.
+pub static BELL_PANE_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+/// Phase 4: Flag indicating a bell is pending processing.
+pub static BELL_PENDING: AtomicBool = AtomicBool::new(false);
+
 /// Called by Ghostty from its renderer thread. Must not call any ghostty_* API inline.
 /// Instead, schedules ghostty_app_tick() on the GLib main loop (per D-04, GHOST-07).
 /// Wakeup count for diagnostic logging (only logs occasionally to avoid spam)
@@ -101,6 +106,26 @@ pub unsafe extern "C" fn action_cb(
     action: crate::ghostty::ffi::ghostty_action_s,
 ) -> bool {
     use crate::ghostty::ffi;
+
+    // Phase 4: Handle bell action — set BELL_PENDING for wakeup_cb to dispatch to AppState.
+    if action.tag == ffi::ghostty_action_tag_e_GHOSTTY_ACTION_RING_BELL {
+        if _target.tag == ffi::ghostty_target_tag_e_GHOSTTY_TARGET_SURFACE {
+            let surface_ptr = unsafe { _target.target.surface } as usize;
+            let pane_id = {
+                if let Ok(reg) = SURFACE_REGISTRY.lock() {
+                    reg.get(&surface_ptr).copied()
+                } else {
+                    None
+                }
+            };
+            if let Some(pane_id) = pane_id {
+                BELL_PANE_ID.store(pane_id, std::sync::atomic::Ordering::SeqCst);
+                BELL_PENDING.store(true, std::sync::atomic::Ordering::SeqCst);
+            }
+        }
+        return true;
+    }
+
     if action.tag == ffi::ghostty_action_tag_e_GHOSTTY_ACTION_RENDER {
         // Trigger a render on the GLArea — will call ghostty_surface_draw on main thread.
         if let Ok(areas) = crate::ghostty::callbacks::GL_AREA_REGISTRY.lock() {
