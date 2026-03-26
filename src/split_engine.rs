@@ -102,6 +102,20 @@ impl SplitNode {
             }
         }
     }
+
+    /// Find the Ghostty surface handle for a specific pane by pane_id.
+    /// Used by debug.type to send text to a specific pane's surface.
+    pub fn find_surface_for_pane(&self, target_id: u64) -> Option<ffi::ghostty_surface_t> {
+        match self {
+            SplitNode::Leaf { pane_id, surface, .. } => {
+                if *pane_id == target_id { Some(*surface) } else { None }
+            }
+            SplitNode::Split { start, end, .. } => {
+                start.find_surface_for_pane(target_id)
+                    .or_else(|| end.find_surface_for_pane(target_id))
+            }
+        }
+    }
 }
 
 /// SplitEngine manages one workspace's pane layout tree.
