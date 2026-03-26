@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=cmux
+Comment=GPU-accelerated terminal multiplexer
+Exec=cmux-linux
+Icon=cmux
+Terminal=false
+Categories=System;TerminalEmulator;
+Keywords=terminal;multiplexer;tabs;splits;workspaces;
+StartupWMClass=cmux
