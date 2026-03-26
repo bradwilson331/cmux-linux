@@ -241,6 +241,16 @@ async fn dispatch_line(
             resp_tx,
         },
 
+        "notification.list" => commands::SocketCommand::NotificationList {
+            req_id: req_id.clone(),
+            resp_tx,
+        },
+        "notification.clear" => commands::SocketCommand::NotificationClear {
+            req_id: req_id.clone(),
+            id: params.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            resp_tx,
+        },
+
         _ => commands::SocketCommand::NotImplemented {
             req_id: req_id.clone(),
             method: method.clone(),

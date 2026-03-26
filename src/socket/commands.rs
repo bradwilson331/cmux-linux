@@ -49,6 +49,10 @@ pub enum SocketCommand {
     DebugLayout      { req_id: Value, resp_tx: RespTx },
     DebugType        { req_id: Value, text: String, resp_tx: RespTx },
 
+    // -- notification.* (Phase 4: NOTF-01, NOTF-02) --
+    NotificationList   { req_id: Value, resp_tx: RespTx },
+    NotificationClear  { req_id: Value, id: String, resp_tx: RespTx },
+
     // -- Tier-2 stub (not_implemented) --
     NotImplemented   { req_id: Value, method: String, resp_tx: RespTx },
 }

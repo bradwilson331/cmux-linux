@@ -182,6 +182,18 @@ impl SplitNode {
         }
     }
 
+    /// Check if a specific pane has attention.
+    pub fn pane_has_attention(&self, target_pane_id: u64) -> bool {
+        match self {
+            SplitNode::Leaf { pane_id, has_attention, .. } => {
+                *pane_id == target_pane_id && *has_attention
+            }
+            SplitNode::Split { start, end, .. } => {
+                start.pane_has_attention(target_pane_id) || end.pane_has_attention(target_pane_id)
+            }
+        }
+    }
+
     /// Clear attention on all leaves in this subtree.
     pub fn clear_all_attention(&mut self) {
         match self {

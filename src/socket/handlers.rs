@@ -48,6 +48,7 @@ pub fn handle_socket_command(
                 "surface.health", "surface.refresh",
                 "pane.list", "pane.focus", "pane.last",
                 "window.list", "window.current",
+                "notification.list", "notification.clear",
                 "debug.layout", "debug.type",
             ];
             let _ = resp_tx.send(ok(req_id, json!({"methods": methods})));
@@ -425,15 +426,24 @@ pub fn handle_socket_command(
 
         SocketCommand::SurfaceHealth { req_id, id, resp_tx } => {
             // SOCK-05: health is NOT focus-intent — NO focus change.
-            let found = {
+            let (found, has_attention) = {
                 let s = state.borrow();
                 if let Some(engine) = s.split_engines.get(s.active_index) {
                     if let Some(ref uuid_str) = id {
-                        engine.find_surface_by_uuid(uuid_str).is_some()
-                    } else { true }
-                } else { false }
+                        let alive = engine.find_surface_by_uuid(uuid_str).is_some();
+                        let attn = engine.find_pane_id_by_uuid(uuid_str)
+                            .map(|pid| engine.root.pane_has_attention(pid))
+                            .unwrap_or(false);
+                        (alive, attn)
+                    } else {
+                        let attn = engine.root.find_active_pane_id()
+                            .map(|pid| engine.root.pane_has_attention(pid))
+                            .unwrap_or(false);
+                        (true, attn)
+                    }
+                } else { (false, false) }
             };
-            let _ = resp_tx.send(ok(req_id, json!({"alive": found})));
+            let _ = resp_tx.send(ok(req_id, json!({"alive": found, "has_attention": has_attention})));
         }
 
         SocketCommand::SurfaceRefresh { req_id, id, resp_tx } => {
@@ -507,6 +517,37 @@ pub fn handle_socket_command(
                 }
             }
             let _ = resp_tx.send(ok(req_id, json!({})));
+        }
+
+        // -- notification.* (Phase 4) --
+        SocketCommand::NotificationList { req_id, resp_tx } => {
+            // SOCK-05: No focus side effects. Read-only attention state query.
+            let s = state.borrow();
+            let notifications: Vec<Value> = s.workspaces.iter().map(|ws| {
+                json!({
+                    "workspace_uuid": ws.uuid.to_string(),
+                    "workspace_name": ws.name,
+                    "has_attention": ws.has_attention,
+                })
+            }).collect();
+            let _ = resp_tx.send(ok(req_id, json!({"notifications": notifications})));
+        }
+
+        SocketCommand::NotificationClear { req_id, id, resp_tx } => {
+            // SOCK-05: No focus side effects. Clears attention without switching workspace.
+            let idx = {
+                let s = state.borrow();
+                s.workspaces.iter().position(|ws| ws.uuid.to_string() == id)
+            };
+            match idx {
+                Some(i) => {
+                    state.borrow_mut().clear_workspace_attention(i);
+                    let _ = resp_tx.send(ok(req_id, json!({})));
+                }
+                None => {
+                    let _ = resp_tx.send(err(req_id, "not_found", "workspace not found"));
+                }
+            }
         }
 
         // -- Tier-2 stubs (D-10) --
