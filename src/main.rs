@@ -234,19 +234,47 @@ fn build_ui(
     }
 
     // Restore session if available (SESS-02), otherwise create default workspace.
-    // For Phase 3, we restore workspace names. Full layout (pane splits) restore
-    // requires Ghostty surface reconstruction -- deferred to Phase 4.
     {
         let has_session = saved_session.as_ref().map(|s| !s.workspaces.is_empty()).unwrap_or(false);
         if has_session {
             let session = saved_session.unwrap();
-            for ws_session in &session.workspaces {
-                state.borrow_mut().create_workspace();
-                state.borrow_mut().rename_active(ws_session.name.clone());
+            if session.version >= 2 {
+                // Version 2: full tree restore (D-05)
+                let mut restored_count = 0;
+                for ws_session in &session.workspaces {
+                    if state.borrow_mut().restore_workspace(ws_session).is_some() {
+                        restored_count += 1;
+                    } else {
+                        // D-15: tree invalid or too deep, fall back to single pane
+                        eprintln!("cmux: workspace '{}' tree invalid, creating default", ws_session.name);
+                        state.borrow_mut().create_workspace();
+                        state.borrow_mut().rename_active(ws_session.name.clone());
+                    }
+                }
+                eprintln!("cmux: restored {} workspaces from v2 session", restored_count);
+            } else {
+                // Version 1: name-only restore (auto-upgrade on next save per D-01)
+                for ws_session in &session.workspaces {
+                    state.borrow_mut().create_workspace();
+                    state.borrow_mut().rename_active(ws_session.name.clone());
+                }
             }
             // Restore active workspace index.
-            let active = session.active_index.min(session.workspaces.len().saturating_sub(1));
+            let ws_count = state.borrow().workspaces.len();
+            let active = session.active_index.min(ws_count.saturating_sub(1));
             state.borrow_mut().switch_to_index(active);
+
+            // D-10: After GLAreas realize, sync surface pointers from registry.
+            if session.version >= 2 {
+                let state_for_sync = state.clone();
+                gtk4::glib::idle_add_local_once(move || {
+                    let mut s = state_for_sync.borrow_mut();
+                    for engine in &mut s.split_engines {
+                        engine.sync_surfaces_from_registry();
+                    }
+                    eprintln!("cmux: synced surface pointers from registry after restore");
+                });
+            }
         } else {
             // No session -- create the default first workspace.
             state.borrow_mut().create_workspace();

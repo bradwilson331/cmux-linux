@@ -133,6 +133,57 @@ impl AppState {
         id
     }
 
+    /// Restore a workspace from a session snapshot (SESS-02).
+    /// Creates sidebar row, uses SplitEngine::from_data() for full tree restore.
+    /// Returns the workspace id, or None if tree is invalid (D-14 depth limit).
+    pub fn restore_workspace(&mut self, ws: &crate::session::WorkspaceSession) -> Option<u64> {
+        let id = self.next_id;
+        self.next_id += 1;
+        let display_number = self.next_display_number;
+        self.next_display_number += 1;
+
+        let mut workspace = Workspace::new(id, display_number);
+        workspace.name = ws.name.clone();
+
+        // Build sidebar row (same pattern as create_workspace)
+        let hbox = gtk4::Box::new(gtk4::Orientation::Horizontal, 4);
+        let vbox = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+        let label = gtk4::Label::new(Some(&workspace.name));
+        label.set_halign(gtk4::Align::Start);
+        label.set_hexpand(true);
+        vbox.append(&label);
+        vbox.set_hexpand(true);
+        hbox.append(&vbox);
+
+        let dot = gtk4::Label::new(None);
+        dot.add_css_class("attention-dot");
+        dot.set_visible(false);
+        hbox.append(&dot);
+
+        let row = gtk4::ListBoxRow::new();
+        row.set_child(Some(&hbox));
+        unsafe { row.set_data("workspace-id", id); }
+        self.sidebar_list.append(&row);
+
+        // Build split tree from session data (D-05)
+        let engine = crate::split_engine::SplitEngine::from_data(
+            self.gtk_app.clone(),
+            self.ghostty_app,
+            &ws.layout,
+            ws.active_pane_uuid.as_deref(),
+        )?;
+
+        // Add to stack
+        let page_name = format!("workspace-{}", id);
+        self.stack.add_named(&engine.root_widget(), Some(&page_name));
+        workspace.stack_page_name = page_name;
+
+        self.workspaces.push(workspace);
+        self.split_engines.push(engine);
+
+        Some(id)
+    }
+
     /// Build a sidebar row for a workspace. Used by create_workspace and create_remote_workspace.
     fn build_sidebar_row(&self, workspace: &Workspace) -> gtk4::ListBoxRow {
         let hbox = gtk4::Box::new(gtk4::Orientation::Horizontal, 4);
