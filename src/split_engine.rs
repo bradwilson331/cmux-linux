@@ -1074,9 +1074,66 @@ pub enum SplitNodeData {
     Split {
         /// "horizontal" or "vertical"
         orientation: String,
+        /// Divider position as fraction 0.0-1.0 relative to parent size (D-03).
+        #[serde(default = "default_ratio")]
+        ratio: f64,
         start: Box<SplitNodeData>,
         end: Box<SplitNodeData>,
     },
+}
+
+fn default_ratio() -> f64 {
+    0.5
+}
+
+/// Best-effort CWD capture for a Ghostty surface via /proc.
+/// Walks /proc looking for child processes of the current process (cmux),
+/// then reads /proc/{pid}/cwd for the foreground shell.
+/// Never panics — falls back to $HOME or empty string.
+fn get_surface_cwd(surface: ffi::ghostty_surface_t) -> String {
+    if surface.is_null() {
+        return String::new();
+    }
+    // Try to find child shell processes by scanning /proc for children of our PID.
+    // Each Ghostty surface spawns a child shell — we look for processes whose
+    // parent is the cmux process and read their CWD.
+    let our_pid = std::process::id();
+    if let Ok(entries) = std::fs::read_dir("/proc") {
+        // Collect candidate child PIDs (children of our process)
+        let mut candidates: Vec<u32> = Vec::new();
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            if let Ok(pid) = name.to_string_lossy().parse::<u32>() {
+                // Read /proc/{pid}/stat to check parent PID
+                if let Ok(stat) = std::fs::read_to_string(format!("/proc/{pid}/stat")) {
+                    // Format: pid (comm) state ppid ...
+                    // Find the closing paren then parse ppid
+                    if let Some(after_comm) = stat.rfind(')') {
+                        let fields: Vec<&str> = stat[after_comm + 2..].split_whitespace().collect();
+                        if fields.len() >= 2 {
+                            if let Ok(ppid) = fields[1].parse::<u32>() {
+                                if ppid == our_pid {
+                                    candidates.push(pid);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Use the last (most recent) child process CWD as best guess.
+        // In practice, each surface has one direct child shell.
+        for pid in candidates.iter().rev() {
+            if let Ok(cwd) = std::fs::read_link(format!("/proc/{pid}/cwd")) {
+                let cwd_str = cwd.to_string_lossy().to_string();
+                if !cwd_str.is_empty() {
+                    return cwd_str;
+                }
+            }
+        }
+    }
+    // Fallback to $HOME
+    std::env::var("HOME").unwrap_or_default()
 }
 
 impl SplitNode {
@@ -1085,21 +1142,37 @@ impl SplitNode {
     /// Falls back to empty strings if /proc is unavailable or the pid is unknown.
     pub fn to_data(&self) -> SplitNodeData {
         match self {
-            SplitNode::Leaf { pane_id, uuid, .. } => SplitNodeData::Leaf {
-                pane_id: *pane_id,
-                surface_uuid: *uuid,
-                // Best-effort CWD: not yet implemented — Plan 05 fills this via /proc.
-                shell: String::new(),
-                cwd: String::new(),
+            SplitNode::Leaf { pane_id, uuid, surface, .. } => {
+                let cwd = get_surface_cwd(*surface);
+                let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+                SplitNodeData::Leaf {
+                    pane_id: *pane_id,
+                    surface_uuid: *uuid,
+                    shell,
+                    cwd,
+                }
             },
-            SplitNode::Split { orientation, start, end, .. } => SplitNodeData::Split {
-                orientation: match orientation {
-                    gtk4::Orientation::Horizontal => "horizontal".to_string(),
-                    gtk4::Orientation::Vertical => "vertical".to_string(),
-                    _ => "horizontal".to_string(),
-                },
-                start: Box::new(start.to_data()),
-                end: Box::new(end.to_data()),
+            SplitNode::Split { orientation, paned, start, end, .. } => {
+                let total_size = if *orientation == gtk4::Orientation::Horizontal {
+                    paned.width()
+                } else {
+                    paned.height()
+                };
+                let ratio = if total_size > 0 {
+                    (paned.position() as f64) / (total_size as f64)
+                } else {
+                    0.5 // default if not yet laid out
+                };
+                SplitNodeData::Split {
+                    orientation: match orientation {
+                        gtk4::Orientation::Horizontal => "horizontal".to_string(),
+                        gtk4::Orientation::Vertical => "vertical".to_string(),
+                        _ => "horizontal".to_string(),
+                    },
+                    ratio,
+                    start: Box::new(start.to_data()),
+                    end: Box::new(end.to_data()),
+                }
             },
         }
     }
@@ -1152,9 +1225,10 @@ mod tests {
 
     #[test]
     fn split_node_data_split_roundtrip_json() {
-        // Verify nested SplitNodeData serializes correctly.
+        // Verify nested SplitNodeData serializes correctly with ratio field.
         let split = SplitNodeData::Split {
             orientation: "horizontal".to_string(),
+            ratio: 0.35,
             start: Box::new(SplitNodeData::Leaf {
                 pane_id: 1,
                 surface_uuid: Uuid::new_v4(),
@@ -1170,10 +1244,20 @@ mod tests {
         };
         let json = serde_json::to_string(&split).expect("serialize failed");
         let restored: SplitNodeData = serde_json::from_str(&json).expect("deserialize failed");
-        if let SplitNodeData::Split { orientation, .. } = restored {
+        if let SplitNodeData::Split { orientation, ratio, .. } = restored {
             assert_eq!(orientation, "horizontal");
+            assert!((ratio - 0.35).abs() < f64::EPSILON, "ratio not preserved in roundtrip");
         } else {
             panic!("Roundtrip changed variant to non-Split");
+        }
+
+        // Verify v1-compat: Split without ratio field deserializes with default 0.5
+        let v1_json = r#"{"type":"Split","orientation":"vertical","start":{"type":"Leaf","pane_id":1,"surface_uuid":"00000000-0000-0000-0000-000000000000","shell":"","cwd":""},"end":{"type":"Leaf","pane_id":2,"surface_uuid":"00000000-0000-0000-0000-000000000000","shell":"","cwd":""}}"#;
+        let v1_restored: SplitNodeData = serde_json::from_str(v1_json).expect("v1 deserialize failed");
+        if let SplitNodeData::Split { ratio, .. } = v1_restored {
+            assert!((ratio - 0.5).abs() < f64::EPSILON, "v1 missing ratio should default to 0.5");
+        } else {
+            panic!("v1 deserialize changed variant");
         }
     }
 }
