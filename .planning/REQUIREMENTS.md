@@ -59,9 +59,9 @@
 
 ### Notification / Attention State
 
-- [ ] **NOTF-01**: Per-pane attention state tracks terminal activity (bell, OSC 99 markers)
-- [ ] **NOTF-02**: Workspace list shows visual indicator for workspaces with unread activity
-- [ ] **NOTF-03**: Desktop notification sent via GTK4 API when terminal rings bell while app is unfocused
+- [x] **NOTF-01**: Per-pane attention state tracks terminal activity (bell, OSC 99 markers)
+- [x] **NOTF-02**: Workspace list shows visual indicator for workspaces with unread activity
+- [x] **NOTF-03**: Desktop notification sent via GTK4 API when terminal rings bell while app is unfocused
 
 ### SSH Remote Workspaces
 
@@ -151,9 +151,9 @@
 | SESS-02 | Phase 3 | Complete |
 | SESS-03 | Phase 3 | Complete |
 | SESS-04 | Phase 3 | Complete |
-| NOTF-01 | Phase 4 | Pending |
-| NOTF-02 | Phase 4 | Pending |
-| NOTF-03 | Phase 4 | Pending |
+| NOTF-01 | Phase 4 | Complete |
+| NOTF-02 | Phase 4 | Complete |
+| NOTF-03 | Phase 4 | Complete |
 | HDPI-01 | Phase 4 | Pending |
 | HDPI-02 | Phase 4 | Pending |
 | SSH-01 | Phase 4 | Pending |
