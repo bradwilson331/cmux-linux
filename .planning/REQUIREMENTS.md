@@ -72,8 +72,8 @@
 
 ### HiDPI / Display
 
-- [ ] **HDPI-01**: App renders correctly at 1x, 1.5x, and 2x display scale factors
-- [ ] **HDPI-02**: Scale factor updates when window moves between monitors with different DPI
+- [x] **HDPI-01**: App renders correctly at 1x, 1.5x, and 2x display scale factors
+- [x] **HDPI-02**: Scale factor updates when window moves between monitors with different DPI
 
 ### Distribution
 
@@ -154,8 +154,8 @@
 | NOTF-01 | Phase 4 | Complete |
 | NOTF-02 | Phase 4 | Complete |
 | NOTF-03 | Phase 4 | Complete |
-| HDPI-01 | Phase 4 | Pending |
-| HDPI-02 | Phase 4 | Pending |
+| HDPI-01 | Phase 4 | Complete |
+| HDPI-02 | Phase 4 | Complete |
 | SSH-01 | Phase 4 | Pending |
 | SSH-02 | Phase 4 | Pending |
 | SSH-03 | Phase 4 | Pending |
