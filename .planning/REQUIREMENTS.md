@@ -46,7 +46,7 @@
 ### Session Persistence
 
 - [x] **SESS-01**: Workspace and pane layout is saved to `~/.local/share/cmux/session.json` on each change (debounced)
-- [x] **SESS-02**: Layout is fully restored on next app launch
+- [ ] **SESS-02**: Layout is fully restored on next app launch
 - [x] **SESS-03**: Session file is written atomically (write `.tmp`, then `rename()`)
 - [x] **SESS-04**: App launches cleanly if session file is missing or corrupted (graceful fallback)
 
@@ -67,7 +67,7 @@
 
 - [x] **SSH-01**: User can configure a workspace with a remote SSH target
 - [x] **SSH-02**: cmuxd-remote Go daemon is deployed to remote host and establishes reverse tunnel
-- [x] **SSH-03**: Terminal sessions in an SSH workspace run on the remote host
+- [ ] **SSH-03**: Terminal sessions in an SSH workspace run on the remote host
 - [x] **SSH-04**: SSH workspace reconnect works after network interruption
 
 ### HiDPI / Display
@@ -148,7 +148,7 @@
 | SOCK-05 | Phase 3 | Complete |
 | SOCK-06 | Phase 3 | Complete |
 | SESS-01 | Phase 3 | Complete |
-| SESS-02 | Phase 3 | Complete |
+| SESS-02 | Phase 6 | Pending |
 | SESS-03 | Phase 3 | Complete |
 | SESS-04 | Phase 3 | Complete |
 | NOTF-01 | Phase 4 | Complete |
@@ -158,7 +158,7 @@
 | HDPI-02 | Phase 4 | Complete |
 | SSH-01 | Phase 4 | Complete |
 | SSH-02 | Phase 4 | Complete |
-| SSH-03 | Phase 4 | Complete |
+| SSH-03 | Phase 7 | Pending |
 | SSH-04 | Phase 4 | Complete |
 | CFG-01 | Phase 5 | Complete |
 | CFG-02 | Phase 5 | Complete |
@@ -172,6 +172,8 @@
 **Coverage:**
 - v1 requirements: 47 total
 - Mapped to phases: 47
+- Satisfied: 45
+- Pending (gap closure): 2 (SESS-02, SSH-03)
 - Unmapped: 0 ✓
 
 ---

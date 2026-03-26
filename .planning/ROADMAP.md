@@ -17,6 +17,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: Socket API + Session Persistence** - v2 JSON-RPC socket server wire-compatible with macOS cmux; workspace/pane layout saved and restored across launches
 - [ ] **Phase 4: Notifications + HiDPI + SSH** - Per-pane attention state, desktop notifications, correct fractional scaling, and SSH remote workspaces
 - [ ] **Phase 5: Config + Distribution** - Config file, keyboard shortcut customization, GitHub Actions CI, and AppImage packaging
+- [ ] **Phase 6: Session Layout Restore + Surface Wiring** - Persist/restore split pane layouts and wire SplitNode surface pointers so socket text injection works
+- [ ] **Phase 7: SSH Terminal I/O** - Implement proxy.stream bidirectional I/O routing so SSH workspace terminal sessions run on the remote host
 
 ## Phase Details
 
@@ -115,6 +117,27 @@ Plans:
 - [x] 05-01-PLAN.md — TOML config system: config.rs with XDG path, ShortcutMap HashMap lookup, refactored shortcuts.rs
 - [x] 05-02-PLAN.md — Linux CI and AppImage: ci.yml linux-build job, release.yml AppImage job, .desktop file and icon
 
+### Phase 6: Session Layout Restore + Surface Wiring
+**Goal**: Split pane layouts persist and restore on relaunch; SplitNode surface pointers are wired so socket commands (surface.send_text, surface.send_key, debug.type) work
+**Depends on**: Phase 3
+**Requirements**: SESS-02, SOCK-02, SOCK-03
+**Gap Closure:** Closes gaps from v1.0 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. App saves full split tree topology (not just workspace names) to session.json
+  2. On relaunch, each workspace restores its exact split layout with new Ghostty surfaces
+  3. `set_initial_surface()` is called for every SplitNode::Leaf, making socket text injection functional
+  4. `surface.send_text` via socket actually types into the target pane
+
+### Phase 7: SSH Terminal I/O
+**Goal**: SSH workspace terminal sessions execute on the remote host via bidirectional I/O proxying through the SSH tunnel
+**Depends on**: Phase 4
+**Requirements**: SSH-03
+**Gap Closure:** Closes gaps from v1.0 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. `proxy.stream` in tunnel.rs routes terminal I/O between the local Ghostty surface and the remote cmuxd shell
+  2. Keystrokes typed in an SSH workspace pane appear in the remote shell
+  3. Remote shell output renders in the local terminal surface
+
 ## Progress
 
 **Execution Order:**
@@ -127,3 +150,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. Socket API + Session Persistence | 2/7 | In Progress|  |
 | 4. Notifications + HiDPI + SSH | 0/5 | Not started | - |
 | 5. Config + Distribution | 0/2 | Not started | - |
+| 6. Session Layout Restore + Surface Wiring | 0/0 | Not started | - |
+| 7. SSH Terminal I/O | 0/0 | Not started | - |
