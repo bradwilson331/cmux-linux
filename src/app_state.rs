@@ -1,6 +1,6 @@
 use crate::ghostty::ffi;
 use crate::split_engine::SplitEngine;
-use crate::workspace::Workspace;
+use crate::workspace::{ConnectionState, Workspace};
 use gtk4::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -29,6 +29,12 @@ pub struct AppState {
     /// Sender for session snapshots to the debounce task.
     /// Each mutation snapshots SessionData on the main thread and sends it here.
     pub session_tx: Option<tokio::sync::mpsc::UnboundedSender<crate::session::SessionData>>,
+    /// Sender for SSH events (cloned into SSH lifecycle tokio tasks).
+    pub ssh_event_tx: Option<crate::ssh::SshEventTx>,
+    /// Tokio runtime handle for spawning SSH lifecycle tasks.
+    pub runtime_handle: Option<tokio::runtime::Handle>,
+    /// Handles to SSH lifecycle tasks, keyed by workspace id. Used for cleanup on close.
+    pub ssh_task_handles: std::collections::HashMap<u64, tokio::task::JoinHandle<()>>,
 }
 
 impl AppState {
@@ -52,6 +58,9 @@ impl AppState {
             next_display_number: 1,
             save_notify: None, // Set to Some(...) after tokio runtime is available in main.rs
             session_tx: None,
+            ssh_event_tx: None,
+            runtime_handle: None,
+            ssh_task_handles: std::collections::HashMap::new(),
         };
         Rc::new(RefCell::new(state))
     }
@@ -124,12 +133,113 @@ impl AppState {
         id
     }
 
+    /// Build a sidebar row for a workspace. Used by create_workspace and create_remote_workspace.
+    fn build_sidebar_row(&self, workspace: &Workspace) -> gtk4::ListBoxRow {
+        let hbox = gtk4::Box::new(gtk4::Orientation::Horizontal, 4);
+        let vbox = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+        let label = gtk4::Label::new(Some(&workspace.name));
+        label.set_halign(gtk4::Align::Start);
+        label.set_hexpand(true);
+        vbox.append(&label);
+
+        // SSH connection state subtitle (only for remote workspaces)
+        if workspace.connection_state.is_remote() {
+            let status = gtk4::Label::new(Some(workspace.connection_state.display_text()));
+            status.set_halign(gtk4::Align::Start);
+            status.add_css_class("connection-state");
+            status.add_css_class(workspace.connection_state.css_class());
+            vbox.append(&status);
+        }
+        vbox.set_hexpand(true);
+        hbox.append(&vbox);
+
+        // Attention dot — hidden by default, shown when has_attention
+        let dot = gtk4::Label::new(None);
+        dot.add_css_class("attention-dot");
+        dot.set_visible(false);
+        hbox.append(&dot);
+
+        let row = gtk4::ListBoxRow::new();
+        row.set_child(Some(&hbox));
+        unsafe {
+            row.set_data("workspace-id", workspace.id);
+        }
+        row
+    }
+
+    /// Create a remote SSH workspace. Returns workspace id.
+    pub fn create_remote_workspace(&mut self, target: String) -> u64 {
+        let id = self.next_id;
+        self.next_id += 1;
+        let display_number = self.next_display_number;
+        self.next_display_number += 1;
+
+        let workspace = Workspace::new_remote(id, display_number, target);
+        let row = self.build_sidebar_row(&workspace);
+        self.sidebar_list.append(&row);
+
+        // Create surface and split engine (same as local)
+        let pane_id = id * 1000;
+        let (gl_area, surface_cell) =
+            crate::ghostty::surface::create_surface(&self.gtk_app, self.ghostty_app, None, pane_id);
+        let engine = SplitEngine::new(
+            self.gtk_app.clone(),
+            self.ghostty_app,
+            gl_area,
+            surface_cell,
+            pane_id,
+        );
+
+        let page_name = workspace.stack_page_name.clone();
+        self.stack
+            .add_named(&engine.root_widget(), Some(&page_name));
+
+        self.workspaces.push(workspace);
+        self.split_engines.push(engine);
+
+        let new_index = self.workspaces.len() - 1;
+        self.switch_to_index(new_index);
+        self.trigger_session_save();
+        id
+    }
+
+    /// Update the connection state of a workspace and refresh its sidebar row.
+    pub fn update_connection_state(&mut self, workspace_id: u64, state: ConnectionState) {
+        if let Some(idx) = self.workspaces.iter().position(|ws| ws.id == workspace_id) {
+            self.workspaces[idx].connection_state = state.clone();
+            // Update sidebar subtitle
+            if let Some(row) = self.sidebar_list.row_at_index(idx as i32) {
+                if let Some(hbox) = row.child().and_downcast::<gtk4::Box>() {
+                    if let Some(vbox) = hbox.first_child().and_downcast::<gtk4::Box>() {
+                        // Last child in vbox is the status label (if it has connection-state class)
+                        if let Some(status) = vbox.last_child().and_downcast::<gtk4::Label>() {
+                            if status.has_css_class("connection-state") {
+                                status.set_text(state.display_text());
+                                status.remove_css_class("connected");
+                                status.remove_css_class("disconnected");
+                                status.remove_css_class("reconnecting");
+                                status.add_css_class(state.css_class());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /// Close the workspace at `index`. Removes the sidebar row and GtkStack page.
     /// Returns false if there is only one workspace (cannot close the last one).
     /// The caller (Plan 04) is responsible for calling ghostty_surface_free on all panes first.
     pub fn close_workspace(&mut self, index: usize) -> bool {
         if self.workspaces.len() <= 1 {
             return false; // Cannot close the last workspace
+        }
+
+        // Abort SSH lifecycle task if this is a remote workspace.
+        if let Some(ws) = self.workspaces.get(index) {
+            if let Some(handle) = self.ssh_task_handles.remove(&ws.id) {
+                handle.abort();
+            }
         }
 
         // Before removing from workspaces, free all Ghostty surfaces in the split engine.

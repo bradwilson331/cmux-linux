@@ -11,6 +11,7 @@ mod sidebar;
 mod shortcuts;
 mod socket;
 mod session;
+mod ssh;
 
 const APP_ID: &str = "io.cmux.App";
 
@@ -40,6 +41,15 @@ paned > separator:hover { background-color: #5b8dd9; }
     max-height: 8px;
     margin: 0 4px;
 }
+/* Phase 4: SSH connection state subtitle (SSH-01, SSH-04) */
+.connection-state {
+    font-size: 11px;
+    font-weight: 400;
+    color: #888888;
+}
+.connection-state.connected { color: #5b8dd9; }
+.connection-state.disconnected { color: #888888; }
+.connection-state.reconnecting { color: #e8a444; }
 ";
 
 fn main() {
