@@ -29,11 +29,11 @@ A Linux user should get the same cmux experience as a Mac user: tabs, splits, wo
 - [ ] Tab/workspace management in Rust — create, close, switch, named workspaces
 - [ ] Pane splitting in Rust — horizontal/vertical splits, divider dragging, tree layout (port Bonsplit logic)
 - [x] Unix socket server in Rust — v2 JSON-RPC protocol compatibility with macOS cmux — Validated in Phase 03: socket-api-session-persistence
-- [ ] Keyboard shortcut configuration — load from config file, bind to actions
+- [x] Keyboard shortcut configuration — load from config file, bind to actions — Validated in Phase 05: config-distribution
 - [x] Session persistence — save/restore workspace+pane layout to JSON on disk — Validated in Phase 03: socket-api-session-persistence
 - [x] Terminal notification/attention state — activity detection per pane — Validated in Phase 04: notifications-hidpi-ssh
-- [ ] CI/CD for Linux (GitHub Actions, Ubuntu runners)
-- [ ] Distribution packaging — .deb, .AppImage, or Flatpak
+- [x] CI/CD for Linux (GitHub Actions, Ubuntu runners) — Validated in Phase 05: config-distribution
+- [x] Distribution packaging — .deb, .AppImage, or Flatpak — Validated in Phase 05: config-distribution (AppImage)
 
 ### Out of Scope
 
@@ -98,4 +98,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-26 after Phase 04 completion*
+*Last updated: 2026-03-26 after Phase 05 completion*
