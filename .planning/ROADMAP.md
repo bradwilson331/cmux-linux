@@ -72,7 +72,7 @@ Plans:
   2. Non-focus-intent socket commands (new_split, workspace.list, send) never steal window focus or call gtk_window_present()
   3. App relaunches and fully restores the previous workspace + pane layout
   4. Killing the app mid-save (kill -9) does not corrupt the session file — next launch recovers cleanly
-**Plans**: 7 plans
+**Plans**: 8 plans
 Plans:
 - [x] 03-00-PLAN.md — Wave 0 scaffold: Cargo.toml deps (serde/serde_json/uuid/libc), module stubs with test scaffolds
 - [x] 03-01-PLAN.md — Data model: UUID fields in Workspace/SplitNode, SplitNodeData serde type, glib channel replaces mpsc polling
@@ -81,6 +81,7 @@ Plans:
 - [x] 03-04-PLAN.md — Tier-1 handlers (surface/pane): send_text/send_key/focus/close with SOCK-05 focus policy
 - [x] 03-05-PLAN.md — Session persistence: SessionData serde, atomic save, 500ms debounce, restore on relaunch
 - [ ] 03-06-PLAN.md — Human verification: socket connectivity, workspace control, session restore, test_ctrl_socket.py
+- [ ] 03-07-PLAN.md — Gap closure: cmux-cli wrapper script for SOCK-03
 
 ### Phase 4: Notifications + HiDPI + SSH
 **Goal**: Users see per-pane activity indicators and desktop notifications; the app renders correctly at any display scale; SSH workspaces connect to remote hosts
