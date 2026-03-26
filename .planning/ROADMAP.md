@@ -59,7 +59,7 @@ Plans:
 - [x] 02-03-PLAN.md — Split engine: src/split_engine.rs SplitNode tree with split/close/focus operations
 - [x] 02-04-PLAN.md — Window layout + sidebar: full GtkBox(H)+GtkStack layout, sidebar CSS, build_ui restructure
 - [x] 02-05-PLAN.md — Keyboard shortcuts: src/shortcuts.rs capture-phase interception, all D-10 shortcuts wired
-- [ ] 02-06-PLAN.md — Human verification: full Phase 2 feature verification checkpoint
+- [x] 02-06-PLAN.md — Human verification: full Phase 2 feature verification checkpoint
 - [x] 02-07-PLAN.md — Gap closure: fix drag-resize cursor freeze, pane-close crash, and Ctrl+Alt+Arrow WM conflict
 **UI hint**: yes
 
