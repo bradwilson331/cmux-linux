@@ -92,7 +92,13 @@ Plans:
   2. Desktop notification appears when a terminal rings a bell while the app window is not focused
   3. App renders correctly at 1x, 1.5x, and 2x scale factors; moving the window between monitors with different DPI updates rendering without restart
   4. User can configure an SSH workspace, and terminal sessions in that workspace run on the remote host with reconnect after network interruption
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 04-01-PLAN.md — Bell attention tracking: action_cb RING_BELL handler, per-pane/workspace has_attention, sidebar dot, desktop notifications
+- [ ] 04-02-PLAN.md — HiDPI verification: audit scale-factor handler, verify CSS at fractional scales, fix any issues
+- [ ] 04-03-PLAN.md — Notification socket commands: notification.list, notification.clear, surface.health attention field
+- [ ] 04-04-PLAN.md — SSH remote workspaces: data model, cmuxd-remote deployment, stdio tunnel, reconnection, socket API
+- [ ] 04-05-PLAN.md — Human verification: full Phase 4 feature verification checkpoint
 **UI hint**: yes
 
 ### Phase 5: Config + Distribution
@@ -116,5 +122,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Ghostty Foundation | 8/9 | In Progress|  |
 | 2. Workspaces + Pane Splits | 5/8 | In Progress|  |
 | 3. Socket API + Session Persistence | 2/7 | In Progress|  |
-| 4. Notifications + HiDPI + SSH | 0/? | Not started | - |
+| 4. Notifications + HiDPI + SSH | 0/5 | Not started | - |
 | 5. Config + Distribution | 0/? | Not started | - |
