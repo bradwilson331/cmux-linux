@@ -28,9 +28,9 @@ A Linux user should get the same cmux experience as a Mac user: tabs, splits, wo
 - [x] Rust project scaffolding with GTK4 bindings (gtk4-rs) wrapping Ghostty terminal surfaces — Validated in Phase 01: ghostty-foundation
 - [ ] Tab/workspace management in Rust — create, close, switch, named workspaces
 - [ ] Pane splitting in Rust — horizontal/vertical splits, divider dragging, tree layout (port Bonsplit logic)
-- [ ] Unix socket server in Rust — v2 JSON-RPC protocol compatibility with macOS cmux
+- [x] Unix socket server in Rust — v2 JSON-RPC protocol compatibility with macOS cmux — Validated in Phase 03: socket-api-session-persistence
 - [ ] Keyboard shortcut configuration — load from config file, bind to actions
-- [ ] Session persistence — save/restore workspace+pane layout to JSON on disk
+- [x] Session persistence — save/restore workspace+pane layout to JSON on disk — Validated in Phase 03: socket-api-session-persistence
 - [ ] Terminal notification/attention state — activity detection per pane
 - [ ] CI/CD for Linux (GitHub Actions, Ubuntu runners)
 - [ ] Distribution packaging — .deb, .AppImage, or Flatpak
@@ -98,4 +98,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-23 after initialization*
+*Last updated: 2026-03-26 after Phase 03 completion*
