@@ -369,7 +369,13 @@ pub fn create_surface(
         let cell = surface_cell.clone();
         move |widget, _| {
             if let Some(surface) = *cell.borrow() {
-                let scale = widget.scale_factor() as f64;
+                // Prefer fractional scale from GdkSurface (Wayland fractional scaling)
+                // over Widget::scale_factor() which returns the integer ceiling.
+                let scale = widget.native()
+                    .and_then(|n| n.surface())
+                    .map(|s| s.scale())
+                    .unwrap_or(widget.scale_factor() as f64);
+                eprintln!("cmux: scale-factor changed to {} for surface {:p}", scale, surface);
                 unsafe {
                     ffi::ghostty_surface_set_content_scale(surface, scale, scale);
                     ffi::ghostty_surface_refresh(surface); // trigger redraw at new scale
