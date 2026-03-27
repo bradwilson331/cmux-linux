@@ -172,11 +172,12 @@ Plans:
   2. `browser.stream.enable` starts CDP screencast and frames render in a GTK4 preview pane at ~5fps
   3. `browser.close` shuts down daemon cleanly with no orphaned Chrome processes
   4. All 6 browser.* socket commands are listed in system.capabilities
-**Plans**: 3 plans
+**Plans**: 4 plans
 Plans:
 - [x] 08-01-PLAN.md — Foundation: BrowserManager module, SplitNode::Preview variant, Cargo deps
 - [x] 08-02-PLAN.md — Socket commands: browser.* enum variants, dispatch routing, handler implementations
 - [x] 08-03-PLAN.md — Preview rendering: WebSocket stream pipeline, preview pane widget factory, shutdown cleanup
+- [ ] 08-04-PLAN.md — Gap closure: wire preview pane creation into BrowserOpen handler and stream pipeline into BrowserStreamEnable handler
 
 ## Progress
 
@@ -192,4 +193,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 5. Config + Distribution | 0/2 | Not started | - |
 | 6. Session Layout Restore + Surface Wiring | 0/2 | Not started | - |
 | 7. SSH Terminal I/O | 2/3 | In Progress|  |
-| 8. Agent-Browser Integration | 0/3 | Not started | - |
+| 8. Agent-Browser Integration | 3/4 | In Progress |  |
