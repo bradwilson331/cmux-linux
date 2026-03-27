@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-03-27T05:56:39.261Z",
+  "phase": "08",
+  "phase_name": "add-agent-browser",
+  "phase_dir": ".planning/phases/08-add-agent-browser",
+  "plan": "post-phase",
+  "task": "browser-interaction",
+  "total_tasks": 5,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "Add browser keybindings (Ctrl+Shift+B/Q)", "status": "done"},
+    {"id": 2, "name": "Add URL bar to preview pane", "status": "done"},
+    {"id": 3, "name": "Wire full daemon lifecycle (stream_enable+launch+navigate+screencast_start+start_stream)", "status": "done"},
+    {"id": 4, "name": "Frame rendering pipeline (WebSocket→JPEG→Texture→Picture)", "status": "done"},
+    {"id": 5, "name": "Viewport resize to match pane", "status": "done"},
+    {"id": 6, "name": "Mouse click+hover forwarding", "status": "done", "progress": "Code written, untested by user"},
+    {"id": 7, "name": "Focus navigation to Preview panes", "status": "done"},
+    {"id": 8, "name": "Close protection (last terminal pane)", "status": "done"}
+  ],
+  "remaining_tasks": [
+    {"id": 9, "name": "Verify mouse click forwarding works", "status": "not_started"},
+    {"id": 10, "name": "Add keyboard input forwarding to Chrome", "status": "not_started"},
+    {"id": 11, "name": "Add scroll wheel forwarding", "status": "not_started"},
+    {"id": 12, "name": "Clean up diagnostic logging", "status": "not_started"}
+  ],
+  "blockers": [
+    {"description": "Ghostty UAF crash when closing last terminal pane next to Preview", "type": "technical", "workaround": "Prevented by count_terminals guard in close_active"}
+  ],
+  "human_actions_pending": [],
+  "decisions": [
+    {"decision": "Cargo workspace for agent-browser co-build", "rationale": "Puts both binaries in target/debug/ so which_agent_browser finds it automatically", "phase": "08"},
+    {"decision": "SplitNode::Preview container changed from Overlay to Box", "rationale": "Needed to accommodate URL bar + overlay layout vertically", "phase": "08"},
+    {"decision": "Synchronous send_command for mouse events", "rationale": "Acceptable latency for click events, avoids async channel complexity", "phase": "08"}
+  ],
+  "uncommitted_files": [
+    "Cargo.toml",
+    "Cargo.lock",
+    "src/browser.rs",
+    "src/config.rs",
+    "src/main.rs",
+    "src/shortcuts.rs",
+    "src/socket/handlers.rs",
+    "src/split_engine.rs"
+  ],
+  "next_action": "Test mouse click forwarding, then add keyboard input forwarding via EventControllerKey on Picture",
+  "context_notes": "Post-phase-08 feature work. Phase plans complete. Building interactive browser preview with keybindings, URL bar, viewport sizing, input forwarding. Frame rendering confirmed working. Input forwarding code written but untested."
+}
