@@ -103,7 +103,7 @@ Plans:
 - [x] 04-04-PLAN.md — SSH remote workspaces: data model, cmuxd-remote deployment, stdio tunnel, reconnection, socket API
 - [x] 04-05-PLAN.md — Human verification: full Phase 4 feature verification checkpoint
 - [x] 04-06-PLAN.md — Gap closure: replace gio::Notification with notify-rust for working desktop notifications
-- [ ] 04-07-PLAN.md — Gap closure: cmuxd-remote install script, SSH lifecycle max retry and permanent failure detection
+- [x] 04-07-PLAN.md — Gap closure: cmuxd-remote install script, SSH lifecycle max retry and permanent failure detection
 **UI hint**: yes
 
 ### Phase 5: Config + Distribution
