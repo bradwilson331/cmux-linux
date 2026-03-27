@@ -38,7 +38,7 @@ pub fn handle_socket_command(
         }
 
         SocketCommand::Capabilities { req_id, resp_tx } => {
-            let methods = [
+            let methods: Vec<&str> = vec![
                 "system.ping", "system.identify", "system.capabilities",
                 "workspace.list", "workspace.current", "workspace.create",
                 "workspace.select", "workspace.close", "workspace.rename",
@@ -49,6 +49,9 @@ pub fn handle_socket_command(
                 "pane.list", "pane.focus", "pane.last",
                 "window.list", "window.current",
                 "notification.list", "notification.clear",
+                "browser.open", "browser.close",
+                "browser.stream.enable", "browser.stream.disable",
+                "browser.snapshot", "browser.screenshot",
                 "debug.layout", "debug.type",
             ];
             let _ = resp_tx.send(ok(req_id, json!({"methods": methods})));
@@ -573,6 +576,111 @@ pub fn handle_socket_command(
                 None => {
                     let _ = resp_tx.send(err(req_id, "not_found", "workspace not found"));
                 }
+            }
+        }
+
+        // -- browser.* (Phase 8: D-04 lifecycle + streaming) --
+        // SOCK-05: None of these commands steal focus.
+        SocketCommand::BrowserOpen { req_id, url, resp_tx } => {
+            let mut s = state.borrow_mut();
+            // Lazy-init BrowserManager per D-05
+            if s.browser_manager.is_none() {
+                s.browser_manager = Some(crate::browser::BrowserManager::new());
+            }
+            let bm = s.browser_manager.as_mut().unwrap();
+            // Ensure daemon is running (auto-start per D-05)
+            if let Err(e) = bm.ensure_daemon() {
+                let _ = resp_tx.send(err(req_id, "daemon_error", &e));
+                return;
+            }
+            // Send navigate command to daemon
+            let params = serde_json::json!({"url": url});
+            match bm.send_command("navigate", params) {
+                Ok(result) => {
+                    let _ = resp_tx.send(ok(req_id, result));
+                }
+                Err(e) => {
+                    let _ = resp_tx.send(err(req_id, "browser_error", &e));
+                }
+            }
+        }
+
+        SocketCommand::BrowserClose { req_id, resp_tx } => {
+            let mut s = state.borrow_mut();
+            if let Some(ref mut bm) = s.browser_manager {
+                bm.shutdown();
+                s.browser_manager = None;
+                let _ = resp_tx.send(ok(req_id, json!({"closed": true})));
+            } else {
+                let _ = resp_tx.send(err(req_id, "not_running", "No browser session active"));
+            }
+        }
+
+        SocketCommand::BrowserStreamEnable { req_id, resp_tx } => {
+            let mut s = state.borrow_mut();
+            if s.browser_manager.is_none() {
+                s.browser_manager = Some(crate::browser::BrowserManager::new());
+            }
+            let bm = s.browser_manager.as_mut().unwrap();
+            if let Err(e) = bm.ensure_daemon() {
+                let _ = resp_tx.send(err(req_id, "daemon_error", &e));
+                return;
+            }
+            match bm.send_command("stream_enable", serde_json::json!({})) {
+                Ok(result) => {
+                    let _ = resp_tx.send(ok(req_id, result));
+                }
+                Err(e) => {
+                    let _ = resp_tx.send(err(req_id, "stream_error", &e));
+                }
+            }
+        }
+
+        SocketCommand::BrowserStreamDisable { req_id, resp_tx } => {
+            let mut s = state.borrow_mut();
+            if let Some(ref mut bm) = s.browser_manager {
+                match bm.send_command("stream_disable", serde_json::json!({})) {
+                    Ok(result) => {
+                        let _ = resp_tx.send(ok(req_id, result));
+                    }
+                    Err(e) => {
+                        let _ = resp_tx.send(err(req_id, "stream_error", &e));
+                    }
+                }
+            } else {
+                let _ = resp_tx.send(err(req_id, "not_running", "No browser session active"));
+            }
+        }
+
+        SocketCommand::BrowserSnapshot { req_id, resp_tx } => {
+            let s = state.borrow();
+            if let Some(ref bm) = s.browser_manager {
+                match bm.send_command("snapshot", serde_json::json!({})) {
+                    Ok(result) => {
+                        let _ = resp_tx.send(ok(req_id, result));
+                    }
+                    Err(e) => {
+                        let _ = resp_tx.send(err(req_id, "browser_error", &e));
+                    }
+                }
+            } else {
+                let _ = resp_tx.send(err(req_id, "not_running", "No browser session active"));
+            }
+        }
+
+        SocketCommand::BrowserScreenshot { req_id, resp_tx } => {
+            let s = state.borrow();
+            if let Some(ref bm) = s.browser_manager {
+                match bm.send_command("screenshot", serde_json::json!({})) {
+                    Ok(result) => {
+                        let _ = resp_tx.send(ok(req_id, result));
+                    }
+                    Err(e) => {
+                        let _ = resp_tx.send(err(req_id, "browser_error", &e));
+                    }
+                }
+            } else {
+                let _ = resp_tx.send(err(req_id, "not_running", "No browser session active"));
             }
         }
 

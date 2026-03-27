@@ -53,6 +53,14 @@ pub enum SocketCommand {
     NotificationList   { req_id: Value, resp_tx: RespTx },
     NotificationClear  { req_id: Value, id: String, resp_tx: RespTx },
 
+    // -- browser.* (Phase 8: D-04 lifecycle + streaming) --
+    BrowserOpen          { req_id: Value, url: String, resp_tx: RespTx },
+    BrowserClose         { req_id: Value, resp_tx: RespTx },
+    BrowserStreamEnable  { req_id: Value, resp_tx: RespTx },
+    BrowserStreamDisable { req_id: Value, resp_tx: RespTx },
+    BrowserSnapshot      { req_id: Value, resp_tx: RespTx },
+    BrowserScreenshot    { req_id: Value, resp_tx: RespTx },
+
     // -- Tier-2 stub (not_implemented) --
     NotImplemented   { req_id: Value, method: String, resp_tx: RespTx },
 }

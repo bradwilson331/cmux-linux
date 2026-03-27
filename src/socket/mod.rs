@@ -255,6 +255,32 @@ async fn dispatch_line(
             resp_tx,
         },
 
+        "browser.open" => commands::SocketCommand::BrowserOpen {
+            req_id: req_id.clone(),
+            url: params.get("url").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            resp_tx,
+        },
+        "browser.close" => commands::SocketCommand::BrowserClose {
+            req_id: req_id.clone(),
+            resp_tx,
+        },
+        "browser.stream.enable" => commands::SocketCommand::BrowserStreamEnable {
+            req_id: req_id.clone(),
+            resp_tx,
+        },
+        "browser.stream.disable" => commands::SocketCommand::BrowserStreamDisable {
+            req_id: req_id.clone(),
+            resp_tx,
+        },
+        "browser.snapshot" => commands::SocketCommand::BrowserSnapshot {
+            req_id: req_id.clone(),
+            resp_tx,
+        },
+        "browser.screenshot" => commands::SocketCommand::BrowserScreenshot {
+            req_id: req_id.clone(),
+            resp_tx,
+        },
+
         _ => commands::SocketCommand::NotImplemented {
             req_id: req_id.clone(),
             method: method.clone(),
