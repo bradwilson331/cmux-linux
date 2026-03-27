@@ -160,7 +160,7 @@ Plans:
   4. SSH workspace auto-named from hostname in sidebar
 **Plans**: 1 plan
 Plans:
-- [ ] 07.1-01-PLAN.md — SSH hosts module + connect dialog: shortcut binding, GTK dialog with autocomplete, host persistence, auto-save on connect
+- [x] 07.1-01-PLAN.md — SSH hosts module + connect dialog: shortcut binding, GTK dialog with autocomplete, host persistence, auto-save on connect
 **UI hint**: yes
 
 ### Phase 8: Agent-Browser Integration

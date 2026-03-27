@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 7.1 context gathered
-last_updated: "2026-03-27T02:26:40.739Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 07.1-01-PLAN.md
+last_updated: "2026-03-27T02:57:27.656Z"
 progress:
   total_phases: 9
-  completed_phases: 7
-  total_plans: 41
-  completed_plans: 38
+  completed_phases: 8
+  total_plans: 42
+  completed_plans: 39
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control — powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** Phase 07 — ssh-terminal-io
+**Current focus:** Phase 07.1 — ssh-workspace-ui
 
 ## Current Position
 
-Phase: 08
-Plan: Not started
+Phase: 07.1 (ssh-workspace-ui) — EXECUTING
+Plan: 1 of 1
 
 ## Performance Metrics
 
@@ -78,6 +78,7 @@ Plan: Not started
 | Phase 07 P01 | 10 | 2 tasks | 11 files |
 | Phase 07 P02 | 4 | 2 tasks | 7 files |
 | Phase 07 P03 | 2 | 1 tasks | 4 files |
+| Phase 07.1 P01 | 4 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -140,6 +141,8 @@ Recent decisions affecting current work:
 - [Phase 07]: SurfaceIoMode enum parameter on create_surface avoids duplicating 600-line function for SSH remote surfaces
 - [Phase 07]: ssh_io_write_cb uses c_char to match ghostty.h typedef; SURFACE_REGISTRY reverse lookup for pane-to-surface dispatch
 - [Phase 07]: Arc<Mutex<UnboundedSender>> for swappable write_tx enables reconnect channel recreation without bridge restart
+- [Phase 07.1]: EntryCompletion used despite GTK 4.10 deprecation -- no replacement exists until GTK 5
+- [Phase 07.1]: Workspace auto-naming extracts hostname only (strips user@ and :port)
 
 ### Roadmap Evolution
 
@@ -157,6 +160,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T02:26:40.736Z
-Stopped at: Phase 7.1 context gathered
-Resume file: .planning/phases/07.1-ssh-workspace-ui/07.1-CONTEXT.md
+Last session: 2026-03-27T02:57:27.653Z
+Stopped at: Completed 07.1-01-PLAN.md
+Resume file: None
