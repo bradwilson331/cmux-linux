@@ -145,7 +145,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 07-01-PLAN.md — FFI + bridge module: ghostty.h manual I/O fields, bridge.rs types, cmuxd-remote PTY spawn, tunnel.rs proxy routing
-- [ ] 07-02-PLAN.md — Remote surface wiring: manual I/O mode surface creation, app_state integration, disconnect/reconnect/exit handling
+- [x] 07-02-PLAN.md — Remote surface wiring: manual I/O mode surface creation, app_state integration, disconnect/reconnect/exit handling
 
 ### Phase 8: Agent-Browser Integration
 **Goal**: Integrate agent-browser headless Chrome automation into cmux with bundled binary, browser.* socket commands, and CDP screencast preview pane

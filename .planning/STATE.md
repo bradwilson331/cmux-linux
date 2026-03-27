@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-03-27T01:17:49.597Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-03-27T01:26:08.296Z"
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 40
-  completed_plans: 36
+  completed_plans: 37
 ---
 
 # Project State
@@ -76,6 +76,7 @@ Plan: 2 of 2
 | Phase 06 P01 | 3 | 2 tasks | 3 files |
 | Phase 06 P02 | 3 | 2 tasks | 3 files |
 | Phase 07 P01 | 10 | 2 tasks | 11 files |
+| Phase 07 P02 | 4 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -135,6 +136,8 @@ Recent decisions affecting current work:
 - [Phase 07]: Per-workspace SshBridge with dedicated write/output channels created at workspace.create time
 - [Phase 07]: ptyConn adapter wraps os.File as net.Conn to reuse existing streamPump infrastructure
 - [Phase 07]: PendingMap (Arc<Mutex<HashMap<u64, oneshot::Sender>>>) for RPC request-response correlation
+- [Phase 07]: SurfaceIoMode enum parameter on create_surface avoids duplicating 600-line function for SSH remote surfaces
+- [Phase 07]: ssh_io_write_cb uses c_char to match ghostty.h typedef; SURFACE_REGISTRY reverse lookup for pane-to-surface dispatch
 
 ### Roadmap Evolution
 
@@ -152,6 +155,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T01:17:49.594Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-03-27T01:26:08.293Z
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
