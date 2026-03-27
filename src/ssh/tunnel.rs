@@ -12,6 +12,15 @@ use tokio::sync::oneshot;
 /// Maximum reconnection backoff delay.
 const MAX_BACKOFF_SECS: u64 = 30;
 
+/// Maximum number of reconnection attempts before giving up.
+const MAX_RETRIES: u32 = 10;
+
+/// Whether a failure is permanent (no point retrying) or transient (retry with backoff).
+enum FailureKind {
+    Permanent,
+    Transient,
+}
+
 /// Pending RPC responses awaiting completion.
 type PendingMap = Arc<Mutex<HashMap<u64, oneshot::Sender<serde_json::Value>>>>;
 
@@ -36,6 +45,23 @@ pub async fn run_ssh_lifecycle(
         if attempt == 0 {
             if let Err(e) = crate::ssh::deploy::deploy_remote(&target).await {
                 eprintln!("cmux: SSH deploy failed: {e}");
+
+                // Classify: binary-not-found is permanent, everything else is transient
+                let kind = if e.contains("not found at") {
+                    FailureKind::Permanent
+                } else {
+                    FailureKind::Transient
+                };
+
+                if matches!(kind, FailureKind::Permanent) {
+                    let _ = ssh_tx.send(SshEvent::StateChanged {
+                        workspace_id,
+                        state: ConnectionState::Disconnected,
+                    });
+                    eprintln!("cmux: SSH permanent failure, giving up: {e}");
+                    break;
+                }
+
                 let _ = ssh_tx.send(SshEvent::StateChanged {
                     workspace_id,
                     state: ConnectionState::Disconnected,
@@ -122,6 +148,15 @@ pub async fn run_ssh_lifecycle(
                     state: ConnectionState::Disconnected,
                 });
             }
+        }
+
+        if attempt >= MAX_RETRIES {
+            eprintln!("cmux: SSH max retries ({MAX_RETRIES}) exceeded for {target}, giving up");
+            let _ = ssh_tx.send(SshEvent::StateChanged {
+                workspace_id,
+                state: ConnectionState::Disconnected,
+            });
+            break;
         }
 
         // Exponential backoff before reconnect (per D-14)
@@ -432,6 +467,12 @@ fn backoff_duration(attempt: u32) -> Duration {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_max_retries_is_reasonable() {
+        assert!(MAX_RETRIES >= 5, "too few retries");
+        assert!(MAX_RETRIES <= 20, "too many retries");
+    }
 
     #[test]
     fn test_backoff_duration() {
