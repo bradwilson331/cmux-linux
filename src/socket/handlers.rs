@@ -597,6 +597,19 @@ pub fn handle_socket_command(
             let params = serde_json::json!({"url": url});
             match bm.send_command("navigate", params) {
                 Ok(result) => {
+                    // Create preview pane in the active workspace split tree
+                    // so the user sees something in the UI (Gap 1 + Gap 2 fix)
+                    if let Some(engine) = s.active_split_engine_mut() {
+                        match engine.split_active_with_preview() {
+                            Some((_pane_id, _picture)) => {
+                                eprintln!("cmux: browser.open created preview pane");
+                                // Note: streaming is started separately via browser.stream.enable
+                            }
+                            None => {
+                                eprintln!("cmux: browser.open failed to create preview pane (split failed)");
+                            }
+                        }
+                    }
                     let _ = resp_tx.send(ok(req_id, result));
                 }
                 Err(e) => {
@@ -628,6 +641,42 @@ pub fn handle_socket_command(
             }
             match bm.send_command("stream_enable", serde_json::json!({})) {
                 Ok(result) => {
+                    // Find the Picture widget from the Preview pane in the active workspace.
+                    // If no preview pane exists yet, create one first.
+                    let picture = {
+                        let engine = s.active_split_engine_mut();
+                        if let Some(eng) = engine {
+                            // Try to find existing Preview node's Picture
+                            find_preview_picture(&eng.root)
+                                .or_else(|| {
+                                    // No preview pane yet -- create one
+                                    eng.split_active_with_preview().map(|(_id, pic)| pic)
+                                })
+                        } else {
+                            None
+                        }
+                    };
+
+                    // Wire the WebSocket stream to the Picture widget (Gap 1 fix)
+                    if let Some(pic) = picture {
+                        let runtime = s.runtime_handle.clone();
+                        let bm = s.browser_manager.as_mut().unwrap();
+                        if let Some(ref rt) = runtime {
+                            match bm.start_stream(rt, pic) {
+                                Ok(()) => {
+                                    eprintln!("cmux: browser.stream.enable wired stream to preview pane");
+                                }
+                                Err(e) => {
+                                    eprintln!("cmux: browser.stream.enable start_stream failed: {}", e);
+                                }
+                            }
+                        } else {
+                            eprintln!("cmux: browser.stream.enable no runtime handle available");
+                        }
+                    } else {
+                        eprintln!("cmux: browser.stream.enable no preview pane available for streaming");
+                    }
+
                     let _ = resp_tx.send(ok(req_id, result));
                 }
                 Err(e) => {
@@ -688,5 +737,16 @@ pub fn handle_socket_command(
         SocketCommand::NotImplemented { req_id, method, resp_tx } => {
             let _ = resp_tx.send(err(req_id, "not_implemented", &format!("{method} is not implemented")));
         }
+    }
+}
+
+/// Walk the split tree to find the first Preview node's Picture widget.
+fn find_preview_picture(node: &crate::split_engine::SplitNode) -> Option<gtk4::Picture> {
+    match node {
+        crate::split_engine::SplitNode::Preview { picture, .. } => Some(picture.clone()),
+        crate::split_engine::SplitNode::Split { start, end, .. } => {
+            find_preview_picture(start).or_else(|| find_preview_picture(end))
+        }
+        crate::split_engine::SplitNode::Leaf { .. } => None,
     }
 }
