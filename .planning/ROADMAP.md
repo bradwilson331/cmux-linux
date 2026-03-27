@@ -158,7 +158,9 @@ Plans:
   2. Successfully connected hosts are saved to `~/.config/cmux/ssh_hosts.toml`
   3. Dialog shows dropdown autocomplete from saved hosts and `~/.ssh/config` Host entries
   4. SSH workspace auto-named from hostname in sidebar
-**Plans**: 0 plans
+**Plans**: 1 plan
+Plans:
+- [ ] 07.1-01-PLAN.md — SSH hosts module + connect dialog: shortcut binding, GTK dialog with autocomplete, host persistence, auto-save on connect
 **UI hint**: yes
 
 ### Phase 8: Agent-Browser Integration
