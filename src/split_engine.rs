@@ -28,6 +28,13 @@ pub enum SplitNode {
         /// Phase 4 NOTF-01: true when this pane has unread bell activity.
         has_attention: bool,
     },
+    /// Phase 8: Browser preview pane (agent-browser frame rendering).
+    Preview {
+        pane_id: u64,
+        container: gtk4::Overlay,
+        picture: gtk4::Picture,
+        uuid: Uuid,
+    },
     Split {
         orientation: gtk4::Orientation,
         paned: gtk4::Paned,
@@ -37,10 +44,11 @@ pub enum SplitNode {
 }
 
 impl SplitNode {
-    /// Returns the root GTK widget for this node (GLArea for Leaf, Paned for Split).
+    /// Returns the root GTK widget for this node (GLArea for Leaf, Overlay for Preview, Paned for Split).
     pub fn widget(&self) -> gtk4::Widget {
         match self {
             SplitNode::Leaf { gl_area, .. } => gl_area.clone().upcast(),
+            SplitNode::Preview { container, .. } => container.clone().upcast(),
             SplitNode::Split { paned, .. } => paned.clone().upcast(),
         }
     }
@@ -57,6 +65,13 @@ impl SplitNode {
                     None
                 }
             }
+            SplitNode::Preview { pane_id, container, .. } => {
+                if container.has_css_class("active-pane") {
+                    Some(*pane_id)
+                } else {
+                    None
+                }
+            }
             SplitNode::Split { start, end, .. } => start
                 .find_active_pane_id()
                 .or_else(|| end.find_active_pane_id()),
@@ -66,7 +81,7 @@ impl SplitNode {
     /// Find the UUID for a pane by pane_id. Returns None if not found.
     pub fn find_uuid_for_pane(&self, target_id: u64) -> Option<String> {
         match self {
-            SplitNode::Leaf { pane_id, uuid, .. } => {
+            SplitNode::Leaf { pane_id, uuid, .. } | SplitNode::Preview { pane_id, uuid, .. } => {
                 if *pane_id == target_id {
                     Some(uuid.to_string())
                 } else {
@@ -93,6 +108,13 @@ impl SplitNode {
                     gl_area.remove_css_class("active-pane");
                 }
             }
+            SplitNode::Preview { pane_id, container, .. } => {
+                if *pane_id == active_pane_id {
+                    container.add_css_class("active-pane");
+                } else {
+                    container.remove_css_class("active-pane");
+                }
+            }
             SplitNode::Split { start, end, .. } => {
                 start.update_focus_css(active_pane_id);
                 end.update_focus_css(active_pane_id);
@@ -103,7 +125,7 @@ impl SplitNode {
     /// Collect all leaf pane_ids into a Vec (for cleanup on workspace close).
     pub fn collect_pane_ids(&self, out: &mut Vec<u64>) {
         match self {
-            SplitNode::Leaf { pane_id, .. } => out.push(*pane_id),
+            SplitNode::Leaf { pane_id, .. } | SplitNode::Preview { pane_id, .. } => out.push(*pane_id),
             SplitNode::Split { start, end, .. } => {
                 start.collect_pane_ids(out);
                 end.collect_pane_ids(out);
@@ -115,6 +137,7 @@ impl SplitNode {
     pub fn collect_surfaces(&self, out: &mut Vec<ffi::ghostty_surface_t>) {
         match self {
             SplitNode::Leaf { surface, .. } => out.push(*surface),
+            SplitNode::Preview { .. } => {} // No Ghostty surface
             SplitNode::Split { start, end, .. } => {
                 start.collect_surfaces(out);
                 end.collect_surfaces(out);
@@ -129,6 +152,7 @@ impl SplitNode {
             SplitNode::Leaf { pane_id, surface, .. } => {
                 if *pane_id == target_id { Some(*surface) } else { None }
             }
+            SplitNode::Preview { .. } => None, // No Ghostty surface
             SplitNode::Split { start, end, .. } => {
                 start.find_surface_for_pane(target_id)
                     .or_else(|| end.find_surface_for_pane(target_id))
@@ -139,7 +163,7 @@ impl SplitNode {
     /// Collect (uuid, pane_id, active) for all leaves in this subtree.
     pub fn collect_pane_info(&self, out: &mut Vec<(Uuid, u64, bool)>, active_id: u64) {
         match self {
-            SplitNode::Leaf { pane_id, uuid, .. } => {
+            SplitNode::Leaf { pane_id, uuid, .. } | SplitNode::Preview { pane_id, uuid, .. } => {
                 out.push((*uuid, *pane_id, *pane_id == active_id));
             }
             SplitNode::Split { start, end, .. } => {
@@ -155,6 +179,7 @@ impl SplitNode {
             SplitNode::Leaf { uuid, surface, .. } => {
                 if uuid.to_string() == target_uuid { Some(*surface) } else { None }
             }
+            SplitNode::Preview { .. } => None, // No Ghostty surface to return
             SplitNode::Split { start, end, .. } => {
                 start.find_by_uuid(target_uuid).or_else(|| end.find_by_uuid(target_uuid))
             }
@@ -164,7 +189,7 @@ impl SplitNode {
     /// Find the pane_id for the leaf matching target_uuid (UUID string).
     pub fn find_pane_id_by_uuid(&self, target_uuid: &str) -> Option<u64> {
         match self {
-            SplitNode::Leaf { uuid, pane_id, .. } => {
+            SplitNode::Leaf { uuid, pane_id, .. } | SplitNode::Preview { uuid, pane_id, .. } => {
                 if uuid.to_string() == target_uuid { Some(*pane_id) } else { None }
             }
             SplitNode::Split { start, end, .. } => {
@@ -185,6 +210,7 @@ impl SplitNode {
                     false
                 }
             }
+            SplitNode::Preview { .. } => false, // No attention state
             SplitNode::Split { start, end, .. } => {
                 start.set_attention(target_pane_id, value) || end.set_attention(target_pane_id, value)
             }
@@ -195,6 +221,7 @@ impl SplitNode {
     pub fn any_attention(&self) -> bool {
         match self {
             SplitNode::Leaf { has_attention, .. } => *has_attention,
+            SplitNode::Preview { .. } => false,
             SplitNode::Split { start, end, .. } => start.any_attention() || end.any_attention(),
         }
     }
@@ -205,6 +232,7 @@ impl SplitNode {
             SplitNode::Leaf { pane_id, has_attention, .. } => {
                 *pane_id == target_pane_id && *has_attention
             }
+            SplitNode::Preview { .. } => false,
             SplitNode::Split { start, end, .. } => {
                 start.pane_has_attention(target_pane_id) || end.pane_has_attention(target_pane_id)
             }
@@ -215,6 +243,7 @@ impl SplitNode {
     pub fn clear_all_attention(&mut self) {
         match self {
             SplitNode::Leaf { has_attention, .. } => *has_attention = false,
+            SplitNode::Preview { .. } => {} // No attention state
             SplitNode::Split { start, end, .. } => {
                 start.clear_all_attention();
                 end.clear_all_attention();
@@ -279,6 +308,7 @@ impl SplitEngine {
                     *s = surface;
                 }
             }
+            SplitNode::Preview { .. } => {} // No surface to set
             SplitNode::Split { start, end, .. } => {
                 Self::set_surface_recursive(start, target_pane_id, surface);
                 Self::set_surface_recursive(end, target_pane_id, surface);
@@ -400,6 +430,7 @@ impl SplitEngine {
                     }
                 }
             }
+            SplitNode::Preview { .. } => {} // No surface to sync
             SplitNode::Split { start, end, .. } => {
                 Self::sync_surfaces_recursive(start);
                 Self::sync_surfaces_recursive(end);
@@ -490,7 +521,7 @@ impl SplitEngine {
         // Only capture this for Leaf roots — for nested splits the outer Paned stays in the Stack.
         let old_root_widget = self.root.widget();
         let stack_slot: Option<(gtk4::Stack, String)> =
-            if matches!(self.root, SplitNode::Leaf { .. }) {
+            if matches!(self.root, SplitNode::Leaf { .. } | SplitNode::Preview { .. }) {
                 old_root_widget
                     .parent()
                     .and_then(|p| p.downcast::<gtk4::Stack>().ok())
@@ -734,7 +765,12 @@ impl SplitEngine {
         let active_id = self.active_pane_id;
 
         // Cannot close the last pane — workspace close is handled at AppState level.
-        if matches!(&self.root, SplitNode::Leaf { pane_id, .. } if *pane_id == active_id) {
+        let is_single_pane = match &self.root {
+            SplitNode::Leaf { pane_id, .. } if *pane_id == active_id => true,
+            SplitNode::Preview { pane_id, .. } if *pane_id == active_id => true,
+            _ => false,
+        };
+        if is_single_pane {
             return None; // Signal to AppState: close the workspace instead
         }
 
@@ -892,6 +928,7 @@ where
             }
         }
         SplitNode::Leaf { .. } => None,
+        SplitNode::Preview { .. } => None, // Cannot split a preview pane
         SplitNode::Split {
             start, end, paned, ..
         } => {
@@ -913,45 +950,49 @@ where
 /// Replaces the parent Split with the surviving sibling in the GTK widget tree.
 fn remove_leaf_from_tree(node: &mut SplitNode, target_id: u64) -> Option<u64> {
     match node {
-        SplitNode::Leaf { .. } => None, // Caller ensures we never remove the root leaf
+        SplitNode::Leaf { .. } | SplitNode::Preview { .. } => None, // Caller ensures we never remove the root leaf
         SplitNode::Split {
             start, end, paned, ..
         } => {
-            // Check if start is the target leaf.
-            if let SplitNode::Leaf { pane_id, .. } = start.as_ref() {
-                if *pane_id == target_id {
-                    // Surviving sibling is end. Replace this Split with end in the GTK tree.
-                    let surviving = *end.clone();
-                    let surviving_widget = surviving.widget();
-                    // Find the paned's parent and replace it with the surviving widget.
-                    if let Some(parent) = paned.parent() {
-                        replace_child_in_parent(
-                            &parent,
-                            &paned.clone().upcast(),
-                            &surviving_widget,
-                        );
-                    }
-                    let surviving_id = first_pane_id(&surviving);
-                    *node = surviving;
-                    return Some(surviving_id);
+            // Check if start is the target (Leaf or Preview).
+            let start_is_target = match start.as_ref() {
+                SplitNode::Leaf { pane_id, .. } | SplitNode::Preview { pane_id, .. } => *pane_id == target_id,
+                _ => false,
+            };
+            if start_is_target {
+                // Surviving sibling is end. Replace this Split with end in the GTK tree.
+                let surviving = *end.clone();
+                let surviving_widget = surviving.widget();
+                // Find the paned's parent and replace it with the surviving widget.
+                if let Some(parent) = paned.parent() {
+                    replace_child_in_parent(
+                        &parent,
+                        &paned.clone().upcast(),
+                        &surviving_widget,
+                    );
                 }
+                let surviving_id = first_pane_id(&surviving);
+                *node = surviving;
+                return Some(surviving_id);
             }
-            // Check if end is the target leaf.
-            if let SplitNode::Leaf { pane_id, .. } = end.as_ref() {
-                if *pane_id == target_id {
-                    let surviving = *start.clone();
-                    let surviving_widget = surviving.widget();
-                    if let Some(parent) = paned.parent() {
-                        replace_child_in_parent(
-                            &parent,
-                            &paned.clone().upcast(),
-                            &surviving_widget,
-                        );
-                    }
-                    let surviving_id = first_pane_id(&surviving);
-                    *node = surviving;
-                    return Some(surviving_id);
+            // Check if end is the target (Leaf or Preview).
+            let end_is_target = match end.as_ref() {
+                SplitNode::Leaf { pane_id, .. } | SplitNode::Preview { pane_id, .. } => *pane_id == target_id,
+                _ => false,
+            };
+            if end_is_target {
+                let surviving = *start.clone();
+                let surviving_widget = surviving.widget();
+                if let Some(parent) = paned.parent() {
+                    replace_child_in_parent(
+                        &parent,
+                        &paned.clone().upcast(),
+                        &surviving_widget,
+                    );
                 }
+                let surviving_id = first_pane_id(&surviving);
+                *node = surviving;
+                return Some(surviving_id);
             }
             // Recurse into start subtree.
             if let Some(id) = remove_leaf_from_tree(start, target_id) {
@@ -1004,7 +1045,7 @@ fn replace_child_in_parent(
 /// Return the first (leftmost/topmost) pane_id in a subtree.
 fn first_pane_id(node: &SplitNode) -> u64 {
     match node {
-        SplitNode::Leaf { pane_id, .. } => *pane_id,
+        SplitNode::Leaf { pane_id, .. } | SplitNode::Preview { pane_id, .. } => *pane_id,
         SplitNode::Split { start, .. } => first_pane_id(start),
     }
 }
@@ -1023,6 +1064,7 @@ fn find_surface_in_tree(node: &SplitNode, pane_id: u64) -> Option<ffi::ghostty_s
             }
         }
         SplitNode::Leaf { .. } => None,
+        SplitNode::Preview { .. } => None, // No Ghostty surface
         SplitNode::Split { start, end, .. } => {
             find_surface_in_tree(start, pane_id).or_else(|| find_surface_in_tree(end, pane_id))
         }
@@ -1037,6 +1079,7 @@ fn find_gl_area_in_tree(node: &SplitNode, pane_id: u64) -> Option<gtk4::GLArea> 
             ..
         } if *id == pane_id => Some(gl_area.clone()),
         SplitNode::Leaf { .. } => None,
+        SplitNode::Preview { .. } => None, // Preview uses Picture, not GLArea
         SplitNode::Split { start, end, .. } => {
             find_gl_area_in_tree(start, pane_id).or_else(|| find_gl_area_in_tree(end, pane_id))
         }
@@ -1051,6 +1094,7 @@ fn update_surface_in_tree(node: &mut SplitNode, pane_id: u64, surface: ffi::ghos
             ..
         } if *id == pane_id => *s = surface,
         SplitNode::Leaf { .. } => {}
+        SplitNode::Preview { .. } => {} // No surface to update
         SplitNode::Split { start, end, .. } => {
             update_surface_in_tree(start, pane_id, surface);
             update_surface_in_tree(end, pane_id, surface);
@@ -1198,7 +1242,7 @@ fn restore_active_pane_focus() {
 
 fn collect_leaves_in_order(node: &SplitNode, out: &mut Vec<u64>) {
     match node {
-        SplitNode::Leaf { pane_id, .. } => out.push(*pane_id),
+        SplitNode::Leaf { pane_id, .. } | SplitNode::Preview { pane_id, .. } => out.push(*pane_id),
         SplitNode::Split { start, end, .. } => {
             collect_leaves_in_order(start, out);
             collect_leaves_in_order(end, out);
@@ -1299,6 +1343,16 @@ impl SplitNode {
                     surface_uuid: *uuid,
                     shell,
                     cwd,
+                }
+            },
+            SplitNode::Preview { .. } => {
+                // Preview panes are ephemeral; skip in session serialization.
+                // Return a dummy leaf that will be ignored during restore.
+                SplitNodeData::Leaf {
+                    pane_id: 0,
+                    surface_uuid: Uuid::nil(),
+                    shell: String::new(),
+                    cwd: String::new(),
                 }
             },
             SplitNode::Split { orientation, paned, start, end, .. } => {

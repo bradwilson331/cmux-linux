@@ -57,6 +57,12 @@ paned > separator:hover { background-color: #5b8dd9; }
 /* Phase 7.1: SSH connect dialog (SSH-01) */
 .ssh-dialog { background-color: #242424; }
 .ssh-dialog entry { font-size: 14px; padding: 8px 16px; }
+/* Phase 8: Browser preview pane */
+.browser-preview { background-color: #1a1a1a; }
+.preview-container { background-color: #1a1a1a; }
+.preview-empty, .preview-error { color: #888888; font-size: 14px; font-weight: 400; padding: 32px; }
+.preview-error { color: #cc4444; }
+.stream-indicator { font-size: 9px; font-weight: 600; color: #5b8dd9; margin: 0 4px; padding: 1px 4px; border-radius: 2px; background-color: rgba(91, 141, 217, 0.15); }
 ";
 
 fn main() {
