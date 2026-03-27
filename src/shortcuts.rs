@@ -278,6 +278,58 @@ fn handle_browser_open(state: &Rc<RefCell<AppState>>) {
         }
     } // drop borrow
 
+    // Step 3b: Wire nav button signals (D-06, D-07)
+    {
+        // Back button
+        let state_for_back = state.clone();
+        widgets.back_btn.connect_clicked(move |_| {
+            let s = state_for_back.borrow();
+            if let Some(ref bm) = s.browser_manager {
+                let _ = bm.send_command("back", serde_json::json!({}));
+            }
+        });
+
+        // Forward button
+        let state_for_fwd = state.clone();
+        widgets.forward_btn.connect_clicked(move |_| {
+            let s = state_for_fwd.borrow();
+            if let Some(ref bm) = s.browser_manager {
+                let _ = bm.send_command("forward", serde_json::json!({}));
+            }
+        });
+
+        // Reload button
+        let state_for_reload = state.clone();
+        widgets.reload_btn.connect_clicked(move |_| {
+            let s = state_for_reload.borrow();
+            if let Some(ref bm) = s.browser_manager {
+                let _ = bm.send_command("reload", serde_json::json!({}));
+            }
+        });
+
+        // Go button: reads URL entry, auto-prepends https://, navigates
+        let state_for_go = state.clone();
+        let url_entry_for_go = url_entry.clone();
+        let picture_for_go = picture_ref.clone();
+        widgets.go_btn.connect_clicked(move |_| {
+            let raw_url = url_entry_for_go.text().to_string();
+            if raw_url.is_empty() {
+                return;
+            }
+            let url = if raw_url.contains("://") { raw_url } else { format!("https://{raw_url}") };
+            url_entry_for_go.set_text(&url);
+            let s = state_for_go.borrow();
+            if let Some(ref bm) = s.browser_manager {
+                let w = picture_for_go.width();
+                let h = picture_for_go.height();
+                if w > 0 && h > 0 {
+                    let _ = bm.send_command("viewport", serde_json::json!({"width": w, "height": h}));
+                }
+                let _ = bm.send_command("navigate", serde_json::json!({"url": url}));
+            }
+        });
+    }
+
     // Step 4: Set viewport to match pane size (deferred until after GTK layout)
     {
         let state_for_viewport = state.clone();
@@ -300,6 +352,12 @@ fn handle_browser_open(state: &Rc<RefCell<AppState>>) {
         let state_for_click = state.clone();
         let picture_for_click = picture_ref.clone();
         click_ctrl.connect_released(move |_gesture, _n_press, x, y| {
+            // D-09: Grab focus on the container so keyboard events resume flowing to Chrome
+            if let Some(parent_box) = picture_for_click.parent()
+                .and_then(|o| o.parent()) // overlay -> container box
+            {
+                parent_box.grab_focus();
+            }
             // Scale widget coordinates to viewport coordinates
             let pic_w = picture_for_click.width() as f64;
             let pic_h = picture_for_click.height() as f64;
