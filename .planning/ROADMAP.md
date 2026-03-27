@@ -146,7 +146,20 @@ Plans:
 Plans:
 - [x] 07-01-PLAN.md — FFI + bridge module: ghostty.h manual I/O fields, bridge.rs types, cmuxd-remote PTY spawn, tunnel.rs proxy routing
 - [x] 07-02-PLAN.md — Remote surface wiring: manual I/O mode surface creation, app_state integration, disconnect/reconnect/exit handling
-- [ ] 07-03-PLAN.md — Gap closure: connect write channel, call open_remote_stream after handshake/reconnect
+- [x] 07-03-PLAN.md — Gap closure: connect write channel, call open_remote_stream after handshake/reconnect
+
+### Phase 7.1: SSH Workspace UI
+**Goal**: Provide keyboard shortcut and GTK dialog for creating SSH workspaces — unblocks Phase 7 UAT
+**Depends on**: Phase 7
+**Requirements**: SSH-01
+**Gap Closure:** Unblocks Phase 7 human UAT (no UI path to create SSH workspaces)
+**Success Criteria** (what must be TRUE):
+  1. Ctrl+Shift+S opens a text entry dialog where user types `user@host` to create an SSH workspace
+  2. Successfully connected hosts are saved to `~/.config/cmux/ssh_hosts.toml`
+  3. Dialog shows dropdown autocomplete from saved hosts and `~/.ssh/config` Host entries
+  4. SSH workspace auto-named from hostname in sidebar
+**Plans**: 0 plans
+**UI hint**: yes
 
 ### Phase 8: Agent-Browser Integration
 **Goal**: Integrate agent-browser headless Chrome automation into cmux with bundled binary, browser.* socket commands, and CDP screencast preview pane
