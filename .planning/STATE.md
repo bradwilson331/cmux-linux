@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase complete — ready for verification
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-03-27T01:26:08.296Z"
+status: Ready to plan
+stopped_at: Completed 07-03-PLAN.md
+last_updated: "2026-03-27T01:57:57.541Z"
 progress:
   total_phases: 8
   completed_phases: 7
-  total_plans: 40
-  completed_plans: 37
+  total_plans: 41
+  completed_plans: 38
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Current Position
 
-Phase: 07 (ssh-terminal-io) — EXECUTING
-Plan: 2 of 2
+Phase: 08
+Plan: Not started
 
 ## Performance Metrics
 
@@ -77,6 +77,7 @@ Plan: 2 of 2
 | Phase 06 P02 | 3 | 2 tasks | 3 files |
 | Phase 07 P01 | 10 | 2 tasks | 11 files |
 | Phase 07 P02 | 4 | 2 tasks | 7 files |
+| Phase 07 P03 | 2 | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,7 @@ Recent decisions affecting current work:
 - [Phase 07]: PendingMap (Arc<Mutex<HashMap<u64, oneshot::Sender>>>) for RPC request-response correlation
 - [Phase 07]: SurfaceIoMode enum parameter on create_surface avoids duplicating 600-line function for SSH remote surfaces
 - [Phase 07]: ssh_io_write_cb uses c_char to match ghostty.h typedef; SURFACE_REGISTRY reverse lookup for pane-to-surface dispatch
+- [Phase 07]: Arc<Mutex<UnboundedSender>> for swappable write_tx enables reconnect channel recreation without bridge restart
 
 ### Roadmap Evolution
 
@@ -155,6 +157,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T01:26:08.293Z
-Stopped at: Completed 07-02-PLAN.md
+Last session: 2026-03-27T01:53:25.156Z
+Stopped at: Completed 07-03-PLAN.md
 Resume file: None
