@@ -30,27 +30,26 @@ result: pass
 
 ### 4. SSH workspace creation via socket API
 expected: workspace.create with remote_target parameter creates SSH workspace with connection state subtitle in sidebar
-result: issue
-reported: "SSH deploy failed: cmuxd-remote binary not found at ~/.local/share/cmux/bin/cmuxd-remote-linux-amd64. After failure, enters infinite reconnect loop with no backoff cap."
-severity: blocker
+result: pass
 gap_closure: 04-07 (install script, MAX_RETRIES, permanent failure detection)
-re_test: pending
+re_test: pass — binary deployed via SCP successfully, surface created (pane 6000), no infinite reconnect. Terminal I/O routing is Phase 7 scope.
 
 ### 5. SSH terminal I/O (proxy.stream routing)
 expected: Terminal sessions in SSH workspace execute on remote host
-result: blocked
-blocked_by: test 4 re-test
-reason: "Depends on SSH workspace creation working"
+result: deferred
+deferred_to: phase-07-ssh-terminal-io
+reason: "SSH workspace creation works (Phase 4 scope). Terminal I/O routing via proxy.stream is Phase 7 scope."
 
 ## Summary
 
 total: 5
-passed: 2
-issues: 2
+passed: 3
+issues: 1
 pending: 0
 skipped: 0
-blocked: 1
-re_test_pending: 2
+blocked: 0
+deferred: 1
+re_test_pending: 1
 
 ## Gaps
 
