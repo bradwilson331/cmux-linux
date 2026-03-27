@@ -507,6 +507,15 @@ impl AppState {
         }
     }
 
+    /// Shut down the agent-browser daemon if running (called on app exit).
+    pub fn shutdown_browser(&mut self) {
+        if let Some(ref mut bm) = self.browser_manager {
+            eprintln!("cmux: shutting down browser daemon");
+            bm.shutdown();
+            self.browser_manager = None;
+        }
+    }
+
     /// Trigger a debounced session save. Call after any workspace/pane mutation.
     /// Snapshots SessionData on the main thread (safe for Rc) and sends to the
     /// tokio debounce task which handles the file I/O.

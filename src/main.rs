@@ -395,6 +395,16 @@ fn build_ui(
         });
     }
 
+    // Phase 8: Clean up browser daemon on app shutdown.
+    // connect_shutdown fires while GTK is still alive and runtime handle is valid,
+    // ensuring the daemon gets a clean shutdown command before tokio tasks are cancelled.
+    {
+        let state_for_shutdown = state.clone();
+        app.connect_shutdown(move |_| {
+            state_for_shutdown.borrow_mut().shutdown_browser();
+        });
+    }
+
     // Start socket server (tokio accept loop + XDG path setup).
     // cmd_tx is passed in so the socket server dispatches commands through the
     // existing tokio mpsc bridge to the GTK main thread (spawn_local above).
