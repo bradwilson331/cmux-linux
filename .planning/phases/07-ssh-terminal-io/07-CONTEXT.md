@@ -17,8 +17,8 @@ No new SSH connection logic. No GUI SSH configuration. No session resumption. Ju
 
 ### Surface I/O Interception
 
-- **D-01:** Use a virtual PTY bridge — create a local PTY pair (`openpty`) and pipe the master side to/from the SSH tunnel. Ghostty reads/writes the slave side as a normal terminal. No Ghostty modifications required.
-- **D-02:** The PTY bridge lives inside `tunnel.rs` — extend `run_ssh_lifecycle()` to create PTY pairs and run bridge loops. Each remote pane gets a tokio task shuttling bytes between PTY master fd and the SSH tunnel's `proxy.write`/`proxy.stream.data`. All SSH logic stays in one module.
+- **D-01:** ~~Use a virtual PTY bridge~~ **OVERRIDDEN:** Use Ghostty's native manual I/O mode (`io_mode = GHOSTTY_SURFACE_IO_MANUAL`) with `io_write_cb` callback for SSH surfaces. Research found this eliminates PTY pair management, reduces latency (direct callback vs master/slave copy), and uses a purpose-built API. Requires updating `ghostty.h` with 3 fields + 1 function from fork header.
+- **D-02:** ~~The PTY bridge lives inside `tunnel.rs`~~ **OVERRIDDEN:** SSH I/O bridge logic lives in a new `src/ssh/bridge.rs` module. `tunnel.rs` handles proxy protocol routing; `bridge.rs` manages per-pane stream state and the `io_write_cb` → `proxy.write` path. Separation keeps tunnel lifecycle and I/O bridging concerns distinct.
 - **D-03:** One shell per pane — each remote pane gets its own `proxy.open` stream through the same SSH tunnel. Splitting a remote pane opens another remote shell. Matches local pane behavior exactly.
 
 ### Protocol Flow
