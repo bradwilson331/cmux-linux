@@ -28,8 +28,10 @@ pub struct SshBridge {
     pub streams: Arc<Mutex<HashMap<u64, PaneStream>>>,
     /// Maps stream_id -> pane_id (reverse lookup for incoming events)
     pub stream_to_pane: Arc<Mutex<HashMap<String, u64>>>,
-    /// Channel to send write requests to the SSH tunnel task
-    pub write_tx: mpsc::UnboundedSender<WriteRequest>,
+    /// Channel to send write requests to the SSH tunnel task (swappable for reconnect)
+    pub write_tx: Arc<Mutex<mpsc::UnboundedSender<WriteRequest>>>,
+    /// Receiver side of the write channel (taken by run_proxy_routing)
+    write_rx: Mutex<Option<mpsc::UnboundedReceiver<WriteRequest>>>,
     /// Atomic counter for JSON-RPC request IDs
     pub next_rpc_id: Arc<AtomicU64>,
     /// Channel for output events to GTK main thread
@@ -39,15 +41,48 @@ pub struct SshBridge {
 impl SshBridge {
     pub fn new(
         write_tx: mpsc::UnboundedSender<WriteRequest>,
+        write_rx: mpsc::UnboundedReceiver<WriteRequest>,
         output_tx: mpsc::UnboundedSender<OutputEvent>,
     ) -> Self {
         Self {
             streams: Arc::new(Mutex::new(HashMap::new())),
             stream_to_pane: Arc::new(Mutex::new(HashMap::new())),
-            write_tx,
+            write_tx: Arc::new(Mutex::new(write_tx)),
+            write_rx: Mutex::new(Some(write_rx)),
             next_rpc_id: Arc::new(AtomicU64::new(10)), // Start after handshake IDs
             output_tx,
         }
+    }
+
+    /// Take the write receiver for use in the proxy routing loop.
+    /// On reconnect, creates a fresh channel pair and swaps the sender.
+    pub fn take_or_recreate_write_rx(&self) -> mpsc::UnboundedReceiver<WriteRequest> {
+        let mut rx_guard = self.write_rx.lock().unwrap();
+        if let Some(rx) = rx_guard.take() {
+            return rx;
+        }
+        // Reconnect case: old rx was consumed. Create fresh channel.
+        let (new_tx, new_rx) = mpsc::unbounded_channel();
+        *self.write_tx.lock().unwrap() = new_tx;
+        new_rx
+    }
+
+    /// Clear all stream state (for reconnect -- old streams are stale).
+    pub fn clear_stream_ids(&self) {
+        if let Ok(mut streams) = self.streams.lock() {
+            for ps in streams.values_mut() {
+                ps.stream_id.clear();
+                ps.subscribed = false;
+            }
+        }
+        if let Ok(mut s2p) = self.stream_to_pane.lock() {
+            s2p.clear();
+        }
+    }
+
+    /// Clone the current write sender (for IoWriteContext creation).
+    pub fn clone_write_tx(&self) -> mpsc::UnboundedSender<WriteRequest> {
+        self.write_tx.lock().unwrap().clone()
     }
 
     /// Register a new pane with its stream_id after proxy.open succeeds.

@@ -91,7 +91,7 @@ pub fn handle_socket_command(
                 // Create per-workspace bridge for SSH I/O routing
                 let (write_tx, write_rx) = tokio::sync::mpsc::unbounded_channel();
                 let (output_tx, _output_rx) = tokio::sync::mpsc::unbounded_channel();
-                let bridge = std::sync::Arc::new(crate::ssh::bridge::SshBridge::new(write_tx, output_tx));
+                let bridge = std::sync::Arc::new(crate::ssh::bridge::SshBridge::new(write_tx, write_rx, output_tx));
                 let id = state.borrow_mut().create_remote_workspace(target.clone(), &bridge);
                 // Store bridge on AppState for later access
                 state.borrow_mut().workspace_bridges.insert(id, bridge.clone());

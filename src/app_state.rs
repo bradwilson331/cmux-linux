@@ -244,7 +244,7 @@ impl AppState {
         let pane_id = id * 1000;
         let io_ctx = std::sync::Arc::new(crate::ssh::bridge::IoWriteContext {
             pane_id,
-            write_tx: bridge.write_tx.clone(),
+            write_tx: bridge.clone_write_tx(),
             stream_id: std::sync::Mutex::new(None),
         });
         let (gl_area, surface_cell) = crate::ghostty::surface::create_surface(

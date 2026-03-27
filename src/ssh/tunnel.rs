@@ -146,23 +146,28 @@ async fn run_proxy_routing(
     let pending: PendingMap = Arc::new(Mutex::new(HashMap::new()));
     let writer = Arc::new(tokio::sync::Mutex::new(buf_writer));
 
-    // Create a channel for WriteRequests (bridge.write_tx sends here)
-    // The bridge already has write_tx; we consume from the receiver side.
-    // We create a local receiver from a new channel pair for the write path.
-    let (local_write_tx, mut local_write_rx) = tokio::sync::mpsc::unbounded_channel::<WriteRequest>();
+    // Take (or recreate on reconnect) the write channel receiver from bridge
+    let mut local_write_rx = bridge.take_or_recreate_write_rx();
 
-    // Forward writes from bridge to local channel
-    let bridge_write_tx = bridge.write_tx.clone();
-    let _forward_handle = {
-        // We can't directly access the bridge's receiver, so we use the bridge's write_tx
-        // to send WriteRequests that get picked up here. The bridge.write_tx already points
-        // to a channel -- we need to drain it. Since SshBridge owns write_tx and external
-        // code sends to it, we need to set up the drain from the receiver side.
-        // However, the receiver is created externally. For now, we use local_write_tx
-        // as a proxy that the write path reads from.
-        drop(bridge_write_tx);
-        local_write_tx
-    };
+    // Clear stale stream state from any prior connection
+    bridge.clear_stream_ids();
+
+    // Open remote streams for all registered panes
+    {
+        let pane_ids: Vec<u64> = bridge.streams.lock()
+            .map(|s| s.keys().copied().collect())
+            .unwrap_or_default();
+        for pane_id in pane_ids {
+            match open_remote_stream(&writer, bridge, pane_id, &pending, ssh_tx, 80, 24).await {
+                Ok(stream_id) => {
+                    eprintln!("cmux: opened remote stream {stream_id} for pane {pane_id}");
+                }
+                Err(e) => {
+                    eprintln!("cmux: failed to open remote stream for pane {pane_id}: {e}");
+                }
+            }
+        }
+    }
 
     // Read path: parse JSON lines from SSH stdout
     let read_bridge = bridge.clone();
