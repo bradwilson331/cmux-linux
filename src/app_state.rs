@@ -39,6 +39,8 @@ pub struct AppState {
     pub remote_pane_contexts: std::collections::HashMap<u64, std::sync::Arc<crate::ssh::bridge::IoWriteContext>>,
     /// Maps workspace_id -> SshBridge for remote workspaces.
     pub workspace_bridges: std::collections::HashMap<u64, std::sync::Arc<crate::ssh::bridge::SshBridge>>,
+    /// Browser preview daemon manager (Phase 8).
+    pub browser_manager: Option<crate::browser::BrowserManager>,
 }
 
 impl AppState {
@@ -67,6 +69,7 @@ impl AppState {
             ssh_task_handles: std::collections::HashMap::new(),
             remote_pane_contexts: std::collections::HashMap::new(),
             workspace_bridges: std::collections::HashMap::new(),
+            browser_manager: None,
         };
         Rc::new(RefCell::new(state))
     }

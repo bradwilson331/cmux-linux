@@ -13,6 +13,8 @@ toml = "0.8"
 uuid = { version = "1", features = ["v4", "serde"] }
 libc = "0.2"
 base64 = "0.22.1"
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
+futures-util = "0.3"
 
 [build-dependencies]
 bindgen = "0.72.1"

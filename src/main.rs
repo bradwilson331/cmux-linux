@@ -13,6 +13,7 @@ mod socket;
 mod session;
 mod ssh;
 mod config;
+mod browser;
 mod ssh_hosts;
 mod ssh_dialog;
 
