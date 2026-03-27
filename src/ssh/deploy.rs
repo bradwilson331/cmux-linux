@@ -18,8 +18,8 @@ pub async fn deploy_remote(target: &str) -> Result<(), String> {
     let local_path = local_daemon_path();
     if !local_path.exists() {
         return Err(format!(
-            "cmuxd-remote binary not found at {}. Cross-compile with: cd daemon/remote && GOOS=linux GOARCH=amd64 go build -o {} ./cmd/cmuxd-remote/",
-            local_path.display(), local_path.display()
+            "cmuxd-remote binary not found at {}. Run: ./scripts/install-cmuxd-remote.sh",
+            local_path.display()
         ));
     }
 
