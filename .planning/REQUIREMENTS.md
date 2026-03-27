@@ -67,7 +67,7 @@
 
 - [x] **SSH-01**: User can configure a workspace with a remote SSH target
 - [x] **SSH-02**: cmuxd-remote Go daemon is deployed to remote host and establishes reverse tunnel
-- [ ] **SSH-03**: Terminal sessions in an SSH workspace run on the remote host
+- [x] **SSH-03**: Terminal sessions in an SSH workspace run on the remote host
 - [x] **SSH-04**: SSH workspace reconnect works after network interruption
 
 ### HiDPI / Display
@@ -158,7 +158,7 @@
 | HDPI-02 | Phase 4 | Complete |
 | SSH-01 | Phase 4 | Complete |
 | SSH-02 | Phase 4 | Complete |
-| SSH-03 | Phase 7 | Pending |
+| SSH-03 | Phase 7 | Complete |
 | SSH-04 | Phase 4 | Complete |
 | CFG-01 | Phase 5 | Complete |
 | CFG-02 | Phase 5 | Complete |

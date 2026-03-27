@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 8 context gathered
-last_updated: "2026-03-26T20:16:43.681Z"
+status: Ready to execute
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-03-27T01:17:49.597Z"
 progress:
   total_phases: 8
   completed_phases: 6
-  total_plans: 35
-  completed_plans: 35
+  total_plans: 40
+  completed_plans: 36
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control — powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** Phase 06 — session-layout-surface-wiring
+**Current focus:** Phase 07 — ssh-terminal-io
 
 ## Current Position
 
-Phase: 07
-Plan: Not started
+Phase: 07 (ssh-terminal-io) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Plan: Not started
 | Phase 05 P01 | 4 | 2 tasks | 4 files |
 | Phase 06 P01 | 3 | 2 tasks | 3 files |
 | Phase 06 P02 | 3 | 2 tasks | 3 files |
+| Phase 07 P01 | 10 | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -131,6 +132,9 @@ Recent decisions affecting current work:
 - [Phase 06]: serde default_ratio for v1 backward-compat session schema evolution
 - [Phase 06]: Reuse find_pane_id_by_uuid instead of adding duplicate find_pane_id_by_uuid_str
 - [Phase 06]: sync_surfaces_from_registry deferred via idle_add_local_once to let GTK realize all widgets first
+- [Phase 07]: Per-workspace SshBridge with dedicated write/output channels created at workspace.create time
+- [Phase 07]: ptyConn adapter wraps os.File as net.Conn to reuse existing streamPump infrastructure
+- [Phase 07]: PendingMap (Arc<Mutex<HashMap<u64, oneshot::Sender>>>) for RPC request-response correlation
 
 ### Roadmap Evolution
 
@@ -148,6 +152,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T20:16:43.679Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-add-agent-browser/08-CONTEXT.md
+Last session: 2026-03-27T01:17:49.594Z
+Stopped at: Completed 07-01-PLAN.md
+Resume file: None
