@@ -142,10 +142,11 @@ Plans:
   1. `proxy.stream` in tunnel.rs routes terminal I/O between the local Ghostty surface and the remote cmuxd shell
   2. Keystrokes typed in an SSH workspace pane appear in the remote shell
   3. Remote shell output renders in the local terminal surface
-**Plans**: 2 plans
+**Plans**: 3 plans
 Plans:
 - [x] 07-01-PLAN.md — FFI + bridge module: ghostty.h manual I/O fields, bridge.rs types, cmuxd-remote PTY spawn, tunnel.rs proxy routing
 - [x] 07-02-PLAN.md — Remote surface wiring: manual I/O mode surface creation, app_state integration, disconnect/reconnect/exit handling
+- [ ] 07-03-PLAN.md — Gap closure: connect write channel, call open_remote_stream after handshake/reconnect
 
 ### Phase 8: Agent-Browser Integration
 **Goal**: Integrate agent-browser headless Chrome automation into cmux with bundled binary, browser.* socket commands, and CDP screencast preview pane
@@ -175,5 +176,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 4. Notifications + HiDPI + SSH | 0/5 | Not started | - |
 | 5. Config + Distribution | 0/2 | Not started | - |
 | 6. Session Layout Restore + Surface Wiring | 0/2 | Not started | - |
-| 7. SSH Terminal I/O | 1/2 | In Progress|  |
+| 7. SSH Terminal I/O | 2/3 | In Progress|  |
 | 8. Agent-Browser Integration | 0/3 | Not started | - |
