@@ -179,7 +179,7 @@ Plans:
 - [x] 08-03-PLAN.md — Preview rendering: WebSocket stream pipeline, preview pane widget factory, shutdown cleanup
 - [x] 08-04-PLAN.md — Gap closure: wire preview pane creation into BrowserOpen handler and stream pipeline into BrowserStreamEnable handler
 - [x] 08-05-PLAN.md — Navigation toolbar: Back/Forward/Reload/Go/DevTools buttons, auto-refocus on viewport click
-- [ ] 08-06-PLAN.md — Async mouse motion forwarding, DevTools snapshot overlay toggle
+- [x] 08-06-PLAN.md — Async mouse motion forwarding, DevTools snapshot overlay toggle
 
 ## Progress
 

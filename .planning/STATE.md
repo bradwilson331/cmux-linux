@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 08-05-PLAN.md
-last_updated: "2026-03-27T15:32:55.692Z"
+stopped_at: Completed 08-06-PLAN.md
+last_updated: "2026-03-27T15:36:19.689Z"
 progress:
   total_phases: 9
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 45
-  completed_plans: 44
+  completed_plans: 45
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 08 (add-agent-browser) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 
 ## Performance Metrics
 
@@ -84,6 +84,7 @@ Plan: 2 of 6
 | Phase 08 P03 | 3 | 2 tasks | 3 files |
 | Phase 08 P04 | 2 | 2 tasks | 2 files |
 | Phase 08 P05 | 4 | 2 tasks | 5 files |
+| Phase 08 P06 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,7 @@ Recent decisions affecting current work:
 - [Phase 08]: Overlay sibling iteration for status label cleanup avoids removing Picture main child
 - [Phase 08]: Preview pane created on BrowserOpen success for immediate visual feedback; BrowserStreamEnable auto-creates pane defensively
 - [Phase 08]: PreviewPaneWidgets struct replaces tuple return from create_preview_pane for extensibility
+- [Phase 08]: spawn_motion_forwarder uses spawn_blocking for Unix socket I/O to avoid blocking tokio runtime
 
 ### Roadmap Evolution
 
@@ -172,6 +174,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T15:32:55.689Z
-Stopped at: Completed 08-05-PLAN.md
+Last session: 2026-03-27T15:36:19.686Z
+Stopped at: Completed 08-06-PLAN.md
 Resume file: None
