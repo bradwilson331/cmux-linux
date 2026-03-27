@@ -19,7 +19,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control — powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** Phase 07.1 — ssh-workspace-ui
+**Current focus:** Phase 08 — add-agent-browser
 
 ## Current Position
 
@@ -160,6 +160,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T02:57:27.653Z
-Stopped at: Completed 07.1-01-PLAN.md
+Last session: 2026-03-27
+Stopped at: Phase 07.1 complete, ready to plan Phase 08
 Resume file: None
