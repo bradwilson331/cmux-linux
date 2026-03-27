@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Config + Distribution** - Config file, keyboard shortcut customization, GitHub Actions CI, and AppImage packaging
 - [ ] **Phase 6: Session Layout Restore + Surface Wiring** - Persist/restore split pane layouts and wire SplitNode surface pointers so socket text injection works
 - [ ] **Phase 7: SSH Terminal I/O** - Implement proxy.stream bidirectional I/O routing so SSH workspace terminal sessions run on the remote host
-- [ ] **Phase 8: Agent-Browser Integration** - Bundle agent-browser, add browser.* socket commands, render CDP screencast frames in preview pane
+- [x] **Phase 8: Agent-Browser Integration** - Bundle agent-browser, add browser.* socket commands, render CDP screencast frames in preview pane (completed 2026-03-27)
 
 ## Phase Details
 
@@ -177,7 +177,7 @@ Plans:
 - [x] 08-01-PLAN.md — Foundation: BrowserManager module, SplitNode::Preview variant, Cargo deps
 - [x] 08-02-PLAN.md — Socket commands: browser.* enum variants, dispatch routing, handler implementations
 - [x] 08-03-PLAN.md — Preview rendering: WebSocket stream pipeline, preview pane widget factory, shutdown cleanup
-- [ ] 08-04-PLAN.md — Gap closure: wire preview pane creation into BrowserOpen handler and stream pipeline into BrowserStreamEnable handler
+- [x] 08-04-PLAN.md — Gap closure: wire preview pane creation into BrowserOpen handler and stream pipeline into BrowserStreamEnable handler
 
 ## Progress
 
@@ -193,4 +193,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 5. Config + Distribution | 0/2 | Not started | - |
 | 6. Session Layout Restore + Surface Wiring | 0/2 | Not started | - |
 | 7. SSH Terminal I/O | 2/3 | In Progress|  |
-| 8. Agent-Browser Integration | 3/4 | In Progress |  |
+| 8. Agent-Browser Integration | 4/4 | Complete   | 2026-03-27 |

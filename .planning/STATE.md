@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase complete — ready for verification
-stopped_at: Completed 08-03-PLAN.md
-last_updated: "2026-03-27T03:19:44.176Z"
+status: Ready to execute
+stopped_at: Completed 08-04-PLAN.md
+last_updated: "2026-03-27T04:15:28.918Z"
 progress:
   total_phases: 9
   completed_phases: 9
-  total_plans: 42
-  completed_plans: 42
+  total_plans: 43
+  completed_plans: 43
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 08 (add-agent-browser) — EXECUTING
-Plan: 3 of 3
+Plan: 2 of 4
 
 ## Performance Metrics
 
@@ -82,6 +82,7 @@ Plan: 3 of 3
 | Phase 08 P01 | 9 | 2 tasks | 5 files |
 | Phase 08 P02 | 2 | 2 tasks | 3 files |
 | Phase 08 P03 | 3 | 2 tasks | 3 files |
+| Phase 08 P04 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -151,6 +152,7 @@ Recent decisions affecting current work:
 - [Phase 08]: Vec<&str> for capabilities methods array to avoid serde 32-element array limit
 - [Phase 08]: glib::MainContext::spawn_local for continuous async frame receiver on GTK main thread
 - [Phase 08]: Overlay sibling iteration for status label cleanup avoids removing Picture main child
+- [Phase 08]: Preview pane created on BrowserOpen success for immediate visual feedback; BrowserStreamEnable auto-creates pane defensively
 
 ### Roadmap Evolution
 
@@ -168,6 +170,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T03:19:44.172Z
-Stopped at: Completed 08-03-PLAN.md
+Last session: 2026-03-27T04:15:28.915Z
+Stopped at: Completed 08-04-PLAN.md
 Resume file: None
