@@ -101,8 +101,8 @@ Plans:
 - [x] 04-02-PLAN.md — HiDPI verification: audit scale-factor handler, verify CSS at fractional scales, fix any issues
 - [x] 04-03-PLAN.md — Notification socket commands: notification.list, notification.clear, surface.health attention field
 - [x] 04-04-PLAN.md — SSH remote workspaces: data model, cmuxd-remote deployment, stdio tunnel, reconnection, socket API
-- [ ] 04-05-PLAN.md — Human verification: full Phase 4 feature verification checkpoint
-- [ ] 04-06-PLAN.md — Gap closure: replace gio::Notification with notify-rust for working desktop notifications
+- [x] 04-05-PLAN.md — Human verification: full Phase 4 feature verification checkpoint
+- [x] 04-06-PLAN.md — Gap closure: replace gio::Notification with notify-rust for working desktop notifications
 - [ ] 04-07-PLAN.md — Gap closure: cmuxd-remote install script, SSH lifecycle max retry and permanent failure detection
 **UI hint**: yes
 
