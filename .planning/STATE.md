@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Completed 07.1-01-PLAN.md
-last_updated: "2026-03-27T03:00:36.662Z"
+status: Ready to execute
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-03-27T03:18:40.865Z"
 progress:
   total_phases: 9
   completed_phases: 8
   total_plans: 42
-  completed_plans: 39
+  completed_plans: 41
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Current Position
 
-Phase: 08
-Plan: Not started
+Phase: 08 (add-agent-browser) — EXECUTING
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -79,6 +79,8 @@ Plan: Not started
 | Phase 07 P02 | 4 | 2 tasks | 7 files |
 | Phase 07 P03 | 2 | 1 tasks | 4 files |
 | Phase 07.1 P01 | 4 | 2 tasks | 6 files |
+| Phase 08 P01 | 9 | 2 tasks | 5 files |
+| Phase 08 P02 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -143,6 +145,9 @@ Recent decisions affecting current work:
 - [Phase 07]: Arc<Mutex<UnboundedSender>> for swappable write_tx enables reconnect channel recreation without bridge restart
 - [Phase 07.1]: EntryCompletion used despite GTK 4.10 deprecation -- no replacement exists until GTK 5
 - [Phase 07.1]: Workspace auto-naming extracts hostname only (strips user@ and :port)
+- [Phase 08]: Preview pane uses gtk4::Overlay + gtk4::Picture (not GLArea) since no Ghostty surface needed
+- [Phase 08]: Preview panes are ephemeral -- skipped in session serialization
+- [Phase 08]: Vec<&str> for capabilities methods array to avoid serde 32-element array limit
 
 ### Roadmap Evolution
 
@@ -160,6 +165,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27
-Stopped at: Phase 07.1 complete, ready to plan Phase 08
+Last session: 2026-03-27T03:18:40.862Z
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None

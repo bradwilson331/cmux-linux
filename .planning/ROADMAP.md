@@ -174,8 +174,8 @@ Plans:
   4. All 6 browser.* socket commands are listed in system.capabilities
 **Plans**: 3 plans
 Plans:
-- [ ] 08-01-PLAN.md — Foundation: BrowserManager module, SplitNode::Preview variant, Cargo deps
-- [ ] 08-02-PLAN.md — Socket commands: browser.* enum variants, dispatch routing, handler implementations
+- [x] 08-01-PLAN.md — Foundation: BrowserManager module, SplitNode::Preview variant, Cargo deps
+- [x] 08-02-PLAN.md — Socket commands: browser.* enum variants, dispatch routing, handler implementations
 - [ ] 08-03-PLAN.md — Preview rendering: WebSocket stream pipeline, preview pane widget factory, shutdown cleanup
 
 ## Progress
