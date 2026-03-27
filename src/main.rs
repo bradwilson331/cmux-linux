@@ -314,6 +314,18 @@ fn build_ui(
                     crate::ssh::SshEvent::StateChanged { workspace_id, state: conn_state } => {
                         state.borrow_mut().update_connection_state(workspace_id, conn_state);
                     }
+                    crate::ssh::SshEvent::RemoteOutput { pane_id, data } => {
+                        // TODO (Plan 02): dispatch data to Ghostty surface via ghostty_surface_process_output
+                        eprintln!("cmux: remote output for pane {pane_id}: {} bytes", data.len());
+                    }
+                    crate::ssh::SshEvent::RemoteEof { pane_id } => {
+                        // TODO (Plan 02): handle remote shell exit
+                        eprintln!("cmux: remote EOF for pane {pane_id}");
+                    }
+                    crate::ssh::SshEvent::StreamOpened { pane_id, stream_id } => {
+                        // TODO (Plan 02): wire stream to surface
+                        eprintln!("cmux: stream {stream_id} opened for pane {pane_id}");
+                    }
                 }
             }
             glib::ControlFlow::Continue
