@@ -88,7 +88,7 @@ impl Workspace {
 
     /// Create a new remote SSH workspace targeting the given host.
     pub fn new_remote(id: u64, display_number: usize, target: String) -> Self {
-        let name = format!("SSH: {}", target);
+        let name = crate::ssh_hosts::workspace_name_from_target(&target);
         let stack_page_name = format!("workspace-{}", id);
         Self {
             id,

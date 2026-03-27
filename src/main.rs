@@ -13,6 +13,7 @@ mod socket;
 mod session;
 mod ssh;
 mod config;
+mod ssh_hosts;
 
 const APP_ID: &str = "io.cmux.App";
 
@@ -312,6 +313,15 @@ fn build_ui(
             while let Ok(event) = ssh_event_rx.try_recv() {
                 match event {
                     crate::ssh::SshEvent::StateChanged { workspace_id, state: conn_state } => {
+                        // Auto-save host on successful connection (D-04)
+                        if conn_state == crate::workspace::ConnectionState::Connected {
+                            let remote_target = state.borrow().workspaces.iter()
+                                .find(|ws| ws.id == workspace_id)
+                                .and_then(|ws| ws.remote_target.clone());
+                            if let Some(target) = remote_target {
+                                crate::ssh_hosts::save_host(&target);
+                            }
+                        }
                         state.borrow_mut().update_connection_state(workspace_id, conn_state);
                     }
                     crate::ssh::SshEvent::RemoteOutput { pane_id, data } => {
