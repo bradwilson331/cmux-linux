@@ -2,6 +2,10 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use serde_json::Value;
+use base64::Engine as _;
+use futures_util::StreamExt;
+use gtk4::prelude::*;
+use uuid::Uuid;
 
 /// Session name for the agent-browser daemon (one daemon per cmux instance).
 const SESSION_NAME: &str = "cmux";
@@ -186,6 +190,151 @@ impl BrowserManager {
             task.abort();
         }
         self.stream_task = None;
+    }
+
+    /// Connect to the agent-browser stream WebSocket and start forwarding
+    /// decoded JPEG frames to the GTK main thread via mpsc channel.
+    /// The Picture widget is updated in idle callbacks per D-02.
+    pub fn start_stream(
+        &mut self,
+        runtime: &tokio::runtime::Handle,
+        picture: gtk4::Picture,
+    ) -> Result<(), String> {
+        let port = self.read_stream_port()?;
+        let url = format!("ws://127.0.0.1:{}", port);
+
+        // Create mpsc channel for frame delivery (tokio -> GTK)
+        let (frame_tx, mut frame_rx) = tokio::sync::mpsc::unbounded_channel::<Vec<u8>>();
+        self.frame_tx = Some(frame_tx.clone());
+
+        // Spawn tokio task: WebSocket client that reads frames
+        let stream_task = runtime.spawn(async move {
+            let ws_result = tokio_tungstenite::connect_async(&url).await;
+            let (ws_stream, _) = match ws_result {
+                Ok(conn) => conn,
+                Err(e) => {
+                    eprintln!("cmux: browser stream WS connect failed: {}", e);
+                    return;
+                }
+            };
+            eprintln!("cmux: browser stream connected to {}", url);
+
+            let (_write, mut read) = ws_stream.split();
+            while let Some(msg_result) = read.next().await {
+                let msg = match msg_result {
+                    Ok(m) => m,
+                    Err(e) => {
+                        eprintln!("cmux: browser stream WS error: {}", e);
+                        break;
+                    }
+                };
+                if let tokio_tungstenite::tungstenite::Message::Text(text) = msg {
+                    // Parse frame JSON
+                    if let Ok(frame) = serde_json::from_str::<serde_json::Value>(&text) {
+                        if frame.get("type").and_then(|t| t.as_str()) == Some("frame") {
+                            if let Some(data_b64) = frame.get("data").and_then(|d| d.as_str()) {
+                                // Decode base64 to JPEG bytes
+                                if let Ok(jpeg_bytes) = base64::engine::general_purpose::STANDARD.decode(data_b64) {
+                                    // Send to GTK thread (ignore error if receiver dropped)
+                                    let _ = frame_tx.send(jpeg_bytes);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            eprintln!("cmux: browser stream ended");
+        });
+        self.stream_task = Some(stream_task);
+
+        // Spawn GTK-side receiver: poll mpsc and update Picture widget
+        // Use glib::MainContext to process frames on GTK main thread
+        let picture_clone = picture.clone();
+        glib::MainContext::default().spawn_local(async move {
+            while let Some(jpeg_bytes) = frame_rx.recv().await {
+                let bytes = glib::Bytes::from(&jpeg_bytes);
+                match gtk4::gdk::Texture::from_bytes(&bytes) {
+                    Ok(texture) => {
+                        picture_clone.set_paintable(Some(&texture));
+                    }
+                    Err(e) => {
+                        // Per UI-SPEC: frame decode failure is silent (keep last valid frame)
+                        eprintln!("cmux: browser frame decode error: {}", e);
+                    }
+                }
+            }
+        });
+
+        self.preview_state = PreviewState::Streaming;
+        Ok(())
+    }
+}
+
+/// Create a browser preview pane widget (Overlay with Picture + status label).
+/// Returns (container, picture, pane_id, uuid) for insertion into SplitNode::Preview.
+pub fn create_preview_pane(next_pane_id: u64) -> (gtk4::Overlay, gtk4::Picture, u64, Uuid) {
+    let uuid = Uuid::new_v4();
+    let picture = gtk4::Picture::new();
+    picture.add_css_class("browser-preview");
+    picture.set_can_shrink(true);
+    picture.set_hexpand(true);
+    picture.set_vexpand(true);
+
+    let overlay = gtk4::Overlay::new();
+    overlay.add_css_class("preview-container");
+    overlay.set_child(Some(&picture));
+
+    // Empty state label (shown when no stream is active)
+    let empty_label = gtk4::Label::new(Some("No browser preview"));
+    empty_label.add_css_class("preview-empty");
+    empty_label.set_halign(gtk4::Align::Center);
+    empty_label.set_valign(gtk4::Align::Center);
+    overlay.add_overlay(&empty_label);
+
+    (overlay, picture, next_pane_id, uuid)
+}
+
+/// Update the preview pane overlay to show the given state.
+/// Removes existing status overlays and adds the appropriate label.
+pub fn update_preview_overlay(overlay: &gtk4::Overlay, state: &PreviewState) {
+    // Remove existing overlay children (status labels).
+    // Walk siblings after the main child (Picture) and remove any status labels.
+    if let Some(child) = overlay.first_child() {
+        let mut sibling = child.next_sibling();
+        while let Some(widget) = sibling {
+            let next = widget.next_sibling();
+            if widget.has_css_class("preview-empty") || widget.has_css_class("preview-error") {
+                overlay.remove_overlay(&widget);
+            }
+            sibling = next;
+        }
+    }
+
+    match state {
+        PreviewState::Empty => {
+            let label = gtk4::Label::new(Some("No browser preview"));
+            label.add_css_class("preview-empty");
+            label.set_halign(gtk4::Align::Center);
+            label.set_valign(gtk4::Align::Center);
+            overlay.add_overlay(&label);
+        }
+        PreviewState::Loading => {
+            let label = gtk4::Label::new(Some("Starting browser..."));
+            label.add_css_class("preview-empty");
+            label.set_halign(gtk4::Align::Center);
+            label.set_valign(gtk4::Align::Center);
+            overlay.add_overlay(&label);
+        }
+        PreviewState::Connected | PreviewState::Streaming => {
+            // No overlay needed -- Picture shows frames or empty background
+        }
+        PreviewState::Error(msg) => {
+            let label = gtk4::Label::new(Some(msg.as_str()));
+            label.add_css_class("preview-error");
+            label.set_halign(gtk4::Align::Center);
+            label.set_valign(gtk4::Align::Center);
+            overlay.add_overlay(&label);
+        }
     }
 }
 
