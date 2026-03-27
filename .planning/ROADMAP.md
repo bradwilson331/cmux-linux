@@ -19,6 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Config + Distribution** - Config file, keyboard shortcut customization, GitHub Actions CI, and AppImage packaging
 - [ ] **Phase 6: Session Layout Restore + Surface Wiring** - Persist/restore split pane layouts and wire SplitNode surface pointers so socket text injection works
 - [ ] **Phase 7: SSH Terminal I/O** - Implement proxy.stream bidirectional I/O routing so SSH workspace terminal sessions run on the remote host
+- [ ] **Phase 8: Agent-Browser Integration** - Bundle agent-browser, add browser.* socket commands, render CDP screencast frames in preview pane
 
 ## Phase Details
 
@@ -142,10 +143,25 @@ Plans:
   2. Keystrokes typed in an SSH workspace pane appear in the remote shell
   3. Remote shell output renders in the local terminal surface
 
+### Phase 8: Agent-Browser Integration
+**Goal**: Integrate agent-browser headless Chrome automation into cmux with bundled binary, browser.* socket commands, and CDP screencast preview pane
+**Depends on**: Phase 3 (socket infrastructure), Phase 2 (split engine)
+**Requirements**: BROW-01
+**Success Criteria** (what must be TRUE):
+  1. `browser.open <url>` socket command spawns agent-browser daemon and navigates to URL
+  2. `browser.stream.enable` starts CDP screencast and frames render in a GTK4 preview pane at ~5fps
+  3. `browser.close` shuts down daemon cleanly with no orphaned Chrome processes
+  4. All 6 browser.* socket commands are listed in system.capabilities
+**Plans**: 3 plans
+Plans:
+- [ ] 08-01-PLAN.md — Foundation: BrowserManager module, SplitNode::Preview variant, Cargo deps
+- [ ] 08-02-PLAN.md — Socket commands: browser.* enum variants, dispatch routing, handler implementations
+- [ ] 08-03-PLAN.md — Preview rendering: WebSocket stream pipeline, preview pane widget factory, shutdown cleanup
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -156,13 +172,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 5. Config + Distribution | 0/2 | Not started | - |
 | 6. Session Layout Restore + Surface Wiring | 0/2 | Not started | - |
 | 7. SSH Terminal I/O | 0/0 | Not started | - |
-
-### Phase 8: add agent-browser
-
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 7
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 8 to break down)
+| 8. Agent-Browser Integration | 0/3 | Not started | - |
