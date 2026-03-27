@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Milestone complete
-stopped_at: Phase 8 context updated with nav bar, input, command parity decisions
-last_updated: "2026-03-27T14:53:49.558Z"
+status: Ready to execute
+stopped_at: Completed 08-05-PLAN.md
+last_updated: "2026-03-27T15:32:55.692Z"
 progress:
   total_phases: 9
-  completed_phases: 9
-  total_plans: 43
-  completed_plans: 43
+  completed_phases: 8
+  total_plans: 45
+  completed_plans: 44
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Current Position
 
-Phase: 08
-Plan: Not started
+Phase: 08 (add-agent-browser) — EXECUTING
+Plan: 2 of 6
 
 ## Performance Metrics
 
@@ -83,6 +83,7 @@ Plan: Not started
 | Phase 08 P02 | 2 | 2 tasks | 3 files |
 | Phase 08 P03 | 3 | 2 tasks | 3 files |
 | Phase 08 P04 | 2 | 2 tasks | 2 files |
+| Phase 08 P05 | 4 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -153,6 +154,7 @@ Recent decisions affecting current work:
 - [Phase 08]: glib::MainContext::spawn_local for continuous async frame receiver on GTK main thread
 - [Phase 08]: Overlay sibling iteration for status label cleanup avoids removing Picture main child
 - [Phase 08]: Preview pane created on BrowserOpen success for immediate visual feedback; BrowserStreamEnable auto-creates pane defensively
+- [Phase 08]: PreviewPaneWidgets struct replaces tuple return from create_preview_pane for extensibility
 
 ### Roadmap Evolution
 
@@ -170,6 +172,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T14:53:49.555Z
-Stopped at: Phase 8 context updated with nav bar, input, command parity decisions
-Resume file: .planning/phases/08-add-agent-browser/08-CONTEXT.md
+Last session: 2026-03-27T15:32:55.689Z
+Stopped at: Completed 08-05-PLAN.md
+Resume file: None
