@@ -73,6 +73,9 @@ paned > separator:hover { background-color: #5b8dd9; }
 .browser-nav-go { color: #5b8dd9; font-weight: 600; }
 .browser-nav-devtools { margin-left: auto; }
 .browser-nav-devtools:checked { background-color: rgba(91, 141, 217, 0.2); color: #5b8dd9; }
+/* Phase 8 Plan 06: DevTools overlay */
+.devtools-overlay { background-color: rgba(26, 26, 26, 0.92); }
+.devtools-snapshot { color: #cccccc; font-family: monospace; font-size: 12px; padding: 16px; }
 ";
 
 fn main() {

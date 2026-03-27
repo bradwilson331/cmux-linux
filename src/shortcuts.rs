@@ -539,6 +539,64 @@ fn handle_browser_open(state: &Rc<RefCell<AppState>>) {
             let _ = bm.send_command("navigate", params);
         }
     });
+
+    // Step 6: DevTools toggle (D-10)
+    let state_for_devtools = state.clone();
+    let picture_for_devtools = picture_ref.clone();
+    widgets.devtools_btn.connect_toggled(move |btn| {
+        if btn.is_active() {
+            // Fetch DOM snapshot from daemon
+            let snapshot_text = {
+                let s = state_for_devtools.borrow();
+                if let Some(ref bm) = s.browser_manager {
+                    match bm.send_command("snapshot", serde_json::json!({})) {
+                        Ok(result) => {
+                            if let Some(text) = result.get("data").and_then(|d| d.as_str()) {
+                                text.to_string()
+                            } else if let Some(text) = result.get("result").and_then(|d| d.as_str()) {
+                                text.to_string()
+                            } else {
+                                serde_json::to_string_pretty(&result).unwrap_or_default()
+                            }
+                        }
+                        Err(e) => format!("Snapshot error: {e}"),
+                    }
+                } else {
+                    "No browser session active".to_string()
+                }
+            };
+
+            // Create scrollable text overlay on the Picture's parent Overlay
+            if let Some(overlay) = picture_for_devtools.parent().and_then(|p| p.downcast::<gtk4::Overlay>().ok()) {
+                let label = gtk4::Label::new(Some(&snapshot_text));
+                label.set_selectable(true);
+                label.set_wrap(true);
+                label.set_xalign(0.0);
+                label.set_yalign(0.0);
+                label.add_css_class("devtools-snapshot");
+                let scrolled = gtk4::ScrolledWindow::new();
+                scrolled.set_child(Some(&label));
+                scrolled.set_hexpand(true);
+                scrolled.set_vexpand(true);
+                scrolled.add_css_class("devtools-overlay");
+                overlay.add_overlay(&scrolled);
+            }
+        } else {
+            // Remove the DevTools overlay
+            if let Some(overlay) = picture_for_devtools.parent().and_then(|p| p.downcast::<gtk4::Overlay>().ok()) {
+                if let Some(child) = overlay.first_child() {
+                    let mut current = Some(child);
+                    while let Some(widget) = current {
+                        let next = widget.next_sibling();
+                        if widget.has_css_class("devtools-overlay") {
+                            overlay.remove_overlay(&widget);
+                        }
+                        current = next;
+                    }
+                }
+            }
+        }
+    });
 }
 
 /// Map GDK keyval to (CDP key name, CDP code name).
