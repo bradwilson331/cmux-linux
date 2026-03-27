@@ -100,7 +100,11 @@ pub fn handle_socket_command(
                 let ssh_tx = state.borrow().ssh_event_tx.clone();
                 let rt_handle = state.borrow().runtime_handle.clone();
                 if let (Some(tx), Some(rt)) = (ssh_tx, rt_handle) {
-                    let handle = rt.spawn(crate::ssh::tunnel::run_ssh_lifecycle(id, target, tx));
+                    // Create per-workspace bridge for SSH I/O routing
+                    let (write_tx, _write_rx) = tokio::sync::mpsc::unbounded_channel();
+                    let (output_tx, _output_rx) = tokio::sync::mpsc::unbounded_channel();
+                    let bridge = std::sync::Arc::new(crate::ssh::bridge::SshBridge::new(write_tx, output_tx));
+                    let handle = rt.spawn(crate::ssh::tunnel::run_ssh_lifecycle(id, target, tx, bridge));
                     state.borrow_mut().ssh_task_handles.insert(id, handle);
                 }
                 let _ = resp_tx.send(ok(req_id, json!({"uuid": uuid_str, "remote": true})));

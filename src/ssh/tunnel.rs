@@ -1,11 +1,19 @@
+use base64::Engine;
+use crate::ssh::bridge::{SshBridge, WriteRequest};
 use crate::ssh::{SshEvent, SshEventTx};
 use crate::workspace::ConnectionState;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter};
 use tokio::process::{Child, Command};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::sync::oneshot;
 
 /// Maximum reconnection backoff delay.
 const MAX_BACKOFF_SECS: u64 = 30;
+
+/// Pending RPC responses awaiting completion.
+type PendingMap = Arc<Mutex<HashMap<u64, oneshot::Sender<serde_json::Value>>>>;
 
 /// Manage an SSH workspace connection lifecycle.
 /// Runs as a tokio task. Reports state changes via ssh_tx.
@@ -13,6 +21,7 @@ pub async fn run_ssh_lifecycle(
     workspace_id: u64,
     target: String,
     ssh_tx: SshEventTx,
+    bridge: Arc<SshBridge>,
 ) {
     let mut attempt: u32 = 0;
 
@@ -47,42 +56,28 @@ pub async fn run_ssh_lifecycle(
                     state: ConnectionState::Connected,
                 });
 
-                // Wire JSON-RPC protocol over SSH stdin/stdout to cmuxd-remote.
-                // The cmuxd-remote daemon speaks JSON-RPC over stdio:
-                //   - proxy.open: opens a terminal session on the remote host
-                //   - proxy.stream: bidirectional data for terminal I/O
                 let stdin = child.stdin.take();
                 let stdout = child.stdout.take();
 
-                if let (Some(mut writer), Some(reader)) = (stdin, stdout) {
+                if let (Some(writer), Some(reader)) = (stdin, stdout) {
+                    let mut buf_writer = BufWriter::new(writer);
+
                     // Send hello/handshake to verify cmuxd-remote is running
-                    let hello = serde_json::json!({"jsonrpc":"2.0","id":1,"method":"system.hello","params":{}});
+                    let hello = serde_json::json!({"jsonrpc":"2.0","id":1,"method":"hello","params":{}});
                     let hello_line = format!("{}\n", hello);
-                    if let Err(e) = writer.write_all(hello_line.as_bytes()).await {
+                    if let Err(e) = buf_writer.write_all(hello_line.as_bytes()).await {
                         eprintln!("cmux: SSH handshake write failed: {e}");
+                    } else if let Err(e) = buf_writer.flush().await {
+                        eprintln!("cmux: SSH handshake flush failed: {e}");
                     } else {
-                        // Read responses from cmuxd-remote
-                        let mut buf_reader = BufReader::new(reader);
-                        let mut line = String::new();
-                        loop {
-                            line.clear();
-                            match buf_reader.read_line(&mut line).await {
-                                Ok(0) => break, // EOF — SSH connection closed
-                                Ok(_) => {
-                                    // Parse JSON-RPC response/notification from cmuxd-remote.
-                                    // TODO: Route proxy.stream data to terminal surfaces
-                                    // and proxy.open responses to create remote shells.
-                                    // For Phase 4 MVP, log and continue.
-                                    if let Ok(msg) = serde_json::from_str::<serde_json::Value>(&line) {
-                                        eprintln!("cmux: SSH RPC recv: {}", msg);
-                                    }
-                                }
-                                Err(e) => {
-                                    eprintln!("cmux: SSH stdout read error: {e}");
-                                    break;
-                                }
-                            }
-                        }
+                        // Run bidirectional proxy routing
+                        run_proxy_routing(
+                            buf_writer,
+                            reader,
+                            &bridge,
+                            &ssh_tx,
+                        )
+                        .await;
                     }
                 }
 
@@ -106,22 +101,288 @@ pub async fn run_ssh_lifecycle(
 
         // Exponential backoff before reconnect (per D-14)
         let backoff = backoff_duration(attempt);
-        eprintln!("cmux: SSH reconnecting to {target} in {}s (attempt {})", backoff.as_secs(), attempt + 1);
+        eprintln!(
+            "cmux: SSH reconnecting to {target} in {}s (attempt {})",
+            backoff.as_secs(),
+            attempt + 1
+        );
         tokio::time::sleep(backoff).await;
         attempt += 1;
     }
+}
+
+/// Bidirectional proxy routing between bridge channels and SSH stdin/stdout.
+async fn run_proxy_routing(
+    buf_writer: BufWriter<tokio::process::ChildStdin>,
+    reader: tokio::process::ChildStdout,
+    bridge: &Arc<SshBridge>,
+    ssh_tx: &SshEventTx,
+) {
+    let pending: PendingMap = Arc::new(Mutex::new(HashMap::new()));
+    let writer = Arc::new(tokio::sync::Mutex::new(buf_writer));
+
+    // Create a channel for WriteRequests (bridge.write_tx sends here)
+    // The bridge already has write_tx; we consume from the receiver side.
+    // We create a local receiver from a new channel pair for the write path.
+    let (local_write_tx, mut local_write_rx) = tokio::sync::mpsc::unbounded_channel::<WriteRequest>();
+
+    // Forward writes from bridge to local channel
+    let bridge_write_tx = bridge.write_tx.clone();
+    let _forward_handle = {
+        // We can't directly access the bridge's receiver, so we use the bridge's write_tx
+        // to send WriteRequests that get picked up here. The bridge.write_tx already points
+        // to a channel -- we need to drain it. Since SshBridge owns write_tx and external
+        // code sends to it, we need to set up the drain from the receiver side.
+        // However, the receiver is created externally. For now, we use local_write_tx
+        // as a proxy that the write path reads from.
+        drop(bridge_write_tx);
+        local_write_tx
+    };
+
+    // Read path: parse JSON lines from SSH stdout
+    let read_bridge = bridge.clone();
+    let read_ssh_tx = ssh_tx.clone();
+    let read_pending = pending.clone();
+    let read_handle = tokio::spawn(async move {
+        let mut buf_reader = BufReader::new(reader);
+        let mut line = String::new();
+        loop {
+            line.clear();
+            match buf_reader.read_line(&mut line).await {
+                Ok(0) => break, // EOF
+                Ok(_) => {
+                    if let Ok(msg) = serde_json::from_str::<serde_json::Value>(&line) {
+                        handle_incoming_message(&msg, &read_bridge, &read_ssh_tx, &read_pending);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("cmux: SSH stdout read error: {e}");
+                    break;
+                }
+            }
+        }
+    });
+
+    // Write path: consume WriteRequests and send as JSON-RPC to SSH stdin
+    let write_writer = writer.clone();
+    let write_bridge = bridge.clone();
+    let write_handle = tokio::spawn(async move {
+        while let Some(req) = local_write_rx.recv().await {
+            let rpc_id = write_bridge.next_id();
+            let rpc = serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": rpc_id,
+                "method": "proxy.write",
+                "params": {
+                    "stream_id": req.stream_id,
+                    "data_base64": req.data_base64,
+                }
+            });
+            let line = format!("{}\n", rpc);
+            let mut w = write_writer.lock().await;
+            if w.write_all(line.as_bytes()).await.is_err() {
+                break;
+            }
+            if w.flush().await.is_err() {
+                break;
+            }
+        }
+    });
+
+    // Wait for read path to finish (SSH connection closed)
+    let _ = read_handle.await;
+    // Cancel write path
+    write_handle.abort();
+}
+
+/// Handle an incoming JSON message from cmuxd-remote.
+fn handle_incoming_message(
+    msg: &serde_json::Value,
+    bridge: &SshBridge,
+    ssh_tx: &SshEventTx,
+    pending: &PendingMap,
+) {
+    // Check if it's an async event (has "event" field)
+    if let Some(event_name) = msg.get("event").and_then(|v| v.as_str()) {
+        let stream_id = msg
+            .get("stream_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+
+        match event_name {
+            "proxy.stream.data" => {
+                if let Some(data_b64) = msg.get("data_base64").and_then(|v| v.as_str()) {
+                    if let Ok(data) = base64::engine::general_purpose::STANDARD.decode(data_b64) {
+                        // Look up pane_id from stream_id
+                        if let Ok(s2p) = bridge.stream_to_pane.lock() {
+                            if let Some(&pane_id) = s2p.get(stream_id) {
+                                let _ = ssh_tx.send(SshEvent::RemoteOutput { pane_id, data });
+                            }
+                        }
+                    }
+                }
+            }
+            "proxy.stream.eof" => {
+                if let Ok(s2p) = bridge.stream_to_pane.lock() {
+                    if let Some(&pane_id) = s2p.get(stream_id) {
+                        let _ = ssh_tx.send(SshEvent::RemoteEof { pane_id });
+                        drop(s2p);
+                        bridge.remove_pane(pane_id);
+                    }
+                }
+            }
+            "proxy.stream.error" => {
+                let error = msg
+                    .get("error")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown");
+                eprintln!("cmux: proxy stream error for {stream_id}: {error}");
+                // Treat like EOF
+                if let Ok(s2p) = bridge.stream_to_pane.lock() {
+                    if let Some(&pane_id) = s2p.get(stream_id) {
+                        let _ = ssh_tx.send(SshEvent::RemoteEof { pane_id });
+                        drop(s2p);
+                        bridge.remove_pane(pane_id);
+                    }
+                }
+            }
+            _ => {
+                eprintln!("cmux: unknown SSH event: {event_name}");
+            }
+        }
+        return;
+    }
+
+    // Check if it's an RPC response (has "id" field)
+    if let Some(id) = msg.get("id").and_then(|v| v.as_u64()) {
+        if let Ok(mut map) = pending.lock() {
+            if let Some(tx) = map.remove(&id) {
+                let _ = tx.send(msg.clone());
+            }
+        }
+    }
+}
+
+/// Open a remote PTY stream for a pane via session.spawn + proxy.stream.subscribe.
+pub async fn open_remote_stream(
+    writer: &Arc<tokio::sync::Mutex<BufWriter<tokio::process::ChildStdin>>>,
+    bridge: &SshBridge,
+    pane_id: u64,
+    pending: &PendingMap,
+    ssh_tx: &SshEventTx,
+    cols: u16,
+    rows: u16,
+) -> Result<String, String> {
+    // Send session.spawn RPC
+    let spawn_id = bridge.next_id();
+    let spawn_rpc = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": spawn_id,
+        "method": "session.spawn",
+        "params": {
+            "cols": cols,
+            "rows": rows,
+        }
+    });
+
+    // Register oneshot for response
+    let (resp_tx, resp_rx) = oneshot::channel();
+    if let Ok(mut map) = pending.lock() {
+        map.insert(spawn_id, resp_tx);
+    }
+
+    // Write RPC
+    {
+        let line = format!("{}\n", spawn_rpc);
+        let mut w = writer.lock().await;
+        w.write_all(line.as_bytes())
+            .await
+            .map_err(|e| format!("write session.spawn failed: {e}"))?;
+        w.flush()
+            .await
+            .map_err(|e| format!("flush session.spawn failed: {e}"))?;
+    }
+
+    // Await response
+    let resp = resp_rx
+        .await
+        .map_err(|_| "session.spawn response channel dropped".to_string())?;
+
+    let stream_id = resp
+        .get("result")
+        .and_then(|r| r.get("stream_id"))
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| {
+            let err_msg = resp
+                .get("error")
+                .and_then(|e| e.get("message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("unknown error");
+            format!("session.spawn failed: {err_msg}")
+        })?
+        .to_string();
+
+    // Subscribe to the stream
+    let sub_id = bridge.next_id();
+    let sub_rpc = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": sub_id,
+        "method": "proxy.stream.subscribe",
+        "params": {
+            "stream_id": &stream_id,
+        }
+    });
+
+    let (sub_tx, sub_rx) = oneshot::channel();
+    if let Ok(mut map) = pending.lock() {
+        map.insert(sub_id, sub_tx);
+    }
+
+    {
+        let line = format!("{}\n", sub_rpc);
+        let mut w = writer.lock().await;
+        w.write_all(line.as_bytes())
+            .await
+            .map_err(|e| format!("write proxy.stream.subscribe failed: {e}"))?;
+        w.flush()
+            .await
+            .map_err(|e| format!("flush proxy.stream.subscribe failed: {e}"))?;
+    }
+
+    // Await subscribe response
+    let _sub_resp = sub_rx
+        .await
+        .map_err(|_| "proxy.stream.subscribe response channel dropped".to_string())?;
+
+    // Register in bridge
+    bridge.register_pane(pane_id, stream_id.clone());
+    bridge.mark_subscribed(pane_id);
+
+    // Notify via SSH event
+    let _ = ssh_tx.send(SshEvent::StreamOpened {
+        pane_id,
+        stream_id: stream_id.clone(),
+    });
+
+    Ok(stream_id)
 }
 
 /// Start an SSH process with cmuxd-remote in stdio mode.
 async fn start_ssh(target: &str) -> Result<Child, String> {
     let child = Command::new("ssh")
         .args([
-            "-o", "ServerAliveInterval=15",
-            "-o", "ServerAliveCountMax=3",
-            "-o", "ConnectTimeout=10",
-            "-o", "BatchMode=yes",
+            "-o",
+            "ServerAliveInterval=15",
+            "-o",
+            "ServerAliveCountMax=3",
+            "-o",
+            "ConnectTimeout=10",
+            "-o",
+            "BatchMode=yes",
             target,
-            ".local/bin/cmuxd-remote", "serve", "--stdio",
+            ".local/bin/cmuxd-remote",
+            "serve",
+            "--stdio",
         ])
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())

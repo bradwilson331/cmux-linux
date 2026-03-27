@@ -12,12 +12,16 @@ import (
 	"math"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
+
+	"github.com/creack/pty"
 )
 
 var version = "dev"
@@ -78,6 +82,36 @@ type sessionState struct {
 	effectiveRows int
 	lastKnownCols int
 	lastKnownRows int
+}
+
+// ptyConn wraps a PTY master fd to implement net.Conn for reuse with streamState.
+type ptyConn struct {
+	ptmx *os.File
+	cmd  *exec.Cmd
+}
+
+func (p *ptyConn) Read(b []byte) (int, error)  { return p.ptmx.Read(b) }
+func (p *ptyConn) Write(b []byte) (int, error) { return p.ptmx.Write(b) }
+func (p *ptyConn) Close() error {
+	_ = p.ptmx.Close()
+	if p.cmd != nil && p.cmd.Process != nil {
+		_ = p.cmd.Process.Signal(syscall.SIGTERM)
+		_ = p.cmd.Wait()
+	}
+	return nil
+}
+func (p *ptyConn) LocalAddr() net.Addr                { return nil }
+func (p *ptyConn) RemoteAddr() net.Addr               { return nil }
+func (p *ptyConn) SetDeadline(t time.Time) error      { return nil }
+func (p *ptyConn) SetReadDeadline(t time.Time) error  { return nil }
+func (p *ptyConn) SetWriteDeadline(t time.Time) error { return nil }
+
+// resize changes the PTY window size.
+func (p *ptyConn) resize(cols, rows int) error {
+	return pty.Setsize(p.ptmx, &pty.Winsize{
+		Cols: uint16(cols),
+		Rows: uint16(rows),
+	})
 }
 
 const maxRPCFrameBytes = 4 * 1024 * 1024
@@ -312,6 +346,7 @@ func (s *rpcServer) handleRequest(req rpcRequest) rpcResponse {
 				"version": version,
 				"capabilities": []string{
 					"session.basic",
+					"session.spawn",
 					"session.resize.min",
 					"proxy.http_connect",
 					"proxy.socks5",
@@ -336,6 +371,10 @@ func (s *rpcServer) handleRequest(req rpcRequest) rpcResponse {
 		return s.handleProxyWrite(req)
 	case "proxy.stream.subscribe":
 		return s.handleProxyStreamSubscribe(req)
+	case "session.spawn":
+		return s.handleSessionSpawn(req)
+	case "stream.resize":
+		return s.handleStreamResize(req)
 	case "session.open":
 		return s.handleSessionOpen(req)
 	case "session.close":
@@ -607,6 +646,103 @@ func (s *rpcServer) handleProxyStreamSubscribe(req rpcRequest) rpcResponse {
 			"already_subscribed": alreadySubscribed,
 		},
 	}
+}
+
+func (s *rpcServer) handleSessionSpawn(req rpcRequest) rpcResponse {
+	// Get optional cols/rows (default 80x24)
+	cols := 80
+	rows := 24
+	if c, ok := getIntParam(req.Params, "cols"); ok && c > 0 {
+		cols = c
+	}
+	if r, ok := getIntParam(req.Params, "rows"); ok && r > 0 {
+		rows = r
+	}
+
+	// Get optional shell (default to user's login shell or /bin/sh)
+	shell := os.Getenv("SHELL")
+	if shell == "" {
+		shell = "/bin/sh"
+	}
+
+	// Start a PTY with the shell
+	cmd := exec.Command(shell, "-l")
+	cmd.Env = append(os.Environ(), "TERM=xterm-256color")
+	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{
+		Cols: uint16(cols),
+		Rows: uint16(rows),
+	})
+	if err != nil {
+		return rpcResponse{
+			ID: req.ID,
+			OK: false,
+			Error: &rpcError{
+				Code:    "spawn_failed",
+				Message: err.Error(),
+			},
+		}
+	}
+
+	// Create a stream wrapping the PTY master fd
+	s.mu.Lock()
+	streamID := fmt.Sprintf("s-%d", s.nextStreamID)
+	s.nextStreamID++
+	s.streams[streamID] = &streamState{conn: &ptyConn{ptmx: ptmx, cmd: cmd}}
+	s.mu.Unlock()
+
+	return rpcResponse{
+		ID: req.ID,
+		OK: true,
+		Result: map[string]any{
+			"stream_id": streamID,
+			"shell":     shell,
+			"cols":      cols,
+			"rows":      rows,
+		},
+	}
+}
+
+func (s *rpcServer) handleStreamResize(req rpcRequest) rpcResponse {
+	streamID, ok := getStringParam(req.Params, "stream_id")
+	if !ok || streamID == "" {
+		return rpcResponse{
+			ID: req.ID, OK: false,
+			Error: &rpcError{Code: "invalid_params", Message: "stream.resize requires stream_id"},
+		}
+	}
+	cols, ok := getIntParam(req.Params, "cols")
+	if !ok || cols <= 0 {
+		return rpcResponse{
+			ID: req.ID, OK: false,
+			Error: &rpcError{Code: "invalid_params", Message: "stream.resize requires cols > 0"},
+		}
+	}
+	rows, ok := getIntParam(req.Params, "rows")
+	if !ok || rows <= 0 {
+		return rpcResponse{
+			ID: req.ID, OK: false,
+			Error: &rpcError{Code: "invalid_params", Message: "stream.resize requires rows > 0"},
+		}
+	}
+
+	s.mu.Lock()
+	st, exists := s.streams[streamID]
+	s.mu.Unlock()
+	if !exists {
+		return rpcResponse{
+			ID: req.ID, OK: false,
+			Error: &rpcError{Code: "not_found", Message: "stream not found"},
+		}
+	}
+	if pc, ok := st.conn.(*ptyConn); ok {
+		if err := pc.resize(cols, rows); err != nil {
+			return rpcResponse{
+				ID: req.ID, OK: false,
+				Error: &rpcError{Code: "resize_failed", Message: err.Error()},
+			}
+		}
+	}
+	return rpcResponse{ID: req.ID, OK: true, Result: map[string]any{"resized": true}}
 }
 
 func (s *rpcServer) handleSessionOpen(req rpcRequest) rpcResponse {
