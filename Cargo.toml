@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "agent-browser/cli"]
+
 [package]
 name = "cmux-linux"
 version = "0.1.0"
@@ -13,6 +16,7 @@ toml = "0.8"
 uuid = { version = "1", features = ["v4", "serde"] }
 libc = "0.2"
 base64 = "0.22.1"
+notify-rust = "4"
 tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
 futures-util = "0.3"
 

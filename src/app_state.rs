@@ -561,12 +561,20 @@ impl AppState {
 }
 
 /// Send a desktop notification for a bell in the given workspace.
-/// Uses GNotification via gio. Rate limiting is handled by the caller.
-fn send_bell_notification(app: &gtk4::Application, workspace_name: &str, workspace_index: usize) {
-    use gtk4::gio;
-    let notification = gio::Notification::new("Terminal Bell");
-    notification.set_body(Some(&format!("{} - Terminal bell", workspace_name)));
-    notification.set_priority(gio::NotificationPriority::Normal);
-    let notif_id = format!("bell-{}", workspace_index);
-    app.send_notification(Some(&notif_id), &notification);
+/// Uses notify-rust to talk to org.freedesktop.Notifications D-Bus directly,
+/// bypassing gio::Notification which requires .desktop file registration.
+fn send_bell_notification(_app: &gtk4::Application, workspace_name: &str, _workspace_index: usize) {
+    let summary = "Terminal Bell";
+    let body = format!("{} - Terminal bell", workspace_name);
+    std::thread::spawn(move || {
+        if let Err(e) = notify_rust::Notification::new()
+            .summary(summary)
+            .body(&body)
+            .icon("utilities-terminal")
+            .timeout(notify_rust::Timeout::Milliseconds(5000))
+            .show()
+        {
+            eprintln!("cmux: desktop notification failed: {e}");
+        }
+    });
 }
