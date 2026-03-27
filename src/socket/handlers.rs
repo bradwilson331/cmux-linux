@@ -49,9 +49,40 @@ pub fn handle_socket_command(
                 "pane.list", "pane.focus", "pane.last",
                 "window.list", "window.current",
                 "notification.list", "notification.clear",
+                // Browser lifecycle + streaming
                 "browser.open", "browser.close",
                 "browser.stream.enable", "browser.stream.disable",
                 "browser.snapshot", "browser.screenshot",
+                // P0: navigation
+                "browser.navigate", "browser.goto",
+                "browser.back", "browser.forward", "browser.reload",
+                // P0: interaction
+                "browser.click", "browser.dblclick", "browser.type", "browser.fill",
+                "browser.press", "browser.keydown", "browser.keyup",
+                "browser.hover", "browser.focus",
+                "browser.check", "browser.uncheck", "browser.select",
+                "browser.scroll", "browser.scroll_into_view",
+                "browser.drag", "browser.upload", "browser.download", "browser.pdf",
+                // P0: evaluation + waiting
+                "browser.eval", "browser.wait",
+                // P0: getters
+                "browser.get.url", "browser.get.title", "browser.get.text",
+                "browser.get.html", "browser.get.value", "browser.get.attr",
+                "browser.get.count", "browser.get.box", "browser.get.styles",
+                // P0: state checks
+                "browser.is.visible", "browser.is.enabled", "browser.is.checked",
+                // P1: locators
+                "browser.find.role", "browser.find.text", "browser.find.label",
+                "browser.find.placeholder", "browser.find.alt", "browser.find.title",
+                "browser.find.testid", "browser.find.nth", "browser.find.first",
+                "browser.find.last",
+                // P1: frames, dialogs, console, errors
+                "browser.frame.select", "browser.frame.main",
+                "browser.dialog.accept", "browser.dialog.dismiss",
+                "browser.console.list", "browser.errors.list",
+                "browser.highlight",
+                "browser.state.save", "browser.state.load",
+                // Debug
                 "debug.layout", "debug.type",
             ];
             let _ = resp_tx.send(ok(req_id, json!({"methods": methods})));
@@ -601,12 +632,11 @@ pub fn handle_socket_command(
                     // so the user sees something in the UI (Gap 1 + Gap 2 fix)
                     if let Some(engine) = s.active_split_engine_mut() {
                         match engine.split_active_with_preview() {
-                            Some((_pane_id, _picture)) => {
-                                eprintln!("cmux: browser.open created preview pane");
-                                // Note: streaming is started separately via browser.stream.enable
+                            Some(_widgets) => {
+                                // Streaming is started separately via browser.stream.enable
                             }
                             None => {
-                                eprintln!("cmux: browser.open failed to create preview pane (split failed)");
+                                // split failed — no preview pane created
                             }
                         }
                     }
@@ -650,7 +680,7 @@ pub fn handle_socket_command(
                             find_preview_picture(&eng.root)
                                 .or_else(|| {
                                     // No preview pane yet -- create one
-                                    eng.split_active_with_preview().map(|(_id, pic)| pic)
+                                    eng.split_active_with_preview().map(|w| w.picture)
                                 })
                         } else {
                             None
@@ -664,17 +694,17 @@ pub fn handle_socket_command(
                         if let Some(ref rt) = runtime {
                             match bm.start_stream(rt, pic) {
                                 Ok(()) => {
-                                    eprintln!("cmux: browser.stream.enable wired stream to preview pane");
+                                    // stream wired to preview pane
                                 }
                                 Err(e) => {
-                                    eprintln!("cmux: browser.stream.enable start_stream failed: {}", e);
+                                    eprintln!("cmux: stream enable failed: {}", e);
                                 }
                             }
                         } else {
-                            eprintln!("cmux: browser.stream.enable no runtime handle available");
+                            // no runtime handle
                         }
                     } else {
-                        eprintln!("cmux: browser.stream.enable no preview pane available for streaming");
+                        // no preview pane available
                     }
 
                     let _ = resp_tx.send(ok(req_id, result));
@@ -721,6 +751,23 @@ pub fn handle_socket_command(
             let s = state.borrow();
             if let Some(ref bm) = s.browser_manager {
                 match bm.send_command("screenshot", serde_json::json!({})) {
+                    Ok(result) => {
+                        let _ = resp_tx.send(ok(req_id, result));
+                    }
+                    Err(e) => {
+                        let _ = resp_tx.send(err(req_id, "browser_error", &e));
+                    }
+                }
+            } else {
+                let _ = resp_tx.send(err(req_id, "not_running", "No browser session active"));
+            }
+        }
+
+        // -- browser.* generic proxy (P0/P1 parity) --
+        SocketCommand::BrowserAction { req_id, action, params, resp_tx } => {
+            let s = state.borrow();
+            if let Some(ref bm) = s.browser_manager {
+                match bm.send_command(&action, params) {
                     Ok(result) => {
                         let _ = resp_tx.send(ok(req_id, result));
                     }

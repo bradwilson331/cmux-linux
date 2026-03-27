@@ -59,10 +59,20 @@ paned > separator:hover { background-color: #5b8dd9; }
 .ssh-dialog entry { font-size: 14px; padding: 8px 16px; }
 /* Phase 8: Browser preview pane */
 .browser-preview { background-color: #1a1a1a; }
+.browser-url-bar { font-size: 13px; padding: 4px 8px; background-color: #2a2a2a; color: #e0e0e0; border-bottom: 1px solid #444; }
 .preview-container { background-color: #1a1a1a; }
 .preview-empty, .preview-error { color: #888888; font-size: 14px; font-weight: 400; padding: 32px; }
 .preview-error { color: #cc4444; }
 .stream-indicator { font-size: 9px; font-weight: 600; color: #5b8dd9; margin: 0 4px; padding: 1px 4px; border-radius: 2px; background-color: rgba(91, 141, 217, 0.15); }
+/* Phase 8 Plan 05: Navigation bar */
+.browser-nav-bar { background-color: #242424; padding: 4px 8px; border-bottom: 1px solid #3a3a3a; }
+.browser-nav-btn { min-width: 28px; min-height: 28px; padding: 4px; margin: 0 2px; border-radius: 4px; background-color: transparent; color: #cccccc; border: none; font-size: 14px; }
+.browser-nav-btn:hover { background-color: rgba(255, 255, 255, 0.08); }
+.browser-nav-btn:active { background-color: rgba(255, 255, 255, 0.12); }
+.browser-nav-btn:disabled { color: #555555; }
+.browser-nav-go { color: #5b8dd9; font-weight: 600; }
+.browser-nav-devtools { margin-left: auto; }
+.browser-nav-devtools:checked { background-color: rgba(91, 141, 217, 0.2); color: #5b8dd9; }
 ";
 
 fn main() {

@@ -217,25 +217,20 @@ impl BrowserManager {
                     return;
                 }
             };
-            eprintln!("cmux: browser stream connected to {}", url);
-
             let (_write, mut read) = ws_stream.split();
             while let Some(msg_result) = read.next().await {
                 let msg = match msg_result {
                     Ok(m) => m,
                     Err(e) => {
-                        eprintln!("cmux: browser stream WS error: {}", e);
+                        eprintln!("cmux: browser stream error: {}", e);
                         break;
                     }
                 };
-                if let tokio_tungstenite::tungstenite::Message::Text(text) = msg {
-                    // Parse frame JSON
-                    if let Ok(frame) = serde_json::from_str::<serde_json::Value>(&text) {
+                if let tokio_tungstenite::tungstenite::Message::Text(text) = &msg {
+                    if let Ok(frame) = serde_json::from_str::<serde_json::Value>(text) {
                         if frame.get("type").and_then(|t| t.as_str()) == Some("frame") {
                             if let Some(data_b64) = frame.get("data").and_then(|d| d.as_str()) {
-                                // Decode base64 to JPEG bytes
                                 if let Ok(jpeg_bytes) = base64::engine::general_purpose::STANDARD.decode(data_b64) {
-                                    // Send to GTK thread (ignore error if receiver dropped)
                                     let _ = frame_tx.send(jpeg_bytes);
                                 }
                             }
@@ -243,24 +238,36 @@ impl BrowserManager {
                     }
                 }
             }
-            eprintln!("cmux: browser stream ended");
         });
         self.stream_task = Some(stream_task);
 
         // Spawn GTK-side receiver: poll mpsc and update Picture widget
-        // Use glib::MainContext to process frames on GTK main thread
         let picture_clone = picture.clone();
         glib::MainContext::default().spawn_local(async move {
+            let mut first_frame = true;
             while let Some(jpeg_bytes) = frame_rx.recv().await {
                 let bytes = glib::Bytes::from(&jpeg_bytes);
                 match gtk4::gdk::Texture::from_bytes(&bytes) {
                     Ok(texture) => {
                         picture_clone.set_paintable(Some(&texture));
+                        // Hide the "No browser preview" overlay label on first frame
+                        if first_frame {
+                            first_frame = false;
+                            if let Some(overlay) = picture_clone.parent().and_then(|p| p.downcast::<gtk4::Overlay>().ok()) {
+                                if let Some(child) = overlay.first_child() {
+                                    let mut sibling = child.next_sibling();
+                                    while let Some(widget) = sibling {
+                                        let next = widget.next_sibling();
+                                        if widget.has_css_class("preview-empty") {
+                                            widget.set_visible(false);
+                                        }
+                                        sibling = next;
+                                    }
+                                }
+                            }
+                        }
                     }
-                    Err(e) => {
-                        // Per UI-SPEC: frame decode failure is silent (keep last valid frame)
-                        eprintln!("cmux: browser frame decode error: {}", e);
-                    }
+                    Err(_) => {}
                 }
             }
         });
@@ -270,9 +277,23 @@ impl BrowserManager {
     }
 }
 
-/// Create a browser preview pane widget (Overlay with Picture + status label).
-/// Returns (container, picture, pane_id, uuid) for insertion into SplitNode::Preview.
-pub fn create_preview_pane(next_pane_id: u64) -> (gtk4::Overlay, gtk4::Picture, u64, Uuid) {
+/// Widgets returned by create_preview_pane for callers to connect signals.
+pub struct PreviewPaneWidgets {
+    pub container: gtk4::Box,
+    pub picture: gtk4::Picture,
+    pub url_entry: gtk4::Entry,
+    pub back_btn: gtk4::Button,
+    pub forward_btn: gtk4::Button,
+    pub reload_btn: gtk4::Button,
+    pub go_btn: gtk4::Button,
+    pub devtools_btn: gtk4::ToggleButton,
+    pub pane_id: u64,
+    pub uuid: Uuid,
+}
+
+/// Create a browser preview pane widget (nav bar + Picture + status overlay).
+/// Returns PreviewPaneWidgets so callers can connect button signals.
+pub fn create_preview_pane(next_pane_id: u64) -> PreviewPaneWidgets {
     let uuid = Uuid::new_v4();
     let picture = gtk4::Picture::new();
     picture.add_css_class("browser-preview");
@@ -283,6 +304,7 @@ pub fn create_preview_pane(next_pane_id: u64) -> (gtk4::Overlay, gtk4::Picture, 
     let overlay = gtk4::Overlay::new();
     overlay.add_css_class("preview-container");
     overlay.set_child(Some(&picture));
+    overlay.set_vexpand(true);
 
     // Empty state label (shown when no stream is active)
     let empty_label = gtk4::Label::new(Some("No browser preview"));
@@ -291,7 +313,62 @@ pub fn create_preview_pane(next_pane_id: u64) -> (gtk4::Overlay, gtk4::Picture, 
     empty_label.set_valign(gtk4::Align::Center);
     overlay.add_overlay(&empty_label);
 
-    (overlay, picture, next_pane_id, uuid)
+    // Navigation bar buttons
+    let back_btn = gtk4::Button::with_label("\u{25C0}");
+    back_btn.add_css_class("browser-nav-btn");
+    back_btn.set_tooltip_text(Some("Back"));
+
+    let forward_btn = gtk4::Button::with_label("\u{25B6}");
+    forward_btn.add_css_class("browser-nav-btn");
+    forward_btn.set_tooltip_text(Some("Forward"));
+
+    let reload_btn = gtk4::Button::with_label("\u{21BB}");
+    reload_btn.add_css_class("browser-nav-btn");
+    reload_btn.set_tooltip_text(Some("Reload"));
+
+    // URL entry inside the nav bar
+    let url_entry = gtk4::Entry::new();
+    url_entry.set_placeholder_text(Some("Enter URL..."));
+    url_entry.add_css_class("browser-url-bar");
+    url_entry.set_hexpand(true);
+
+    let go_btn = gtk4::Button::with_label("\u{2192}");
+    go_btn.add_css_class("browser-nav-btn");
+    go_btn.add_css_class("browser-nav-go");
+    go_btn.set_tooltip_text(Some("Go"));
+
+    let devtools_btn = gtk4::ToggleButton::with_label("{ }");
+    devtools_btn.add_css_class("browser-nav-btn");
+    devtools_btn.add_css_class("browser-nav-devtools");
+    devtools_btn.set_tooltip_text(Some("Developer Tools"));
+
+    // Navigation bar: horizontal box with buttons + URL entry
+    let nav_bar = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
+    nav_bar.add_css_class("browser-nav-bar");
+    nav_bar.append(&back_btn);
+    nav_bar.append(&forward_btn);
+    nav_bar.append(&reload_btn);
+    nav_bar.append(&url_entry);
+    nav_bar.append(&go_btn);
+    nav_bar.append(&devtools_btn);
+
+    // Vertical box: nav bar on top, picture overlay below
+    let vbox = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+    vbox.append(&nav_bar);
+    vbox.append(&overlay);
+
+    PreviewPaneWidgets {
+        container: vbox,
+        picture,
+        url_entry,
+        back_btn,
+        forward_btn,
+        reload_btn,
+        go_btn,
+        devtools_btn,
+        pane_id: next_pane_id,
+        uuid,
+    }
 }
 
 /// Update the preview pane overlay to show the given state.

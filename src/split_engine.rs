@@ -31,8 +31,10 @@ pub enum SplitNode {
     /// Phase 8: Browser preview pane (agent-browser frame rendering).
     Preview {
         pane_id: u64,
-        container: gtk4::Overlay,
+        container: gtk4::Box,
         picture: gtk4::Picture,
+        #[allow(dead_code)] // Kept alive for GTK widget tree reference counting
+        url_entry: gtk4::Entry,
         uuid: Uuid,
     },
     Split {
@@ -118,6 +120,18 @@ impl SplitNode {
             SplitNode::Split { start, end, .. } => {
                 start.update_focus_css(active_pane_id);
                 end.update_focus_css(active_pane_id);
+            }
+        }
+    }
+
+    /// Find a node by pane_id.
+    pub fn find_node(&self, target_id: u64) -> Option<&SplitNode> {
+        match self {
+            SplitNode::Leaf { pane_id, .. } | SplitNode::Preview { pane_id, .. } => {
+                if *pane_id == target_id { Some(self) } else { None }
+            }
+            SplitNode::Split { start, end, .. } => {
+                start.find_node(target_id).or_else(|| end.find_node(target_id))
             }
         }
     }
@@ -604,9 +618,9 @@ impl SplitEngine {
     }
 
     /// Split the active pane vertically and insert a Preview node on the right.
-    /// Returns (new_pane_id, picture_widget) so the caller can wire streaming to the Picture.
+    /// Returns (new_pane_id, picture_widget, url_entry) so the caller can wire streaming and URL navigation.
     /// The active terminal pane stays on the left and retains focus.
-    pub fn split_active_with_preview(&mut self) -> Option<(u64, gtk4::Picture)> {
+    pub fn split_active_with_preview(&mut self) -> Option<crate::browser::PreviewPaneWidgets> {
         let active_id = self.active_pane_id;
         let new_pane_id = self.next_pane_id;
         self.next_pane_id += 1;
@@ -629,12 +643,13 @@ impl SplitEngine {
             };
 
         // Create preview pane widgets
-        let (container, picture, _pid, uuid) = crate::browser::create_preview_pane(new_pane_id);
+        let widgets = crate::browser::create_preview_pane(new_pane_id);
         let preview_node = SplitNode::Preview {
             pane_id: new_pane_id,
-            container,
-            picture: picture.clone(),
-            uuid,
+            container: widgets.container.clone(),
+            picture: widgets.picture.clone(),
+            url_entry: widgets.url_entry.clone(),
+            uuid: widgets.uuid,
         };
 
         // Replace active leaf with Split(active_leaf, preview_node) -- vertical, preview on right
@@ -655,7 +670,7 @@ impl SplitEngine {
         // The terminal keeps keyboard input, preview is passive display only.
         self.root.update_focus_css(active_id);
 
-        Some((new_pane_id, picture))
+        Some(widgets)
     }
 
     /// Replace the leaf with `target_pane_id` with a Split(orientation) node.
@@ -836,6 +851,18 @@ impl SplitEngine {
             return None; // Signal to AppState: close the workspace instead
         }
 
+        // Don't close the last terminal pane if only a Preview would survive.
+        // A Preview-only workspace has no terminal and the Ghostty surface free
+        // can crash when no terminal remains to receive focus.
+        let terminal_count = count_terminals(&self.root);
+        let active_is_terminal = matches!(
+            self.root.find_node(active_id),
+            Some(SplitNode::Leaf { .. })
+        );
+        if active_is_terminal && terminal_count <= 1 {
+            return None; // Prevent closing last terminal; close workspace instead
+        }
+
         // Find the surface before removing it from the tree.
         let surface_to_free = self.find_surface(active_id)?;
 
@@ -880,9 +907,11 @@ impl SplitEngine {
             }
         }
 
-        // Grab GTK focus on the surviving GLArea.
+        // Grab GTK focus on the surviving pane's widget (GLArea or URL entry).
         if let Some(gl_area) = self.find_gl_area(surviving_id) {
             gl_area.grab_focus();
+        } else if let Some(entry) = find_url_entry_in_tree(&self.root, surviving_id) {
+            entry.grab_focus();
         }
 
         Some(surviving_id)
@@ -900,7 +929,7 @@ impl SplitEngine {
             }
             self.active_pane_id = new_id;
             self.root.update_focus_css(new_id);
-            // Focus new surface (SPLIT-07).
+            // Focus new surface or Preview URL entry.
             if let Some(new_surface) = self.find_surface(new_id) {
                 unsafe {
                     ffi::ghostty_surface_set_focus(new_surface, true);
@@ -908,6 +937,8 @@ impl SplitEngine {
             }
             if let Some(gl_area) = self.find_gl_area(new_id) {
                 gl_area.grab_focus();
+            } else if let Some(entry) = find_url_entry_in_tree(&self.root, new_id) {
+                entry.grab_focus();
             }
             true
         } else {
@@ -1144,6 +1175,25 @@ fn find_gl_area_in_tree(node: &SplitNode, pane_id: u64) -> Option<gtk4::GLArea> 
         SplitNode::Preview { .. } => None, // Preview uses Picture, not GLArea
         SplitNode::Split { start, end, .. } => {
             find_gl_area_in_tree(start, pane_id).or_else(|| find_gl_area_in_tree(end, pane_id))
+        }
+    }
+}
+
+/// Count terminal (Leaf) panes in the tree.
+fn count_terminals(node: &SplitNode) -> usize {
+    match node {
+        SplitNode::Leaf { .. } => 1,
+        SplitNode::Preview { .. } => 0,
+        SplitNode::Split { start, end, .. } => count_terminals(start) + count_terminals(end),
+    }
+}
+
+fn find_url_entry_in_tree(node: &SplitNode, pane_id: u64) -> Option<gtk4::Entry> {
+    match node {
+        SplitNode::Preview { pane_id: id, url_entry, .. } if *id == pane_id => Some(url_entry.clone()),
+        SplitNode::Preview { .. } | SplitNode::Leaf { .. } => None,
+        SplitNode::Split { start, end, .. } => {
+            find_url_entry_in_tree(start, pane_id).or_else(|| find_url_entry_in_tree(end, pane_id))
         }
     }
 }
