@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-03-27T03:18:40.865Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 08-03-PLAN.md
+last_updated: "2026-03-27T03:19:44.176Z"
 progress:
   total_phases: 9
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 42
-  completed_plans: 41
+  completed_plans: 42
 ---
 
 # Project State
@@ -81,6 +81,7 @@ Plan: 3 of 3
 | Phase 07.1 P01 | 4 | 2 tasks | 6 files |
 | Phase 08 P01 | 9 | 2 tasks | 5 files |
 | Phase 08 P02 | 2 | 2 tasks | 3 files |
+| Phase 08 P03 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -148,6 +149,8 @@ Recent decisions affecting current work:
 - [Phase 08]: Preview pane uses gtk4::Overlay + gtk4::Picture (not GLArea) since no Ghostty surface needed
 - [Phase 08]: Preview panes are ephemeral -- skipped in session serialization
 - [Phase 08]: Vec<&str> for capabilities methods array to avoid serde 32-element array limit
+- [Phase 08]: glib::MainContext::spawn_local for continuous async frame receiver on GTK main thread
+- [Phase 08]: Overlay sibling iteration for status label cleanup avoids removing Picture main child
 
 ### Roadmap Evolution
 
@@ -165,6 +168,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-27T03:18:40.862Z
-Stopped at: Completed 08-02-PLAN.md
+Last session: 2026-03-27T03:19:44.172Z
+Stopped at: Completed 08-03-PLAN.md
 Resume file: None
