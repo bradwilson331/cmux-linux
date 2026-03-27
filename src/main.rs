@@ -14,6 +14,7 @@ mod session;
 mod ssh;
 mod config;
 mod ssh_hosts;
+mod ssh_dialog;
 
 const APP_ID: &str = "io.cmux.App";
 
@@ -52,6 +53,9 @@ paned > separator:hover { background-color: #5b8dd9; }
 .connection-state.connected { color: #5b8dd9; }
 .connection-state.disconnected { color: #888888; }
 .connection-state.reconnecting { color: #e8a444; }
+/* Phase 7.1: SSH connect dialog (SSH-01) */
+.ssh-dialog { background-color: #242424; }
+.ssh-dialog entry { font-size: 14px; padding: 8px 16px; }
 ";
 
 fn main() {

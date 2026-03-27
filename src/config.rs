@@ -23,6 +23,7 @@ pub struct ShortcutConfig {
     pub split_right: Option<String>,
     pub split_down: Option<String>,
     pub close_pane: Option<String>,
+    pub new_ssh_workspace: Option<String>,
     pub focus_left: Option<String>,
     pub focus_right: Option<String>,
     pub focus_up: Option<String>,
@@ -50,6 +51,7 @@ pub enum ShortcutAction {
     SplitRight,
     SplitDown,
     ClosePane,
+    NewSshWorkspace,
     FocusLeft,
     FocusRight,
     FocusUp,
@@ -74,7 +76,7 @@ pub struct ShortcutMap {
 const KNOWN_SHORTCUTS: &[&str] = &[
     "new_workspace", "close_workspace", "next_workspace", "prev_workspace",
     "rename_workspace", "toggle_sidebar", "split_right", "split_down",
-    "close_pane", "focus_left", "focus_right", "focus_up", "focus_down",
+    "close_pane", "new_ssh_workspace", "focus_left", "focus_right", "focus_up", "focus_down",
     "workspace_1", "workspace_2", "workspace_3", "workspace_4",
     "workspace_5", "workspace_6", "workspace_7", "workspace_8", "workspace_9",
 ];
@@ -150,6 +152,7 @@ impl ShortcutMap {
             (ShortcutAction::SplitRight,      &config.split_right,      "<Ctrl>d"),
             (ShortcutAction::SplitDown,       &config.split_down,       "<Ctrl><Shift>d"),
             (ShortcutAction::ClosePane,       &config.close_pane,       "<Ctrl><Shift>x"),
+            (ShortcutAction::NewSshWorkspace, &config.new_ssh_workspace, "<Ctrl><Shift>s"),
             (ShortcutAction::FocusLeft,       &config.focus_left,       "<Ctrl><Shift>Left"),
             (ShortcutAction::FocusRight,      &config.focus_right,      "<Ctrl><Shift>Right"),
             (ShortcutAction::FocusUp,         &config.focus_up,         "<Ctrl><Shift>Up"),

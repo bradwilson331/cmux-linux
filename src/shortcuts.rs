@@ -78,6 +78,11 @@ pub fn install_shortcuts(
                     handle_close_pane(&state, &app_clone);
                     gtk4::glib::Propagation::Stop
                 }
+                // -- SSH workspace shortcut --
+                Some(ShortcutAction::NewSshWorkspace) => {
+                    handle_new_ssh_workspace(&state, &app_clone);
+                    gtk4::glib::Propagation::Stop
+                }
                 // -- Focus direction shortcuts --
                 Some(ShortcutAction::FocusLeft) => {
                     handle_focus_direction(&state, FocusDirection::Left);
@@ -195,6 +200,11 @@ fn handle_close_pane(state: &Rc<RefCell<AppState>>, app: &gtk4::Application) {
     if close_workspace {
         handle_close_workspace(state, app);
     }
+}
+
+/// Open the SSH connect dialog (Ctrl+Shift+S).
+fn handle_new_ssh_workspace(state: &Rc<RefCell<AppState>>, app: &gtk4::Application) {
+    crate::ssh_dialog::show_ssh_dialog(app, state.clone());
 }
 
 /// Move focus to adjacent pane in `direction`.
