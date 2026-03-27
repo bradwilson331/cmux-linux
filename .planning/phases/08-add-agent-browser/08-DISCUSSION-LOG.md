@@ -3,77 +3,101 @@
 > **Audit trail only.** Do not use as input to planning, research, or execution agents.
 > Decisions are captured in CONTEXT.md — this log preserves the alternatives considered.
 
-**Date:** 2026-03-26
+**Date:** 2026-03-27
 **Phase:** 08-add-agent-browser
-**Areas discussed:** Integration model, Visual rendering, Socket API surface, Lifecycle management
+**Areas discussed:** Navigation bar design, Input forwarding model, P0 command parity scope, DevTools view
+**Mode:** --analyze (trade-off tables provided for each area)
 
 ---
 
-## Integration Model
+## Navigation Bar Layout
 
 | Option | Description | Selected |
 |--------|-------------|----------|
-| Socket proxy | cmux socket exposes `browser.*` commands that proxy to agent-browser's CDP connection. Tight coupling. | |
-| Bundled CLI | agent-browser binary ships with cmux, launchable from terminal panes. Loose coupling. | |
-| Hybrid | Bundled binary + thin socket API layer for key operations. Agents can use either path. | ✓ |
+| Single toolbar row | [ ◀ ][ ▶ ][ ↻ ] [ URL... ] [ → ] [ {} ] — compact ~36px, familiar browser UX | ✓ |
+| Split rows | Nav buttons on one row, URL bar on second row — 64px overhead | |
+| URL bar only + shortcuts | Minimal UI, Alt+Left/Right for nav, F5 for reload | |
 
-**User's choice:** Hybrid
-**Notes:** None
+**User's choice:** Single toolbar row
+**Notes:** Matches Chrome/Firefox convention. URL entry hexpand handles narrow panes.
 
 ---
 
-## Visual Rendering
+## Reload/Stop Swap
 
 | Option | Description | Selected |
 |--------|-------------|----------|
-| Headless only | No visual pane. Agents interact via CLI/socket. Screenshots via CLI. | |
-| Embedded browser pane | WebKitGTK or CEF renders live browser content in a split pane. | (stretch goal) |
-| Headless + preview pane | Browser runs headless, cmux renders screenshots/snapshots in a pane on demand. | ✓ |
+| Swap Reload↔Stop | Chrome behavior: ✕ during load, ↻ when idle. Requires loading state tracking. | ✓ |
+| Always show Reload | Simpler — no state tracking. Stop via Escape key. | |
+| Show both | Reload and Stop side by side. More space, no state tracking. | |
 
-**User's choice:** Both embedded browser pane and headless + preview — then clarified to CDP streaming model
-**Notes:** Follow-up question on rendering engine resolved to option 3: CDP streaming to preview. agent-browser streams screenshots/DOM snapshots via `stream` command, cmux renders them. No real browser widget. Embedded pane noted as stretch goal.
+**User's choice:** Swap Reload↔Stop
+**Notes:** Standard browser UX. Loading state tracked from daemon navigation events.
 
 ---
 
-## Socket API Surface
+## Input Forwarding Model
 
 | Option | Description | Selected |
 |--------|-------------|----------|
-| Minimal control | Just `browser.open`, `browser.close`, `browser.snapshot`, `browser.screenshot`. | |
-| Full proxy | Mirror most agent-browser commands through socket. | |
-| Lifecycle + streaming | `browser.open`, `browser.close`, `browser.stream.enable/disable`, `browser.snapshot`, `browser.screenshot`. Interaction via CLI. | ✓ |
+| Hybrid async/sync | Mouse motion fire-and-forget via tokio channel. Clicks/keyboard sync. | ✓ |
+| All synchronous | Current implementation. May stutter on rapid mouse movement. | |
+| All async fire-and-forget | Best perf but click/key events could be silently lost. | |
 
-**User's choice:** Lifecycle + streaming
-**Notes:** Interaction commands (click, fill, eval, etc.) go through agent-browser CLI directly.
+**User's choice:** Hybrid async/sync
+**Notes:** Balances performance (no stutter on hover) with reliability (clicks/keys confirmed).
 
 ---
 
-## Lifecycle Management
+## Focus Handoff (URL bar ↔ viewport)
 
 | Option | Description | Selected |
 |--------|-------------|----------|
-| cmux-managed | Auto-start and auto-stop with workspace lifecycle. | |
-| User-managed | User starts agent-browser themselves, cmux connects. | |
-| Auto-start, manual stop | cmux spawns on first use, leaves running. User stops explicitly. | ✓ |
+| Auto-refocus viewport on click | Clicking Picture sets focus back to container for keyboard input. | ✓ |
+| Require explicit Escape or Tab | URL bar keeps focus until user explicitly leaves. | |
+| Split focus model | Both can receive keyboard simultaneously. More complex. | |
 
-**User's choice:** Auto-start, manual stop
-**Notes:** Avoids repeated cold starts. Stops via `browser.close` or cmux shutdown.
+**User's choice:** Auto-refocus viewport on click
+**Notes:** Natural browser UX. URL bar is independent; click viewport to return keyboard to Chrome.
+
+---
+
+## P0 Command Parity Scope
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| P0+P1 wired, P2 not_supported | Generic proxy for all P0+P1. Explicit not_supported for P2. | ✓ |
+| P0 only, P1 deferred to 8.1 | Strip P1 routing to separate phase. | |
+| Wire everything, best-effort | Proxy all including P2. Daemon returns errors for unsupported. | |
+
+**User's choice:** P0+P1 wired, P2 not_supported
+**Notes:** Matches port spec recommendation. P2 commands (network intercept, emulation, trace) explicitly rejected.
+
+---
+
+## DevTools View
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| DOM snapshot overlay | Toggle shows browser.snapshot accessibility tree as scrollable overlay on viewport. | ✓ |
+| Console log panel | Shows console.list + errors.list as scrollable log below viewport. | |
+| Split bottom panel (DOM + Console tabs) | Resizable bottom panel with tabs. Most complete but significant UI work. | |
+| Defer DevTools entirely | Ship without DevTools toggle. Add later. | |
+
+**User's choice:** DOM snapshot overlay
+**Notes:** Compact, no extra panes. Uses existing browser.snapshot command. Shows element refs useful for agents.
 
 ---
 
 ## Claude's Discretion
 
-- Binary bundling strategy
-- CDP streaming transport details
-- Preview pane GTK4 widget choice
-- Chrome install management
-- Error handling for missing dependencies
+- Async mouse motion channel implementation details (throttle rate, channel type)
+- Loading state detection mechanism
+- DevTools overlay styling and scroll behavior
+- P2 command filtering — at routing layer or handler layer
 
 ## Deferred Ideas
 
-- Full embedded browser pane (stretch goal)
-- Browser tab management
-- JavaScript console UI
-- Find-in-page overlay
-- Browser history/bookmarks
-- macOS wire-compatibility for browser commands
+- Console log panel (complement to DOM snapshot)
+- P2 command support (network, emulation, trace)
+- Full DevTools panel with tabs
