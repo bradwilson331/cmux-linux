@@ -596,6 +596,68 @@ impl SplitEngine {
         Some(new_pane_id)
     }
 
+    /// Allocate the next available pane ID (used by browser preview pane creation).
+    pub fn allocate_pane_id(&mut self) -> u64 {
+        let id = self.next_pane_id;
+        self.next_pane_id += 1;
+        id
+    }
+
+    /// Split the active pane vertically and insert a Preview node on the right.
+    /// Returns (new_pane_id, picture_widget) so the caller can wire streaming to the Picture.
+    /// The active terminal pane stays on the left and retains focus.
+    pub fn split_active_with_preview(&mut self) -> Option<(u64, gtk4::Picture)> {
+        let active_id = self.active_pane_id;
+        let new_pane_id = self.next_pane_id;
+        self.next_pane_id += 1;
+
+        // Same stack re-parenting guard as split_active:
+        // When root is a Leaf or Preview, capture the GtkStack parent so we can
+        // re-parent the new Paned into the Stack after the split.
+        let old_root_widget = self.root.widget();
+        let stack_slot: Option<(gtk4::Stack, String)> =
+            if matches!(self.root, SplitNode::Leaf { .. } | SplitNode::Preview { .. }) {
+                old_root_widget
+                    .parent()
+                    .and_then(|p| p.downcast::<gtk4::Stack>().ok())
+                    .and_then(|stack| {
+                        let name = stack.page(&old_root_widget).name()?.to_string();
+                        Some((stack, name))
+                    })
+            } else {
+                None
+            };
+
+        // Create preview pane widgets
+        let (container, picture, _pid, uuid) = crate::browser::create_preview_pane(new_pane_id);
+        let preview_node = SplitNode::Preview {
+            pane_id: new_pane_id,
+            container,
+            picture: picture.clone(),
+            uuid,
+        };
+
+        // Replace active leaf with Split(active_leaf, preview_node) -- vertical, preview on right
+        let _replaced = self.replace_leaf_with_split(
+            active_id,
+            preview_node,
+            gtk4::Orientation::Horizontal, // Horizontal paned = side-by-side (left terminal, right preview)
+        )?;
+
+        // Re-parent new root Paned into GtkStack if root was a single Leaf
+        if let Some((stack, name)) = stack_slot {
+            let new_root = self.root.widget();
+            stack.add_named(&new_root, Some(&name));
+            stack.set_visible_child_name(&name);
+        }
+
+        // Keep focus on the original terminal pane (do NOT change active_pane_id)
+        // The terminal keeps keyboard input, preview is passive display only.
+        self.root.update_focus_css(active_id);
+
+        Some((new_pane_id, picture))
+    }
+
     /// Replace the leaf with `target_pane_id` with a Split(orientation) node.
     /// Returns Some(()) on success, None if the leaf was not found.
     fn replace_leaf_with_split(
