@@ -330,6 +330,19 @@ fn handle_browser_open(state: &Rc<RefCell<AppState>>) {
         });
     }
 
+    // Step 3.5: Create async motion forwarder channel (D-08)
+    let motion_tx = {
+        let s = state.borrow();
+        let runtime = s.runtime_handle.clone();
+        let bm = s.browser_manager.as_ref();
+        match (runtime, bm) {
+            (Some(rt), Some(bm)) => {
+                Some(crate::browser::spawn_motion_forwarder(&rt, bm.daemon_socket_path()))
+            }
+            _ => None,
+        }
+    };
+
     // Step 4: Set viewport to match pane size (deferred until after GTK layout)
     {
         let state_for_viewport = state.clone();
@@ -389,32 +402,27 @@ fn handle_browser_open(state: &Rc<RefCell<AppState>>) {
         });
         picture_ref.add_controller(click_ctrl);
 
-        // Attach mouse motion controller for hover effects
+        // Attach mouse motion controller for hover effects (async channel, D-08)
         let motion_ctrl = gtk4::EventControllerMotion::new();
-        let state_for_motion = state.clone();
-        let picture_for_motion = picture_ref.clone();
-        motion_ctrl.connect_motion(move |_ctrl, x, y| {
-            let pic_w = picture_for_motion.width() as f64;
-            let pic_h = picture_for_motion.height() as f64;
-            if pic_w <= 0.0 || pic_h <= 0.0 {
-                return;
-            }
-            let (vp_w, vp_h) = picture_for_motion
-                .paintable()
-                .map(|p| (p.intrinsic_width() as f64, p.intrinsic_height() as f64))
-                .unwrap_or((pic_w, pic_h));
-            let scale_x = vp_w / pic_w;
-            let scale_y = vp_h / pic_h;
-            let mx = (x * scale_x) as i64;
-            let my = (y * scale_y) as i64;
-
-            let s = state_for_motion.borrow();
-            if let Some(ref bm) = s.browser_manager {
-                let _ = bm.send_command("input_mouse", serde_json::json!({
-                    "type": "mouseMoved", "x": mx, "y": my
-                }));
-            }
-        });
+        if let Some(mtx) = motion_tx {
+            let picture_for_motion = picture_ref.clone();
+            motion_ctrl.connect_motion(move |_ctrl, x, y| {
+                let pic_w = picture_for_motion.width() as f64;
+                let pic_h = picture_for_motion.height() as f64;
+                if pic_w <= 0.0 || pic_h <= 0.0 {
+                    return;
+                }
+                let (vp_w, vp_h) = picture_for_motion
+                    .paintable()
+                    .map(|p| (p.intrinsic_width() as f64, p.intrinsic_height() as f64))
+                    .unwrap_or((pic_w, pic_h));
+                let scale_x = vp_w / pic_w;
+                let scale_y = vp_h / pic_h;
+                let mx = (x * scale_x) as i64;
+                let my = (y * scale_y) as i64;
+                let _ = mtx.send((mx, my));
+            });
+        }
         picture_ref.add_controller(motion_ctrl);
 
         // Attach scroll controller for scroll wheel forwarding

@@ -415,6 +415,43 @@ pub fn update_preview_overlay(overlay: &gtk4::Overlay, state: &PreviewState) {
     }
 }
 
+/// Spawn a tokio task that forwards mouse motion events to the agent-browser daemon.
+/// Events are throttled to ~16fps (60ms) to avoid flooding the daemon (D-08).
+/// The returned sender can be cloned into the GTK motion controller closure.
+pub fn spawn_motion_forwarder(
+    runtime: &tokio::runtime::Handle,
+    daemon_socket_path: std::path::PathBuf,
+) -> tokio::sync::mpsc::UnboundedSender<(i64, i64)> {
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<(i64, i64)>();
+    runtime.spawn(async move {
+        let mut last_sent = std::time::Instant::now();
+        while let Some((x, y)) = rx.recv().await {
+            let now = std::time::Instant::now();
+            if now.duration_since(last_sent) < std::time::Duration::from_millis(60) {
+                continue;
+            }
+            last_sent = now;
+            let path = daemon_socket_path.clone();
+            let _ = tokio::task::spawn_blocking(move || {
+                use std::io::Write;
+                if let Ok(mut stream) = std::os::unix::net::UnixStream::connect(&path) {
+                    let req = serde_json::json!({
+                        "id": "motion",
+                        "action": "input_mouse",
+                        "type": "mouseMoved",
+                        "x": x,
+                        "y": y,
+                    });
+                    let mut msg = serde_json::to_string(&req).unwrap_or_default();
+                    msg.push('\n');
+                    let _ = stream.write_all(msg.as_bytes());
+                }
+            }).await;
+        }
+    });
+    tx
+}
+
 /// Find agent-browser binary in PATH or alongside the cmux binary.
 fn which_agent_browser() -> Option<PathBuf> {
     // Check PATH
