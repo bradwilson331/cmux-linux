@@ -1,14 +1,12 @@
 ---
 phase: 08-add-agent-browser
-verified: 2026-03-27T05:30:00Z
+verified: 2026-03-27T16:45:00Z
 status: passed
-score: 4/4 must-haves verified
+score: 7/7 must-haves verified
 re_verification:
-  previous_status: gaps_found
-  previous_score: 2/4
-  gaps_closed:
-    - "browser.stream.enable starts CDP screencast and frames render in a GTK4 preview pane at ~5fps"
-    - "browser.open <url> socket command spawns agent-browser daemon and navigates to URL"
+  previous_status: passed
+  previous_score: 4/4
+  gaps_closed: []
   gaps_remaining: []
   regressions: []
 ---
@@ -16,102 +14,116 @@ re_verification:
 # Phase 8: Agent-Browser Integration Verification Report
 
 **Phase Goal:** Integrate agent-browser headless Chrome automation into cmux with bundled binary, browser.* socket commands, and CDP screencast preview pane
-**Verified:** 2026-03-27T05:30:00Z
+**Verified:** 2026-03-27T16:45:00Z
 **Status:** passed
-**Re-verification:** Yes -- after gap closure (plan 08-04)
+**Re-verification:** Yes -- expanded verification covering plans 01-06 (previous covered 01-04 only)
 
 ## Goal Achievement
 
 ### Observable Truths
 
 | # | Truth | Status | Evidence |
-|---|-------|--------|----------|
-| 1 | `browser.open <url>` socket command spawns agent-browser daemon and navigates to URL | VERIFIED | Handler at handlers.rs:584 calls ensure_daemon + send_command("navigate"), then on success calls engine.split_active_with_preview() at line 603 to create a visible preview pane in the split tree. |
-| 2 | `browser.stream.enable` starts CDP screencast and frames render in a GTK4 preview pane at ~5fps | VERIFIED | Handler at handlers.rs:632 sends stream_enable to daemon, then at line 650 calls find_preview_picture() to locate existing Preview node (or creates one via split_active_with_preview at line 653). At line 665, calls bm.start_stream(rt, pic) which connects WebSocket, spawns tokio frame reader, and updates Picture via glib::MainContext::spawn_local. |
-| 3 | `browser.close` shuts down daemon cleanly with no orphaned Chrome processes | VERIFIED | Handler at handlers.rs:621 calls bm.shutdown() which sends close command + kill with 2s timeout. connect_shutdown wired at main.rs:403 calls shutdown_browser on app exit. Unchanged from initial verification. |
-| 4 | All 6 browser.* socket commands are listed in system.capabilities | VERIFIED | handlers.rs lines 52-54 list all 6: browser.open, browser.close, browser.stream.enable, browser.stream.disable, browser.snapshot, browser.screenshot. Unchanged from initial verification. |
+|---|-------|--------|---------|
+| 1 | `browser.open <url>` socket command spawns agent-browser daemon and navigates to URL | VERIFIED | handlers.rs:615 BrowserOpen calls ensure_daemon + send_command("navigate") + split_active_with_preview. shortcuts.rs:230 handle_browser_open mirrors for keyboard shortcut path. |
+| 2 | `browser.stream.enable` starts CDP screencast and frames render in a GTK4 preview pane at ~5fps | VERIFIED | handlers.rs:662 BrowserStreamEnable sends stream_enable to daemon, finds/creates Preview Picture, calls bm.start_stream(rt, pic). browser.rs:198-277 start_stream connects WebSocket, decodes base64 JPEG, updates Picture via glib::MainContext::spawn_local. |
+| 3 | `browser.close` shuts down daemon cleanly with no orphaned Chrome processes | VERIFIED | handlers.rs:651 calls bm.shutdown(). browser.rs:163-193 sends close + kill with 2s timeout. main.rs:416-417 connect_shutdown calls shutdown_browser on app exit. |
+| 4 | All 6 browser.* socket commands are listed in system.capabilities | VERIFIED | handlers.rs:53-55 lists browser.open, browser.close, browser.stream.enable, browser.stream.disable, browser.snapshot, browser.screenshot (plus 40+ additional browser.* P0/P1 commands). |
+| 5 | Preview pane has navigation bar with Back, Forward, Reload, Go, and DevTools buttons above URL entry | VERIFIED | browser.rs:316-353 create_preview_pane builds nav_bar horizontal Box with all 5 buttons + URL entry. PreviewPaneWidgets struct at lines 281-292 exposes all widgets. |
+| 6 | Nav buttons send commands to daemon; Go button auto-prepends https:// | VERIFIED | shortcuts.rs:285-308 wires back/forward/reload via send_command. Go button at lines 314-330 checks for "://" and prepends "https://". |
+| 7 | Async mouse motion via tokio channel with 60ms throttle; DevTools snapshot overlay toggle | VERIFIED | browser.rs:421-453 spawn_motion_forwarder with unbounded_channel and 60ms throttle. shortcuts.rs:406-426 sends via mtx.send(). DevTools toggle at shortcuts.rs:546-599 fetches snapshot, creates/removes ScrolledWindow overlay. |
 
-**Score:** 4/4 truths verified
+**Score:** 7/7 truths verified
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `src/browser.rs` | BrowserManager with daemon lifecycle, streaming, preview pane | VERIFIED | 373 lines. BrowserManager has ensure_daemon, send_command, shutdown, start_stream (all with call sites). create_preview_pane called from split_engine.rs:632. |
-| `Cargo.toml` | tokio-tungstenite, futures-util, base64 deps | VERIFIED | base64 0.22.1, tokio-tungstenite 0.24, futures-util 0.3. Unchanged. |
-| `src/split_engine.rs` | SplitNode::Preview variant + split_active_with_preview | VERIFIED | Preview variant with container, picture, pane_id, uuid. allocate_pane_id at line 600, split_active_with_preview at line 609 (50 lines, substantive: creates preview widgets, calls replace_leaf_with_split, handles GtkStack re-parenting, preserves terminal focus). |
-| `src/socket/commands.rs` | 6 Browser* variants | VERIFIED | BrowserOpen, BrowserClose, BrowserStreamEnable, BrowserStreamDisable, BrowserSnapshot, BrowserScreenshot. Unchanged. |
-| `src/socket/mod.rs` | browser.* dispatch routing | VERIFIED | All 6 browser.* methods routed. Unchanged. |
-| `src/socket/handlers.rs` | browser.* handler implementations + find_preview_picture | VERIFIED | All 6 handlers (lines 584-734). BrowserOpen creates preview pane (line 603). BrowserStreamEnable wires stream (line 665). find_preview_picture helper at line 744 walks split tree recursively. |
-| `src/app_state.rs` | browser_manager field + shutdown_browser + active_split_engine_mut | VERIFIED | browser_manager field, shutdown_browser method, active_split_engine_mut at line 431. |
-| `src/main.rs` | mod browser, CSS, shutdown wiring | VERIFIED | Unchanged from initial verification. |
+| `src/browser.rs` | BrowserManager, preview pane factory, async motion | VERIFIED | 487 lines. BrowserManager (ensure_daemon, send_command, shutdown, start_stream), PreviewPaneWidgets struct, create_preview_pane with nav bar, spawn_motion_forwarder. All have call sites. |
+| `src/shortcuts.rs` | Browser shortcuts, nav signals, interaction controllers, DevTools | VERIFIED | 670 lines. handle_browser_open (line 230) wires nav buttons, async motion, click/scroll/keyboard controllers, URL entry, DevTools toggle. |
+| `src/socket/commands.rs` | 6 Browser* variants + BrowserAction proxy | VERIFIED | Lines 57-65: BrowserOpen, BrowserClose, BrowserStreamEnable, BrowserStreamDisable, BrowserSnapshot, BrowserScreenshot, BrowserAction. |
+| `src/socket/handlers.rs` | browser.* handlers + find_preview_picture | VERIFIED | All 6 explicit handlers (lines 615-764) + BrowserAction proxy (line 767). find_preview_picture at line 791. |
+| `src/socket/mod.rs` | browser.* dispatch routing | VERIFIED | All 6 methods routed at lines 266-279 plus generic proxy. |
+| `src/split_engine.rs` | SplitNode::Preview + split_active_with_preview | VERIFIED | Preview variant at line 32. split_active_with_preview at line 623 returns PreviewPaneWidgets. Preview handled in all match arms (25+ locations). |
+| `src/main.rs` | mod browser, CSS, shutdown wiring | VERIFIED | mod browser (line 16), nav bar CSS (line 68), devtools CSS (lines 77-78), connect_shutdown (lines 416-417). |
+| `Cargo.toml` | tokio-tungstenite, futures-util, base64 deps | VERIFIED | Dependencies present; `cargo check` succeeds. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
-| src/socket/mod.rs | src/socket/commands.rs | browser.* dispatch to Browser* variants | WIRED | 6 match arms |
-| src/socket/handlers.rs (BrowserOpen) | src/split_engine.rs | engine.split_active_with_preview() | WIRED | handlers.rs:603 calls split_active_with_preview, which calls create_preview_pane and inserts SplitNode::Preview into tree |
-| src/socket/handlers.rs (BrowserStreamEnable) | src/browser.rs | bm.start_stream(rt, pic) | WIRED | handlers.rs:665 calls start_stream with runtime handle and Picture widget |
-| src/socket/handlers.rs (BrowserStreamEnable) | split tree | find_preview_picture(&eng.root) | WIRED | handlers.rs:650 walks split tree to find existing Preview node's Picture widget |
-| src/split_engine.rs split_active_with_preview | src/browser.rs | crate::browser::create_preview_pane(new_pane_id) | WIRED | split_engine.rs:632 calls create_preview_pane to build Overlay+Picture widgets |
-| src/browser.rs start_stream | gtk4::Picture | tokio_tungstenite + mpsc + glib::MainContext::spawn_local | WIRED | WebSocket frames decoded from base64 JPEG, sent via mpsc channel, rendered via Texture::from_bytes + set_paintable |
-| src/browser.rs | agent-browser daemon | Command::new spawn + Unix socket | WIRED | ensure_daemon at line 73, send_command at line 114 |
-| src/main.rs | src/app_state.rs | connect_shutdown -> shutdown_browser | WIRED | Line 403-404 |
+| socket/mod.rs | socket/commands.rs | browser.* dispatch | WIRED | 6 match arms route to Browser* variants |
+| handlers.rs BrowserOpen | split_engine.rs | split_active_with_preview() | WIRED | handlers.rs:634 creates preview pane |
+| handlers.rs BrowserStreamEnable | browser.rs | bm.start_stream(rt, pic) | WIRED | handlers.rs:695 |
+| handlers.rs BrowserStreamEnable | split tree | find_preview_picture() | WIRED | handlers.rs:680 |
+| split_engine.rs | browser.rs | create_preview_pane() | WIRED | split_engine.rs:623+ |
+| browser.rs start_stream | gtk4::Picture | WebSocket -> mpsc -> spawn_local | WIRED | base64 JPEG -> Texture::from_bytes -> set_paintable |
+| browser.rs | daemon | Command::new + Unix socket | WIRED | ensure_daemon line 73, send_command line 114 |
+| main.rs | app_state.rs | connect_shutdown -> shutdown_browser | WIRED | Lines 416-417 |
+| shortcuts.rs nav btns | browser.rs | send_command("back"/"forward"/"reload") | WIRED | Lines 285-308 |
+| shortcuts.rs motion | browser.rs spawn_motion_forwarder | mpsc channel + mtx.send() | WIRED | Lines 334-344, 406-426 |
+| shortcuts.rs devtools | browser.rs | send_command("snapshot") + overlay | WIRED | Lines 546-599 |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 |----------|--------------|--------|-------------------|--------|
-| src/browser.rs start_stream | jpeg_bytes via frame_rx | WebSocket ws://127.0.0.1:{port} from agent-browser daemon | Yes -- base64-decoded JPEG frames from CDP screencast | FLOWING (start_stream is called from BrowserStreamEnable handler at handlers.rs:665) |
-| src/browser.rs start_stream -> GTK consumer | picture.set_paintable(texture) | mpsc channel from tokio task | Yes -- Texture::from_bytes creates GdkTexture from JPEG bytes | FLOWING (glib::MainContext::spawn_local receives frames and updates Picture) |
-| src/split_engine.rs split_active_with_preview | SplitNode::Preview in split tree | create_preview_pane builds widgets | Yes -- Preview node inserted via replace_leaf_with_split | FLOWING (called from BrowserOpen handler at handlers.rs:603) |
+| browser.rs start_stream | jpeg_bytes via frame_rx | WebSocket from daemon | Yes -- base64-decoded JPEG frames | FLOWING |
+| browser.rs -> GTK | picture.set_paintable | mpsc channel | Yes -- Texture::from_bytes | FLOWING |
+| split_engine.rs | SplitNode::Preview | create_preview_pane | Yes -- inserted via replace_leaf_with_split | FLOWING |
+| shortcuts.rs motion | (mx, my) coords | EventControllerMotion -> mtx.send() | Yes -- scaled viewport coords | FLOWING |
+| shortcuts.rs devtools | snapshot_text | send_command("snapshot") | Yes -- daemon response rendered as Label | FLOWING |
 
 ### Behavioral Spot-Checks
 
-Step 7b: SKIPPED (requires running GTK app + agent-browser daemon; cannot test without launching the application)
+Step 7b: SKIPPED (requires running GTK app with agent-browser daemon; cannot test without launching the application)
 
 ### Requirements Coverage
 
-| Requirement | Source Plan | Description | Status | Evidence |
-|-------------|-----------|-------------|--------|----------|
-| BROW-01 | 08-01, 08-02, 08-03, 08-04 | User can open a WebKit browser panel in a pane split alongside terminals | SATISFIED | browser.open creates preview pane via split_active_with_preview (side-by-side split with terminal on left, preview on right). browser.stream.enable connects WebSocket frame pipeline to Picture widget. Full pipeline: socket command -> daemon navigate -> stream enable -> WebSocket -> base64 decode -> mpsc -> GTK Picture. |
+| Requirement | Source Plans | Description | Status | Evidence |
+|-------------|-------------|-------------|--------|----------|
+| BROW-01 | 08-01 through 08-06 | User can open a browser panel in a pane split alongside terminals | SATISFIED | Full pipeline: browser.open spawns daemon + navigates + creates preview pane. browser.stream.enable connects WebSocket frame stream to Picture. Nav bar with 5 buttons. Async motion forwarding. DevTools overlay. Clean shutdown. |
+
+No orphaned requirements -- BROW-01 is the only requirement mapped to Phase 8 in REQUIREMENTS.md.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| src/browser.rs | 299 | Orphaned function: update_preview_overlay has no call sites | Info | Utility for future state display enhancement (Loading/Error overlays). Not blocking -- streaming pipeline works without it. The function is `pub` so no compiler warning. |
-| src/browser.rs | 288 | Hardcoded string "No browser preview" in create_preview_pane | Info | Not localized per CLAUDE.md pitfalls. Minor -- only visible before streaming starts. |
+| src/browser.rs | 376 | `update_preview_overlay` is never used (compiler warning confirms) | Info | Utility for future state display. Not blocking. |
+| src/browser.rs | 310 | Hardcoded string "No browser preview" not localized | Info | Minor -- only visible before streaming starts. |
 
 ### Human Verification Required
 
-### 1. Daemon Auto-Start
-**Test:** Run `cmux` CLI command `browser.open {"url": "https://example.com"}` and observe if agent-browser daemon starts and preview pane appears
-**Expected:** Daemon process appears in `ps aux`, socket file created in runtime dir, preview pane visible in split tree alongside terminal
-**Why human:** Requires running cmux app with agent-browser binary installed
+### 1. Daemon Auto-Start and Preview Pane
+**Test:** Run `browser.open {"url": "https://example.com"}` via socket or Ctrl+Shift+B
+**Expected:** Daemon starts, preview pane appears alongside terminal, URL entry shows URL
+**Why human:** Requires running cmux with agent-browser binary installed
 
-### 2. Preview Pane Visual Rendering
-**Test:** After browser.open, run browser.stream.enable and verify frame rendering
-**Expected:** JPEG frames from CDP screencast appear in GTK Picture widget at ~5fps, terminal remains focused and usable
-**Why human:** Visual rendering quality and frame rate can only be assessed by observation
+### 2. CDP Screencast Frame Rendering
+**Test:** After browser.open, run browser.stream.enable
+**Expected:** JPEG frames appear in Picture widget at ~5fps, terminal remains usable
+**Why human:** Visual rendering quality requires observation
 
-### 3. Clean Shutdown
-**Test:** Exit cmux (Ctrl+Q) while browser daemon is running, verify no orphaned processes
-**Expected:** `ps aux | grep agent-browser` shows no lingering processes after exit
-**Why human:** Process lifecycle verification requires running the full application
+### 3. Navigation Bar Interaction
+**Test:** Click Back, Forward, Reload; type URL and click Go
+**Expected:** Each triggers corresponding browser action, Go auto-prepends https://
+**Why human:** Requires active browser session
+
+### 4. DevTools Overlay Toggle
+**Test:** Click "{ }" DevTools toggle button
+**Expected:** ON: scrollable monospace overlay. OFF: overlay removed.
+**Why human:** Visual overlay rendering requires observation
+
+### 5. Clean Shutdown
+**Test:** Exit cmux while browser daemon is running
+**Expected:** No orphaned agent-browser processes after exit
+**Why human:** Process lifecycle requires running the full application
 
 ## Gaps Summary
 
-All previously identified gaps have been closed:
-
-1. **Gap 1 (orphaned functions) -- CLOSED:** `create_preview_pane` is now called from `split_active_with_preview` (split_engine.rs:632). `start_stream` is now called from BrowserStreamEnable handler (handlers.rs:665). `update_preview_overlay` remains without call sites but is a non-blocking utility for future enhancement.
-
-2. **Gap 2 (BrowserOpen didn't create preview pane) -- CLOSED:** BrowserOpen handler now calls `engine.split_active_with_preview()` on successful navigate (handlers.rs:603), creating a visible SplitNode::Preview in the split tree.
-
-The full pipeline is now wired end-to-end: `browser.open` spawns daemon + navigates + creates preview pane, `browser.stream.enable` connects WebSocket frame stream to the preview pane's Picture widget, and `browser.close` + app shutdown clean up daemon processes.
+No gaps found. All 7 observable truths verified across plans 01-06. The project compiles cleanly (`cargo check` succeeds with only unrelated warnings). All key links are wired end-to-end. BROW-01 is satisfied.
 
 ---
 
-_Verified: 2026-03-27T05:30:00Z_
+_Verified: 2026-03-27T16:45:00Z_
 _Verifier: Claude (gsd-verifier)_
