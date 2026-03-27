@@ -332,7 +332,7 @@ impl SplitEngine {
                 *next_pane_id += 1;
                 // Create surface — realize callback will create Ghostty surface and wire registries
                 let (gl_area, _surface_cell) =
-                    crate::ghostty::surface::create_surface(app, ghostty_app, None, pane_id);
+                    crate::ghostty::surface::create_surface(app, ghostty_app, None, pane_id, crate::ghostty::surface::SurfaceIoMode::Exec);
                 // D-06: preserve UUID from session
                 let uuid = *surface_uuid;
                 let surface_placeholder: ffi::ghostty_surface_t = std::ptr::null_mut();
@@ -532,6 +532,7 @@ impl SplitEngine {
             self.ghostty_app,
             Some(inherited_config),
             new_pane_id,
+            crate::ghostty::surface::SurfaceIoMode::Exec,
         );
 
         // Replace the active leaf in the tree with a Split node.

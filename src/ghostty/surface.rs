@@ -3,6 +3,17 @@ use gtk4::glib;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+/// I/O mode for a Ghostty surface.
+/// - `Exec`: normal mode — Ghostty spawns a local shell process.
+/// - `Manual`: SSH remote mode — keystrokes route through io_write_cb to the SSH bridge.
+#[derive(Clone)]
+pub enum SurfaceIoMode {
+    Exec,
+    Manual {
+        io_write_ctx: std::sync::Arc<crate::ssh::bridge::IoWriteContext>,
+    },
+}
+
 /// Call glGetError() via FFI to check for GL errors after ghostty calls.
 /// Returns 0 if no error, or the GL error code otherwise.
 fn gl_get_error() -> u32 {
@@ -26,6 +37,7 @@ pub fn create_surface(
     ghostty_app: ffi::ghostty_app_t,
     inherited_config: Option<ffi::ghostty_surface_config_s>,
     pane_id: u64,
+    io_mode: SurfaceIoMode,
 ) -> (gtk4::GLArea, Rc<RefCell<Option<ffi::ghostty_surface_t>>>) {
     use gtk4::prelude::*;
     use std::sync::atomic::Ordering;
@@ -73,6 +85,7 @@ pub fn create_surface(
     let pane_id_for_log = pane_id;
     gl_area.connect_realize({
         let cell = surface_cell.clone();
+        let io_mode = io_mode;
         move |area| {
             eprintln!(
                 "cmux: GLArea {:p} realize for pane_id={} — making GL context current",
@@ -158,6 +171,16 @@ pub fn create_surface(
                 surface_config.platform = platform;
                 surface_config.userdata = std::ptr::null_mut();
                 surface_config.scale_factor = area.scale_factor() as f64;
+
+                // Set manual I/O mode for SSH remote surfaces.
+                if let SurfaceIoMode::Manual { ref io_write_ctx } = io_mode {
+                    surface_config.io_mode = ffi::ghostty_surface_io_mode_e_GHOSTTY_SURFACE_IO_MANUAL;
+                    surface_config.io_write_cb = Some(crate::ssh::bridge::ssh_io_write_cb);
+                    // Increment Arc refcount for the raw pointer — the matching
+                    // Arc::from_raw happens in unrealize/cleanup.
+                    let ctx_raw = std::sync::Arc::into_raw(io_write_ctx.clone()) as *mut std::ffi::c_void;
+                    surface_config.io_write_userdata = ctx_raw;
+                }
 
                 eprintln!("cmux: calling ghostty_surface_new");
                 let s = ffi::ghostty_surface_new(ghostty_app, &surface_config);

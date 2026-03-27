@@ -111,7 +111,7 @@ pub struct IoWriteContext {
 /// This callback runs on the GTK main thread (same thread as key events).
 pub unsafe extern "C" fn ssh_io_write_cb(
     userdata: *mut std::ffi::c_void,
-    data: *const u8,
+    data: *const std::ffi::c_char,
     len: usize,
 ) {
     if userdata.is_null() || data.is_null() || len == 0 {
@@ -119,7 +119,7 @@ pub unsafe extern "C" fn ssh_io_write_cb(
     }
     // SAFETY: userdata is an Arc<IoWriteContext> pointer -- we borrow without taking ownership.
     let ctx = &*(userdata as *const IoWriteContext);
-    let bytes = std::slice::from_raw_parts(data, len);
+    let bytes = std::slice::from_raw_parts(data as *const u8, len);
     let b64 = base64::engine::general_purpose::STANDARD.encode(bytes);
     if let Some(ref stream_id) = *ctx.stream_id.lock().unwrap() {
         let _ = ctx.write_tx.send(WriteRequest {

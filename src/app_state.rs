@@ -35,6 +35,10 @@ pub struct AppState {
     pub runtime_handle: Option<tokio::runtime::Handle>,
     /// Handles to SSH lifecycle tasks, keyed by workspace id. Used for cleanup on close.
     pub ssh_task_handles: std::collections::HashMap<u64, tokio::task::JoinHandle<()>>,
+    /// Maps pane_id -> IoWriteContext for remote panes (needed to set stream_id after proxy.open).
+    pub remote_pane_contexts: std::collections::HashMap<u64, std::sync::Arc<crate::ssh::bridge::IoWriteContext>>,
+    /// Maps workspace_id -> SshBridge for remote workspaces.
+    pub workspace_bridges: std::collections::HashMap<u64, std::sync::Arc<crate::ssh::bridge::SshBridge>>,
 }
 
 impl AppState {
@@ -61,6 +65,8 @@ impl AppState {
             ssh_event_tx: None,
             runtime_handle: None,
             ssh_task_handles: std::collections::HashMap::new(),
+            remote_pane_contexts: std::collections::HashMap::new(),
+            workspace_bridges: std::collections::HashMap::new(),
         };
         Rc::new(RefCell::new(state))
     }
@@ -108,7 +114,7 @@ impl AppState {
             id, pane_id
         );
         let (gl_area, surface_cell) =
-            crate::ghostty::surface::create_surface(&self.gtk_app, self.ghostty_app, None, pane_id);
+            crate::ghostty::surface::create_surface(&self.gtk_app, self.ghostty_app, None, pane_id, crate::ghostty::surface::SurfaceIoMode::Exec);
         let engine = SplitEngine::new(
             self.gtk_app.clone(),
             self.ghostty_app,
@@ -219,7 +225,12 @@ impl AppState {
     }
 
     /// Create a remote SSH workspace. Returns workspace id.
-    pub fn create_remote_workspace(&mut self, target: String) -> u64 {
+    /// The bridge is used to create an IoWriteContext for the initial pane's manual I/O mode surface.
+    pub fn create_remote_workspace(
+        &mut self,
+        target: String,
+        bridge: &std::sync::Arc<crate::ssh::bridge::SshBridge>,
+    ) -> u64 {
         let id = self.next_id;
         self.next_id += 1;
         let display_number = self.next_display_number;
@@ -229,10 +240,20 @@ impl AppState {
         let row = self.build_sidebar_row(&workspace);
         self.sidebar_list.append(&row);
 
-        // Create surface and split engine (same as local)
+        // Create remote surface with manual I/O mode
         let pane_id = id * 1000;
-        let (gl_area, surface_cell) =
-            crate::ghostty::surface::create_surface(&self.gtk_app, self.ghostty_app, None, pane_id);
+        let io_ctx = std::sync::Arc::new(crate::ssh::bridge::IoWriteContext {
+            pane_id,
+            write_tx: bridge.write_tx.clone(),
+            stream_id: std::sync::Mutex::new(None),
+        });
+        let (gl_area, surface_cell) = crate::ghostty::surface::create_surface(
+            &self.gtk_app,
+            self.ghostty_app,
+            None,
+            pane_id,
+            crate::ghostty::surface::SurfaceIoMode::Manual { io_write_ctx: io_ctx.clone() },
+        );
         let engine = SplitEngine::new(
             self.gtk_app.clone(),
             self.ghostty_app,
@@ -247,6 +268,9 @@ impl AppState {
 
         self.workspaces.push(workspace);
         self.split_engines.push(engine);
+
+        // Store IoWriteContext for stream_id wiring when StreamOpened arrives
+        self.remote_pane_contexts.insert(pane_id, io_ctx);
 
         let new_index = self.workspaces.len() - 1;
         self.switch_to_index(new_index);

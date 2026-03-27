@@ -88,7 +88,13 @@ pub fn handle_socket_command(
         SocketCommand::WorkspaceCreate { req_id, remote_target, resp_tx } => {
             if let Some(target) = remote_target {
                 // SSH workspace creation per D-13, D-15
-                let id = state.borrow_mut().create_remote_workspace(target.clone());
+                // Create per-workspace bridge for SSH I/O routing
+                let (write_tx, write_rx) = tokio::sync::mpsc::unbounded_channel();
+                let (output_tx, _output_rx) = tokio::sync::mpsc::unbounded_channel();
+                let bridge = std::sync::Arc::new(crate::ssh::bridge::SshBridge::new(write_tx, output_tx));
+                let id = state.borrow_mut().create_remote_workspace(target.clone(), &bridge);
+                // Store bridge on AppState for later access
+                state.borrow_mut().workspace_bridges.insert(id, bridge.clone());
                 let uuid_str = {
                     let s = state.borrow();
                     s.workspaces.iter()
@@ -100,10 +106,6 @@ pub fn handle_socket_command(
                 let ssh_tx = state.borrow().ssh_event_tx.clone();
                 let rt_handle = state.borrow().runtime_handle.clone();
                 if let (Some(tx), Some(rt)) = (ssh_tx, rt_handle) {
-                    // Create per-workspace bridge for SSH I/O routing
-                    let (write_tx, _write_rx) = tokio::sync::mpsc::unbounded_channel();
-                    let (output_tx, _output_rx) = tokio::sync::mpsc::unbounded_channel();
-                    let bridge = std::sync::Arc::new(crate::ssh::bridge::SshBridge::new(write_tx, output_tx));
                     let handle = rt.spawn(crate::ssh::tunnel::run_ssh_lifecycle(id, target, tx, bridge));
                     state.borrow_mut().ssh_task_handles.insert(id, handle);
                 }
