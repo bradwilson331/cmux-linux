@@ -315,16 +315,58 @@ fn build_ui(
                         state.borrow_mut().update_connection_state(workspace_id, conn_state);
                     }
                     crate::ssh::SshEvent::RemoteOutput { pane_id, data } => {
-                        // TODO (Plan 02): dispatch data to Ghostty surface via ghostty_surface_process_output
-                        eprintln!("cmux: remote output for pane {pane_id}: {} bytes", data.len());
+                        // Dispatch remote output to the Ghostty surface via process_output.
+                        if let Ok(registry) = crate::ghostty::callbacks::SURFACE_REGISTRY.lock() {
+                            let surface_ptr = registry.iter()
+                                .find(|(_, &pid)| pid == pane_id)
+                                .map(|(&sptr, _)| sptr as crate::ghostty::ffi::ghostty_surface_t);
+                            if let Some(surface) = surface_ptr {
+                                unsafe {
+                                    crate::ghostty::ffi::ghostty_surface_process_output(
+                                        surface,
+                                        data.as_ptr() as *const _,
+                                        data.len(),
+                                    );
+                                }
+                                // Queue render for the GLArea associated with this surface
+                                if let Ok(gl_areas) = crate::ghostty::callbacks::GL_TO_SURFACE.lock() {
+                                    for (&gl_ptr, &s_ptr) in gl_areas.iter() {
+                                        if s_ptr == surface as usize {
+                                            let area: glib::translate::Borrowed<gtk4::GLArea> =
+                                                unsafe { glib::translate::from_glib_borrow(gl_ptr as *mut gtk4::ffi::GtkGLArea) };
+                                            area.queue_render();
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     crate::ssh::SshEvent::RemoteEof { pane_id } => {
-                        // TODO (Plan 02): handle remote shell exit
-                        eprintln!("cmux: remote EOF for pane {pane_id}");
+                        // D-08: write exit message to surface, keep pane open for user to close
+                        if let Ok(registry) = crate::ghostty::callbacks::SURFACE_REGISTRY.lock() {
+                            let surface_ptr = registry.iter()
+                                .find(|(_, &pid)| pid == pane_id)
+                                .map(|(&sptr, _)| sptr as crate::ghostty::ffi::ghostty_surface_t);
+                            if let Some(surface) = surface_ptr {
+                                let msg = b"\r\n\x1b[90m[Remote shell exited. Press any key to close]\x1b[0m\r\n";
+                                unsafe {
+                                    crate::ghostty::ffi::ghostty_surface_process_output(
+                                        surface,
+                                        msg.as_ptr() as *const _,
+                                        msg.len(),
+                                    );
+                                }
+                            }
+                        }
                     }
                     crate::ssh::SshEvent::StreamOpened { pane_id, stream_id } => {
-                        // TODO (Plan 02): wire stream to surface
-                        eprintln!("cmux: stream {stream_id} opened for pane {pane_id}");
+                        // Set the stream_id on the IoWriteContext so keystrokes start flowing
+                        if let Some(ctx) = state.borrow().remote_pane_contexts.get(&pane_id) {
+                            if let Ok(mut sid) = ctx.stream_id.lock() {
+                                *sid = Some(stream_id);
+                            }
+                        }
                     }
                 }
             }

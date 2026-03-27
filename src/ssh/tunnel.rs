@@ -50,11 +50,25 @@ pub async fn run_ssh_lifecycle(
         // Start SSH connection with cmuxd-remote in stdio mode
         match start_ssh(&target).await {
             Ok(mut child) => {
+                let was_reconnect = attempt > 0;
                 attempt = 0; // Reset on successful connection
                 let _ = ssh_tx.send(SshEvent::StateChanged {
                     workspace_id,
                     state: ConnectionState::Connected,
                 });
+
+                // D-07: inject reconnect message if this was a reconnection
+                if was_reconnect {
+                    if let Ok(streams) = bridge.streams.lock() {
+                        for (&pane_id, _) in streams.iter() {
+                            let msg = b"\r\n\x1b[32m[Reconnected \xe2\x80\x94 new session]\x1b[0m\r\n";
+                            let _ = ssh_tx.send(SshEvent::RemoteOutput {
+                                pane_id,
+                                data: msg.to_vec(),
+                            });
+                        }
+                    }
+                }
 
                 let stdin = child.stdin.take();
                 let stdout = child.stdout.take();
@@ -84,6 +98,17 @@ pub async fn run_ssh_lifecycle(
                 // Wait for SSH process to exit
                 let exit_status = child.wait().await;
                 eprintln!("cmux: SSH to {target} exited: {exit_status:?}");
+
+                // D-06: inject disconnect message into all active panes
+                if let Ok(streams) = bridge.streams.lock() {
+                    for (&pane_id, _) in streams.iter() {
+                        let msg = b"\r\n\x1b[33m[SSH disconnected \xe2\x80\x94 reconnecting...]\x1b[0m\r\n";
+                        let _ = ssh_tx.send(SshEvent::RemoteOutput {
+                            pane_id,
+                            data: msg.to_vec(),
+                        });
+                    }
+                }
 
                 let _ = ssh_tx.send(SshEvent::StateChanged {
                     workspace_id,
