@@ -20,6 +20,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 6: Session Layout Restore + Surface Wiring** - Persist/restore split pane layouts and wire SplitNode surface pointers so socket text injection works
 - [ ] **Phase 7: SSH Terminal I/O** - Implement proxy.stream bidirectional I/O routing so SSH workspace terminal sessions run on the remote host
 - [ ] **Phase 8: Agent-Browser Integration** - Bundle agent-browser, add browser.* socket commands, render CDP screencast frames in preview pane
+- [ ] **Phase 9: UI Buttons and Menus** - GTK4 HeaderBar with toolbar buttons, hamburger menu, sidebar controls, and terminal/browser pane context menus
+- [ ] **Phase 10: CLI Socket Commands** - Implement cmux command-line tool for controlling cmux via Unix socket (port macOS CLI commands)
 
 ## Phase Details
 
@@ -218,3 +220,21 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 7. SSH Terminal I/O | 3/4 | In Progress|  |
 | 8. Agent-Browser Integration | 4/6 | In Progress|  |
 | 9. UI Buttons and Menus | 0/3 | Not started | - |
+| 10. CLI Socket Commands | 0/2 | Not started | - |
+
+### Phase 10: CLI Socket Commands
+
+**Goal:** Native Rust `cmux` CLI binary communicates with the running cmux-app via Unix socket; all 34+ socket commands accessible as flat verb subcommands with human-readable and JSON output
+**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14
+**Depends on:** Phase 3 (Socket API)
+**Success Criteria** (what must be TRUE):
+  1. `cmux ping` connects to the running cmux-app socket and returns pong
+  2. `cmux list-workspaces` shows human-readable workspace list with * marker on active
+  3. `cmux --json list-workspaces` outputs raw JSON result for scripting
+  4. `cmux raw <method>` sends arbitrary socket methods for power users
+  5. `cargo build --bin cmux` succeeds without GTK4 headers (CLI is dependency-light)
+  6. GUI binary renamed to cmux-app; CI and packaging updated
+**Plans**: 2 plans
+Plans:
+- [ ] 10-01-PLAN.md — Cargo config, binary rename, CI updates, CLI scaffold with socket client, discovery, and core commands
+- [ ] 10-02-PLAN.md — Complete all subcommand dispatch and human-readable output formatting with color support
