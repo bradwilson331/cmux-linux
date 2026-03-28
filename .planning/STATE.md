@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-03-28T03:56:39.975Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 10-02-PLAN.md
+last_updated: "2026-03-28T04:01:47.892Z"
 progress:
   total_phases: 11
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 53
-  completed_plans: 51
+  completed_plans: 52
 ---
 
 # Project State
@@ -91,6 +91,7 @@ Plan: 2 of 2
 | Phase 09 P02 | 3 | 2 tasks | 2 files |
 | Phase 09 P03 | 6 | 2 tasks | 7 files |
 | Phase 10 P01 | 5 | 2 tasks | 9 files |
+| Phase 10 P02 | 3 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -173,6 +174,8 @@ Recent decisions affecting current work:
 - [Phase 09]: Terminal context menu on GLArea via GestureClick button-3, no Ghostty interference
 - [Phase 10]: Used #[path] attribute for CLI module inclusion to maintain GTK4 isolation
 - [Phase 10]: Renamed binary from cmux-linux to cmux-app; package name stays cmux-linux
+- [Phase 10]: Conditional param building omits keys when Option is None rather than sending null
+- [Phase 10]: format_response dispatches on method string to pick per-command formatter
 
 ### Roadmap Evolution
 
@@ -192,6 +195,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T03:56:39.973Z
-Stopped at: Completed 10-01-PLAN.md
+Last session: 2026-03-28T04:01:47.889Z
+Stopped at: Completed 10-02-PLAN.md
 Resume file: None

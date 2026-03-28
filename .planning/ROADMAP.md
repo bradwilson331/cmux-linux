@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 7: SSH Terminal I/O** - Implement proxy.stream bidirectional I/O routing so SSH workspace terminal sessions run on the remote host
 - [ ] **Phase 8: Agent-Browser Integration** - Bundle agent-browser, add browser.* socket commands, render CDP screencast frames in preview pane
 - [ ] **Phase 9: UI Buttons and Menus** - GTK4 HeaderBar with toolbar buttons, hamburger menu, sidebar controls, and terminal/browser pane context menus
-- [ ] **Phase 10: CLI Socket Commands** - Implement cmux command-line tool for controlling cmux via Unix socket (port macOS CLI commands)
+- [x] **Phase 10: CLI Socket Commands** - Implement cmux command-line tool for controlling cmux via Unix socket (port macOS CLI commands) (completed 2026-03-28)
 
 ## Phase Details
 
@@ -220,7 +220,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 7. SSH Terminal I/O | 3/4 | In Progress|  |
 | 8. Agent-Browser Integration | 4/6 | In Progress|  |
 | 9. UI Buttons and Menus | 0/3 | Not started | - |
-| 10. CLI Socket Commands | 1/2 | In Progress|  |
+| 10. CLI Socket Commands | 2/2 | Complete   | 2026-03-28 |
 
 ### Phase 10: CLI Socket Commands
 
@@ -237,4 +237,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 **Plans**: 2 plans
 Plans:
 - [x] 10-01-PLAN.md — Cargo config, binary rename, CI updates, CLI scaffold with socket client, discovery, and core commands
-- [ ] 10-02-PLAN.md — Complete all subcommand dispatch and human-readable output formatting with color support
+- [x] 10-02-PLAN.md — Complete all subcommand dispatch and human-readable output formatting with color support
