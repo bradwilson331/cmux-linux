@@ -8,6 +8,8 @@ use std::path::PathBuf;
 pub struct Config {
     #[serde(default)]
     pub shortcuts: ShortcutConfig,
+    #[serde(default)]
+    pub ui: UiConfig,
 }
 
 /// Per-action shortcut overrides. Each value is a GTK accelerator string (e.g. "<Ctrl>n").
@@ -37,6 +39,42 @@ pub struct ShortcutConfig {
     pub workspace_7: Option<String>,
     pub workspace_8: Option<String>,
     pub workspace_9: Option<String>,
+    pub browser_open: Option<String>,
+    pub browser_close: Option<String>,
+}
+
+/// UI configuration section -- [ui] in config.toml (D-16).
+#[derive(serde::Deserialize, Default, Debug)]
+pub struct UiConfig {
+    #[serde(default)]
+    pub header_bar: HeaderBarConfig,
+}
+
+/// Header bar configuration -- [ui.header_bar] in config.toml (D-16).
+/// Requires app restart to take effect.
+#[derive(serde::Deserialize, Debug)]
+pub struct HeaderBarConfig {
+    /// "gtk" (default, full header bar), "custom" (user-specified buttons), "none" (no header bar)
+    #[serde(default = "default_header_style")]
+    pub style: String,
+    /// Button names for left side (only used when style="custom")
+    pub buttons_left: Option<Vec<String>>,
+    /// Button names for right side (only used when style="custom")
+    pub buttons_right: Option<Vec<String>>,
+}
+
+fn default_header_style() -> String {
+    "gtk".to_string()
+}
+
+impl Default for HeaderBarConfig {
+    fn default() -> Self {
+        Self {
+            style: default_header_style(),
+            buttons_left: None,
+            buttons_right: None,
+        }
+    }
 }
 
 /// All bindable shortcut actions.
@@ -65,6 +103,8 @@ pub enum ShortcutAction {
     Workspace7,
     Workspace8,
     Workspace9,
+    BrowserOpen,
+    BrowserClose,
 }
 
 /// HashMap-based shortcut lookup table built from config + defaults.
@@ -79,6 +119,7 @@ const KNOWN_SHORTCUTS: &[&str] = &[
     "close_pane", "new_ssh_workspace", "focus_left", "focus_right", "focus_up", "focus_down",
     "workspace_1", "workspace_2", "workspace_3", "workspace_4",
     "workspace_5", "workspace_6", "workspace_7", "workspace_8", "workspace_9",
+    "browser_open", "browser_close",
 ];
 
 /// Modifier mask for lookup: ignore Caps Lock, Num Lock, etc.
@@ -166,6 +207,8 @@ impl ShortcutMap {
             (ShortcutAction::Workspace7,      &config.workspace_7,      "<Ctrl>7"),
             (ShortcutAction::Workspace8,      &config.workspace_8,      "<Ctrl>8"),
             (ShortcutAction::Workspace9,      &config.workspace_9,      "<Ctrl>9"),
+            (ShortcutAction::BrowserOpen,     &config.browser_open,     "<Ctrl><Shift>b"),
+            (ShortcutAction::BrowserClose,    &config.browser_close,    "<Ctrl><Shift>q"),
         ];
 
         let mut map = HashMap::new();
@@ -270,6 +313,26 @@ mod tests {
         assert!(config.shortcuts.new_workspace.is_none());
         std::env::remove_var("XDG_CONFIG_HOME");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_ui_config_default() {
+        let config: Config = toml::from_str("").unwrap();
+        assert_eq!(config.ui.header_bar.style, "gtk");
+        assert!(config.ui.header_bar.buttons_left.is_none());
+    }
+
+    #[test]
+    fn test_ui_config_custom_style() {
+        let config: Config = toml::from_str(r#"
+[ui.header_bar]
+style = "none"
+buttons_left = ["new_workspace"]
+buttons_right = ["split_right", "toggle_sidebar"]
+"#).unwrap();
+        assert_eq!(config.ui.header_bar.style, "none");
+        assert_eq!(config.ui.header_bar.buttons_left.as_ref().unwrap().len(), 1);
+        assert_eq!(config.ui.header_bar.buttons_right.as_ref().unwrap().len(), 2);
     }
 
     // Tests that require GTK4 initialization (accelerator_parse).

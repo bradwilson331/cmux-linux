@@ -7,7 +7,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-gtk4 = { version = "0.10.3", features = ["v4_12"] }
+gtk4 = { version = "0.10.3", features = ["v4_12", "v4_14"] }
 tokio = { version = "1", features = ["full"] }
 glib = "0.21.5"
 serde = { version = "1", features = ["derive"] }
@@ -16,7 +16,6 @@ toml = "0.8"
 uuid = { version = "1", features = ["v4", "serde"] }
 libc = "0.2"
 base64 = "0.22.1"
-notify-rust = "4"
 tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
 futures-util = "0.3"
 
