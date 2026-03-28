@@ -142,12 +142,12 @@ pub fn install_shortcuts(
 }
 
 /// Create a new workspace with an initial GLArea pane and add it to AppState + GtkStack.
-fn handle_new_workspace(state: &Rc<RefCell<AppState>>, _app: &gtk4::Application) {
+pub fn handle_new_workspace(state: &Rc<RefCell<AppState>>, _app: &gtk4::Application) {
     state.borrow_mut().create_workspace();
 }
 
 /// Show close-workspace confirmation dialog. If confirmed, closes the active workspace.
-fn handle_close_workspace(state: &Rc<RefCell<AppState>>, app: &gtk4::Application) {
+pub fn handle_close_workspace(state: &Rc<RefCell<AppState>>, app: &gtk4::Application) {
     // Cannot close the last workspace.
     let (active_index, workspace_count) = {
         let s = state.borrow();
@@ -180,7 +180,7 @@ fn handle_close_workspace(state: &Rc<RefCell<AppState>>, app: &gtk4::Application
 }
 
 /// Split the active pane. `vertical=false` -> split right (Ctrl+D), `vertical=true` -> split down.
-fn handle_split(state: &Rc<RefCell<AppState>>, vertical: bool) {
+pub fn handle_split(state: &Rc<RefCell<AppState>>, vertical: bool) {
     let mut s = state.borrow_mut();
     if let Some(engine) = s.active_split_engine_mut() {
         let _new_pane_id = if vertical {
@@ -194,7 +194,7 @@ fn handle_split(state: &Rc<RefCell<AppState>>, vertical: bool) {
 }
 
 /// Close the active pane (Ctrl+Shift+X).
-fn handle_close_pane(state: &Rc<RefCell<AppState>>, app: &gtk4::Application) {
+pub fn handle_close_pane(state: &Rc<RefCell<AppState>>, app: &gtk4::Application) {
     let (close_workspace, active_index) = {
         let mut s = state.borrow_mut();
         if let Some(engine) = s.active_split_engine_mut() {
@@ -212,12 +212,12 @@ fn handle_close_pane(state: &Rc<RefCell<AppState>>, app: &gtk4::Application) {
 }
 
 /// Open the SSH connect dialog (Ctrl+Shift+S).
-fn handle_new_ssh_workspace(state: &Rc<RefCell<AppState>>, app: &gtk4::Application) {
+pub fn handle_new_ssh_workspace(state: &Rc<RefCell<AppState>>, app: &gtk4::Application) {
     crate::ssh_dialog::show_ssh_dialog(app, state.clone());
 }
 
 /// Move focus to adjacent pane in `direction`.
-fn handle_focus_direction(state: &Rc<RefCell<AppState>>, direction: FocusDirection) {
+pub fn handle_focus_direction(state: &Rc<RefCell<AppState>>, direction: FocusDirection) {
     let mut s = state.borrow_mut();
     if let Some(engine) = s.active_split_engine_mut() {
         engine.focus_next_in_direction(direction);
@@ -227,7 +227,7 @@ fn handle_focus_direction(state: &Rc<RefCell<AppState>>, direction: FocusDirecti
 /// Open a browser preview pane (Ctrl+Shift+B).
 /// Launches the agent-browser daemon, navigates to about:blank, creates a preview pane,
 /// and starts the CDP screencast stream so frames render in the Picture widget.
-fn handle_browser_open(state: &Rc<RefCell<AppState>>) {
+pub fn handle_browser_open(state: &Rc<RefCell<AppState>>) {
     // Step 1: Ensure daemon is running, launch browser, enable streaming, navigate
     {
         let mut s = state.borrow_mut();
@@ -660,7 +660,7 @@ fn cdp_modifiers(mods: gtk4::gdk::ModifierType) -> i32 {
 }
 
 /// Close the browser preview and shut down the daemon (Ctrl+Shift+Q).
-fn handle_browser_close(state: &Rc<RefCell<AppState>>) {
+pub fn handle_browser_close(state: &Rc<RefCell<AppState>>) {
     let mut s = state.borrow_mut();
     if let Some(ref mut bm) = s.browser_manager {
         bm.shutdown();

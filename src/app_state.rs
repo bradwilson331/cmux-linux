@@ -428,6 +428,10 @@ impl AppState {
         self.switch_to_index(prev);
     }
 
+    pub fn active_split_engine(&self) -> Option<&SplitEngine> {
+        self.split_engines.get(self.active_index)
+    }
+
     pub fn active_split_engine_mut(&mut self) -> Option<&mut SplitEngine> {
         self.split_engines.get_mut(self.active_index)
     }
@@ -561,20 +565,32 @@ impl AppState {
 }
 
 /// Send a desktop notification for a bell in the given workspace.
-/// Uses notify-rust to talk to org.freedesktop.Notifications D-Bus directly,
-/// bypassing gio::Notification which requires .desktop file registration.
+/// Uses `notify-send` subprocess to send notifications via org.freedesktop.Notifications.
+///
+/// We use a subprocess instead of notify-rust (zbus D-Bus client) because GNOME Shell
+/// destroys notifications when the D-Bus sender name vanishes. With notify-rust in a
+/// spawned thread, the zbus connection drops when the thread exits, causing GNOME Shell's
+/// FdoNotificationDaemonSource._onNameVanished() to destroy the notification immediately.
+/// `notify-send` avoids this because it's a separate process whose D-Bus lifetime is
+/// independent of cmux.
 fn send_bell_notification(_app: &gtk4::Application, workspace_name: &str, _workspace_index: usize) {
-    let summary = "Terminal Bell";
     let body = format!("{} - Terminal bell", workspace_name);
     std::thread::spawn(move || {
-        if let Err(e) = notify_rust::Notification::new()
-            .summary(summary)
-            .body(&body)
-            .icon("utilities-terminal")
-            .timeout(notify_rust::Timeout::Milliseconds(5000))
-            .show()
-        {
-            eprintln!("cmux: desktop notification failed: {e}");
+        let result = std::process::Command::new("notify-send")
+            .arg("--app-name=cmux")
+            .arg("--icon=utilities-terminal")
+            .arg("--expire-time=5000")
+            .arg("Terminal Bell")
+            .arg(&body)
+            .status();
+        match result {
+            Ok(status) if !status.success() => {
+                eprintln!("cmux: notify-send exited with {status}");
+            }
+            Err(e) => {
+                eprintln!("cmux: failed to run notify-send: {e}");
+            }
+            _ => {}
         }
     });
 }

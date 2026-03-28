@@ -14,6 +14,7 @@ mod session;
 mod ssh;
 mod config;
 mod browser;
+mod menus;
 mod ssh_hosts;
 mod ssh_dialog;
 
@@ -149,7 +150,7 @@ fn main() {
             let rx = cmd_rx.lock().unwrap().take().expect("activate called more than once");
             let session = saved_session.lock().unwrap().take().flatten();
             let smap = crate::config::ShortcutMap::from_config(&config.shortcuts);
-            build_ui(app, runtime_handle.clone(), cmd_tx.clone(), rx, save_notify.clone(), session_tx.clone(), session, smap);
+            build_ui(app, runtime_handle.clone(), cmd_tx.clone(), rx, save_notify.clone(), session_tx.clone(), session, smap, &config);
         }
     });
 
@@ -170,6 +171,7 @@ fn build_ui(
     session_tx: tokio::sync::mpsc::UnboundedSender<crate::session::SessionData>,
     saved_session: Option<crate::session::SessionData>,
     shortcut_map: crate::config::ShortcutMap,
+    _config: &crate::config::Config,
 ) {
     // 1. Initialize Ghostty once
     let ghostty_app = unsafe {
@@ -449,6 +451,10 @@ fn build_ui(
 
     // 6. Sidebar toggle state (D-04, Ctrl+B — full shortcut wired in Plan 05):
     // Storing sidebar_scroll on the stack is enough for now. Plan 05 will pass it to shortcuts.
+
+    // Phase 9: Register GIO actions for menu/button dispatch
+    crate::menus::register_actions(&window, state.clone(), &sidebar_scroll, app);
+    crate::menus::register_accels(app);
 
     // 7. Install keyboard shortcuts (config-driven, D-06)
     crate::shortcuts::install_shortcuts(&window, state.clone(), &sidebar_scroll, app, shortcut_map);
