@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 9 UI-SPEC approved
-last_updated: "2026-03-28T01:22:53.899Z"
+status: Ready to execute
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-03-28T02:04:05.523Z"
 progress:
   total_phases: 10
   completed_phases: 8
-  total_plans: 48
-  completed_plans: 47
+  total_plans: 51
+  completed_plans: 48
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control — powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** Phase 04 — notifications-hidpi-ssh
+**Current focus:** Phase 09 — ui-buttons-and-menus
 
 ## Current Position
 
-Phase: 05
-Plan: Not started
+Phase: 09 (ui-buttons-and-menus) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -87,6 +87,7 @@ Plan: Not started
 | Phase 08 P06 | 2 | 2 tasks | 3 files |
 | Phase 04 P06 | 1 | 1 tasks | 3 files |
 | Phase 04 P07 | 191 | 2 tasks | 3 files |
+| Phase 09 P01 | 6 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -162,6 +163,8 @@ Recent decisions affecting current work:
 - [Phase 04]: notify-rust replaces gio::Notification to bypass .desktop file registration requirement
 - [Phase 04]: Classify binary-not-found as permanent failure via string match on error message
 - [Phase 04]: MAX_RETRIES=10 as bounded retry count for transient SSH failures
+- [Phase 09]: Browser open-external and copy-url actions disabled until BrowserManager exposes current_url()
+- [Phase 09]: Added immutable active_split_engine() to AppState for copy/paste menu action closures
 
 ### Roadmap Evolution
 
@@ -180,6 +183,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T01:22:53.897Z
-Stopped at: Phase 9 UI-SPEC approved
-Resume file: .planning/phases/09-ui-buttons-and-menus/09-UI-SPEC.md
+Last session: 2026-03-28T02:04:05.520Z
+Stopped at: Completed 09-01-PLAN.md
+Resume file: None
