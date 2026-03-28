@@ -21,6 +21,8 @@ pub enum SshEvent {
         pane_id: u64,
         stream_id: String,
     },
+    /// User pressed a key after remote shell exited -- close the pane/workspace.
+    ClosePaneRequest { pane_id: u64 },
 }
 
 /// Sender for SSH events (cloned into tokio tasks).

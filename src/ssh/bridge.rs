@@ -1,6 +1,6 @@
 use base64::Engine;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 
@@ -149,6 +149,10 @@ pub struct IoWriteContext {
     pub write_tx: mpsc::UnboundedSender<WriteRequest>,
     /// Set after proxy.open returns the stream_id.
     pub stream_id: Mutex<Option<String>>,
+    /// Set when remote shell exits -- next keypress triggers pane close.
+    pub eof_received: AtomicBool,
+    /// Channel to send close requests to the GTK main loop.
+    pub ssh_tx: mpsc::UnboundedSender<crate::ssh::SshEvent>,
 }
 
 /// C-compatible callback invoked by Ghostty when user types in a manual-mode surface.
@@ -166,6 +170,15 @@ pub unsafe extern "C" fn ssh_io_write_cb(
     }
     // SAFETY: userdata is an Arc<IoWriteContext> pointer -- we borrow without taking ownership.
     let ctx = &*(userdata as *const IoWriteContext);
+
+    // After remote shell exits, any keypress closes the pane
+    if ctx.eof_received.load(Ordering::Relaxed) {
+        let _ = ctx.ssh_tx.send(crate::ssh::SshEvent::ClosePaneRequest {
+            pane_id: ctx.pane_id,
+        });
+        return;
+    }
+
     let bytes = std::slice::from_raw_parts(data as *const u8, len);
     let b64 = base64::engine::general_purpose::STANDARD.encode(bytes);
     if let Some(ref stream_id) = *ctx.stream_id.lock().unwrap() {

@@ -429,6 +429,22 @@ fn build_ui(
                                 }
                             }
                         }
+                        // Clear stream_id and set eof flag so next keypress triggers close
+                        if let Some(ctx) = state.borrow().remote_pane_contexts.get(&pane_id) {
+                            if let Ok(mut sid) = ctx.stream_id.lock() {
+                                *sid = None;
+                            }
+                            ctx.eof_received.store(true, std::sync::atomic::Ordering::Relaxed);
+                        }
+                    }
+                    crate::ssh::SshEvent::ClosePaneRequest { pane_id } => {
+                        // Find the workspace containing this pane and close it
+                        let ws_index = state.borrow().workspaces.iter().position(|ws| {
+                            ws.id * 1000 == pane_id
+                        });
+                        if let Some(idx) = ws_index {
+                            state.borrow_mut().close_workspace(idx);
+                        }
                     }
                     crate::ssh::SshEvent::StreamOpened { pane_id, stream_id } => {
                         // Set the stream_id on the IoWriteContext so keystrokes start flowing

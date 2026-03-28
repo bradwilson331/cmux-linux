@@ -223,6 +223,8 @@ impl AppState {
             pane_id,
             write_tx: bridge.clone_write_tx(),
             stream_id: std::sync::Mutex::new(None),
+            eof_received: std::sync::atomic::AtomicBool::new(false),
+            ssh_tx: self.ssh_event_tx.clone().expect("ssh_event_tx must be set before creating remote workspaces"),
         });
         let (gl_area, surface_cell) = crate::ghostty::surface::create_surface(
             &self.gtk_app,
