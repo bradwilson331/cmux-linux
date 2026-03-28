@@ -98,6 +98,23 @@ pub async fn run_ssh_lifecycle(
 
                 let stdin = child.stdin.take();
                 let stdout = child.stdout.take();
+                let stderr = child.stderr.take();
+
+                // Log stderr from SSH/cmuxd-remote so errors aren't silently lost
+                if let Some(err_reader) = stderr {
+                    tokio::spawn(async move {
+                        let mut buf = BufReader::new(err_reader);
+                        let mut line = String::new();
+                        loop {
+                            line.clear();
+                            match buf.read_line(&mut line).await {
+                                Ok(0) => break,
+                                Ok(_) => eprintln!("cmux: SSH stderr: {}", line.trim_end()),
+                                Err(_) => break,
+                            }
+                        }
+                    });
+                }
 
                 if let (Some(writer), Some(reader)) = (stdin, stdout) {
                     let mut buf_writer = BufWriter::new(writer);
@@ -187,24 +204,8 @@ async fn run_proxy_routing(
     // Clear stale stream state from any prior connection
     bridge.clear_stream_ids();
 
-    // Open remote streams for all registered panes
-    {
-        let pane_ids: Vec<u64> = bridge.streams.lock()
-            .map(|s| s.keys().copied().collect())
-            .unwrap_or_default();
-        for pane_id in pane_ids {
-            match open_remote_stream(&writer, bridge, pane_id, &pending, ssh_tx, 80, 24).await {
-                Ok(stream_id) => {
-                    eprintln!("cmux: opened remote stream {stream_id} for pane {pane_id}");
-                }
-                Err(e) => {
-                    eprintln!("cmux: failed to open remote stream for pane {pane_id}: {e}");
-                }
-            }
-        }
-    }
-
-    // Read path: parse JSON lines from SSH stdout
+    // Read path: parse JSON lines from SSH stdout.
+    // MUST be spawned BEFORE open_remote_stream so RPC responses can be received.
     let read_bridge = bridge.clone();
     let read_ssh_tx = ssh_tx.clone();
     let read_pending = pending.clone();
@@ -227,6 +228,23 @@ async fn run_proxy_routing(
             }
         }
     });
+
+    // Open remote streams for all registered panes (reader is running to receive responses)
+    {
+        let pane_ids: Vec<u64> = bridge.streams.lock()
+            .map(|s| s.keys().copied().collect())
+            .unwrap_or_default();
+        for pane_id in pane_ids {
+            match open_remote_stream(&writer, bridge, pane_id, &pending, ssh_tx, 80, 24).await {
+                Ok(stream_id) => {
+                    eprintln!("cmux: opened remote stream {stream_id} for pane {pane_id}");
+                }
+                Err(e) => {
+                    eprintln!("cmux: failed to open remote stream for pane {pane_id}: {e}");
+                }
+            }
+        }
+    }
 
     // Write path: consume WriteRequests and send as JSON-RPC to SSH stdin
     let write_writer = writer.clone();
