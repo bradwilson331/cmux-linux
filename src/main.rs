@@ -15,6 +15,7 @@ mod ssh;
 mod config;
 mod browser;
 mod menus;
+mod header_bar;
 mod ssh_hosts;
 mod ssh_dialog;
 
@@ -77,6 +78,11 @@ paned > separator:hover { background-color: #5b8dd9; }
 /* Phase 8 Plan 06: DevTools overlay */
 .devtools-overlay { background-color: rgba(26, 26, 26, 0.92); }
 .devtools-snapshot { color: #cccccc; font-family: monospace; font-size: 12px; padding: 16px; }
+/* Phase 9: Header bar (D-04) */
+.cmux-headerbar { background-color: #242424; }
+.headerbar-btn { min-width: 28px; min-height: 28px; padding: 4px; margin: 0 2px; border-radius: 4px; background-color: transparent; color: #cccccc; border: none; }
+.headerbar-btn:hover { background-color: rgba(255, 255, 255, 0.08); }
+.headerbar-btn:active { background-color: rgba(255, 255, 255, 0.12); }
 ";
 
 fn main() {
@@ -171,7 +177,7 @@ fn build_ui(
     session_tx: tokio::sync::mpsc::UnboundedSender<crate::session::SessionData>,
     saved_session: Option<crate::session::SessionData>,
     shortcut_map: crate::config::ShortcutMap,
-    _config: &crate::config::Config,
+    config: &crate::config::Config,
 ) {
     // 1. Initialize Ghostty once
     let ghostty_app = unsafe {
@@ -226,16 +232,21 @@ fn build_ui(
         .default_height(600)
         .build();
 
-    let (sidebar_scroll, sidebar_list) = crate::sidebar::build_sidebar();
+    let (sidebar_box, _sidebar_scroll, sidebar_list) = crate::sidebar::build_sidebar();
     let stack = gtk4::Stack::new();
     stack.set_transition_type(gtk4::StackTransitionType::None);
 
     let hbox = gtk4::Box::new(gtk4::Orientation::Horizontal, 0);
-    hbox.append(&sidebar_scroll);
+    hbox.append(&sidebar_box);
     hbox.append(&stack);
     // Make the stack expand to fill remaining width.
     stack.set_hexpand(true);
     stack.set_vexpand(true);
+
+    // Phase 9: Set HeaderBar as titlebar (D-04)
+    if let Some(header) = crate::header_bar::build_header_bar(config) {
+        window.set_titlebar(Some(&header));
+    }
 
     window.set_child(Some(&hbox));
 
@@ -453,11 +464,11 @@ fn build_ui(
     // Storing sidebar_scroll on the stack is enough for now. Plan 05 will pass it to shortcuts.
 
     // Phase 9: Register GIO actions for menu/button dispatch
-    crate::menus::register_actions(&window, state.clone(), &sidebar_scroll, app);
+    crate::menus::register_actions(&window, state.clone(), &sidebar_box, app);
     crate::menus::register_accels(app);
 
     // 7. Install keyboard shortcuts (config-driven, D-06)
-    crate::shortcuts::install_shortcuts(&window, state.clone(), &sidebar_scroll, app, shortcut_map);
+    crate::shortcuts::install_shortcuts(&window, state.clone(), &sidebar_box, app, shortcut_map);
 
     // 8. Present the window
     window.present();
