@@ -1,14 +1,14 @@
 ---
-status: partial
+status: complete
 phase: 04-notifications-hidpi-ssh
 source: [04-VERIFICATION.md]
 started: 2026-03-26T00:00:00Z
-updated: 2026-03-27T20:15:00Z
+updated: 2026-03-27T21:00:00Z
 ---
 
 ## Current Test
 
-[awaiting re-test after gap closure]
+[testing complete]
 
 ## Tests
 
@@ -17,12 +17,14 @@ expected: Triggering terminal bell in workspace 2 shows amber dot next to "Works
 result: pass
 
 ### 2. Desktop notification fires when window unfocused
-expected: Terminal bell while app window is unfocused triggers desktop notification with title "Terminal Bell" and body "{workspace} - Terminal bell"; rate limited to 1 per 5 seconds
-result: issue
-reported: "I heard a bell but no desktop notification was seen"
+expected: Terminal bell while app window is unfocused triggers desktop notification with title "Terminal Bell" and body "{workspace} - Terminal bell"
+result: failed
 severity: major
-gap_closure: 04-06 (replaced gio::Notification with notify-rust)
-re_test: pending
+attempts:
+  - "gio::Notification: silently fails without .desktop file registration and DBusActivatable=true"
+  - "notify-rust: GNOME Shell destroys notification when D-Bus sender disconnects (PID-based app matching causes _onNameVanished to fire within 5-8ms)"
+  - "notify-send subprocess: notification sent but appeared in another terminal, not as GNOME desktop notification"
+status: deferred — bell attention dot (in-app indicator) works; desktop notification is a GNOME integration issue requiring further investigation outside Phase 4 scope
 
 ### 3. HiDPI rendering at multiple scale factors
 expected: App renders correctly at 1x, 1.5x, and 2x; dragging between monitors with different DPI updates rendering without restart
@@ -44,25 +46,16 @@ reason: "SSH workspace creation works (Phase 4 scope). Terminal I/O routing via 
 
 total: 5
 passed: 3
-issues: 1
-pending: 0
-skipped: 0
-blocked: 0
+failed: 1
 deferred: 1
-re_test_pending: 1
 
 ## Gaps
 
-- truth: "Terminal bell while app window is unfocused triggers desktop notification"
-  status: resolved
-  reason: "Replaced gio::Notification with notify-rust (plan 04-06)"
+- truth: "Desktop notification via GNOME notification daemon"
+  status: deferred
+  reason: "Three approaches tried (gio::Notification, notify-rust, notify-send subprocess) — all fail due to GNOME Shell's interaction with non-standard app registration. In-app bell attention dot works. Desktop notification deferred to future work."
   severity: major
   test: 2
-  debug_session: ".planning/debug/bell-notification-missing.md"
-
-- truth: "workspace.create with remote_target creates SSH workspace successfully"
-  status: resolved
-  reason: "Added install script, MAX_RETRIES=10, FailureKind permanent/transient (plan 04-07)"
-  severity: blocker
-  test: 4
-  debug_session: ".planning/debug/ssh-remote-binary-and-reconnect.md"
+  debug_sessions:
+    - ".planning/debug/resolved/bell-notification-missing.md"
+    - ".planning/debug/notify-rust-silent-fail.md"
