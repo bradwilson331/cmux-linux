@@ -2,9 +2,11 @@ use gtk4::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-/// Build the sidebar widget: GtkScrolledWindow(160px) containing a GtkListBox.
-/// Returns the GtkScrolledWindow. The GtkListBox inside is accessible via the AppState
-/// after AppState::new() is called with it.
+/// Build the sidebar widget: outer Box(V) > [ScrolledWindow(ListBox), Button(+)].
+/// Returns (sidebar_box, scrolled_window, list_box).
+///
+/// Per Pitfall 5 from RESEARCH.md: the '+' button is OUTSIDE the ScrolledWindow
+/// so it doesn't scroll away.
 ///
 /// Per UI-SPEC:
 /// - Width: 160px (set_size_request(160, -1))
@@ -14,7 +16,7 @@ use std::rc::Rc;
 /// - Active row: #5b8dd9 background, #ffffff text, font-weight 600
 /// - Inactive row: transparent bg, #cccccc text, font-weight 400
 /// - Hover (inactive): #2e2e2e
-pub fn build_sidebar() -> (gtk4::ScrolledWindow, gtk4::ListBox) {
+pub fn build_sidebar() -> (gtk4::Box, gtk4::ScrolledWindow, gtk4::ListBox) {
     let list_box = gtk4::ListBox::new();
     list_box.set_selection_mode(gtk4::SelectionMode::Single);
     list_box.add_css_class("workspace-list");
@@ -24,9 +26,21 @@ pub fn build_sidebar() -> (gtk4::ScrolledWindow, gtk4::ListBox) {
     scrolled.set_hscrollbar_policy(gtk4::PolicyType::Never);
     scrolled.set_vscrollbar_policy(gtk4::PolicyType::Automatic);
     scrolled.set_child(Some(&list_box));
-    scrolled.add_css_class("sidebar");
+    scrolled.set_vexpand(true);
 
-    (scrolled, list_box)
+    // Sidebar container: Box(V) > [ScrolledWindow(ListBox), Button(+)]
+    let sidebar_box = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
+    sidebar_box.add_css_class("sidebar");
+    sidebar_box.append(&scrolled);
+
+    // '+' button at the bottom (D-01)
+    let add_btn = gtk4::Button::with_label("+");
+    add_btn.add_css_class("sidebar-add-btn");
+    add_btn.set_tooltip_text(Some("New Workspace (Ctrl+N)"));
+    add_btn.set_action_name(Some("win.new-workspace"));
+    sidebar_box.append(&add_btn);
+
+    (sidebar_box, scrolled, list_box)
 }
 
 /// Wire sidebar click-to-switch. Called from main.rs after AppState is constructed.
@@ -107,7 +121,7 @@ pub fn start_inline_rename(
             if !trimmed.is_empty() {
                 state.borrow_mut().rename_active(trimmed.clone());
             }
-            // Restore Phase 4 nested layout: hbox > [vbox > [label], dot]
+            // Restore Phase 4 nested layout: hbox > [vbox > [label], dot, close_btn]
             let display = if trimmed.is_empty() { &new_name } else { &trimmed };
             row.set_child(Some(&rebuild_sidebar_row_content(display)));
         }
@@ -147,9 +161,11 @@ pub fn start_inline_rename(
     entry.add_controller(key_ctrl);
 }
 
-/// Rebuild the Phase 4 sidebar row content: GtkBox(H, 4) > [GtkBox(V, 0) > [GtkLabel(name)], GtkLabel(dot)].
+/// Rebuild the Phase 4 sidebar row content:
+/// GtkBox(H, 4) > [GtkBox(V, 0) > [GtkLabel(name)], GtkLabel(dot), Button(close)].
 /// Dot is hidden by default (fresh state after rename).
-fn rebuild_sidebar_row_content(name: &str) -> gtk4::Box {
+/// Close button is hidden by default, shown on row hover via CSS (D-02).
+pub fn rebuild_sidebar_row_content(name: &str) -> gtk4::Box {
     let hbox = gtk4::Box::new(gtk4::Orientation::Horizontal, 4);
     let vbox = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
     let label = gtk4::Label::new(Some(name));
@@ -164,5 +180,88 @@ fn rebuild_sidebar_row_content(name: &str) -> gtk4::Box {
     dot.set_visible(false);
     hbox.append(&dot);
 
+    // Close button (D-02) -- hidden by default, shown on row hover via CSS
+    let close_btn = gtk4::Button::with_label("\u{00D7}"); // Unicode multiplication sign
+    close_btn.add_css_class("sidebar-close-btn");
+    close_btn.set_tooltip_text(Some("Close Workspace"));
+    hbox.append(&close_btn);
+
     hbox
+}
+
+/// Wire the close button for a specific sidebar row.
+/// Called when a row is created (in app_state::create_workspace or after rename rebuild).
+pub fn wire_row_close_button(
+    row: &gtk4::ListBoxRow,
+    state: Rc<RefCell<crate::app_state::AppState>>,
+    app: &gtk4::Application,
+) {
+    let close_btn = row
+        .child()
+        .and_downcast::<gtk4::Box>()
+        .and_then(|hbox| hbox.last_child())
+        .and_downcast::<gtk4::Button>();
+
+    if let Some(btn) = close_btn {
+        btn.connect_clicked({
+            let state = state.clone();
+            let app = app.clone();
+            let row = row.clone();
+            move |_| {
+                let index = row.index() as usize;
+                let ws_count = state.borrow().workspaces.len();
+                if ws_count <= 1 {
+                    return; // Cannot close last workspace
+                }
+                // Switch to this workspace first (so close_workspace operates on the right one)
+                state.borrow_mut().switch_to_index(index);
+                crate::shortcuts::handle_close_workspace(&state, &app);
+            }
+        });
+    }
+}
+
+/// Attach right-click context menu to a sidebar row (D-03).
+pub fn attach_sidebar_context_menu(
+    row: &gtk4::ListBoxRow,
+    state: Rc<RefCell<crate::app_state::AppState>>,
+) {
+    let menu_model = crate::menus::build_sidebar_context_menu();
+    let popover = gtk4::PopoverMenu::from_model(Some(&menu_model));
+    popover.set_parent(row);
+    popover.set_has_arrow(false);
+
+    let gesture = gtk4::GestureClick::new();
+    gesture.set_button(3); // Right-click
+    gesture.connect_released({
+        let popover = popover.clone();
+        let state = state.clone();
+        let row = row.clone();
+        move |_, _, x, y| {
+            // Switch to this workspace first so context menu actions apply to it
+            let index = row.index() as usize;
+            state.borrow_mut().switch_to_index(index);
+            popover.set_pointing_to(Some(&gtk4::gdk::Rectangle::new(
+                x as i32, y as i32, 1, 1,
+            )));
+            popover.popup();
+        }
+    });
+    row.add_controller(gesture);
+}
+
+/// Wire close button + context menu to the most recently added sidebar row.
+pub fn wire_latest_row(
+    sidebar_list: &gtk4::ListBox,
+    state: Rc<RefCell<crate::app_state::AppState>>,
+    app: &gtk4::Application,
+) {
+    let n = sidebar_list.observe_children().n_items();
+    if n == 0 {
+        return;
+    }
+    if let Some(row) = sidebar_list.row_at_index((n - 1) as i32) {
+        wire_row_close_button(&row, state.clone(), app);
+        attach_sidebar_context_menu(&row, state);
+    }
 }

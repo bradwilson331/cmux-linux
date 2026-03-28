@@ -9,7 +9,7 @@ use std::rc::Rc;
 pub fn register_actions(
     window: &gtk4::ApplicationWindow,
     state: Rc<RefCell<crate::app_state::AppState>>,
-    sidebar: &gtk4::ScrolledWindow,
+    sidebar: &gtk4::Box,
     app: &gtk4::Application,
 ) {
     // --- File section actions ---

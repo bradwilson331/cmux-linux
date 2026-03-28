@@ -15,7 +15,7 @@ use std::rc::Rc;
 pub fn install_shortcuts(
     window: &gtk4::ApplicationWindow,
     state: Rc<RefCell<AppState>>,
-    sidebar: &gtk4::ScrolledWindow,
+    sidebar: &gtk4::Box,
     app: &gtk4::Application,
     shortcut_map: crate::config::ShortcutMap,
 ) {
@@ -142,8 +142,11 @@ pub fn install_shortcuts(
 }
 
 /// Create a new workspace with an initial GLArea pane and add it to AppState + GtkStack.
-pub fn handle_new_workspace(state: &Rc<RefCell<AppState>>, _app: &gtk4::Application) {
+pub fn handle_new_workspace(state: &Rc<RefCell<AppState>>, app: &gtk4::Application) {
     state.borrow_mut().create_workspace();
+    // Wire close button + context menu on the newly created sidebar row
+    let sidebar_list = state.borrow().sidebar_list.clone();
+    crate::sidebar::wire_latest_row(&sidebar_list, state.clone(), app);
 }
 
 /// Show close-workspace confirmation dialog. If confirmed, closes the active workspace.

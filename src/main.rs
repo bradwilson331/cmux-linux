@@ -83,6 +83,18 @@ paned > separator:hover { background-color: #5b8dd9; }
 .headerbar-btn { min-width: 28px; min-height: 28px; padding: 4px; margin: 0 2px; border-radius: 4px; background-color: transparent; color: #cccccc; border: none; }
 .headerbar-btn:hover { background-color: rgba(255, 255, 255, 0.08); }
 .headerbar-btn:active { background-color: rgba(255, 255, 255, 0.12); }
+/* Phase 9: Sidebar add button (D-01) */
+.sidebar-add-btn { min-height: 36px; padding: 8px 16px; background-color: transparent; color: #cccccc; border: none; border-top: 1px solid #3a3a3a; font-size: 16px; }
+.sidebar-add-btn:hover { background-color: #2e2e2e; }
+/* Phase 9: Sidebar close button (D-02) */
+.sidebar-close-btn { min-width: 20px; min-height: 20px; padding: 0; margin: 0; background-color: transparent; color: #888888; border: none; font-size: 14px; opacity: 0; }
+.workspace-list row:hover .sidebar-close-btn { opacity: 1; }
+.sidebar-close-btn:hover { color: #cccccc; }
+/* Phase 9: Context menu popover */
+popover.menu { background-color: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 8px; }
+popover.menu modelbutton { padding: 8px 16px; color: #cccccc; font-size: 14px; }
+popover.menu modelbutton:hover { background-color: #3a3a3a; }
+popover.menu accelerator { color: #5b8dd9; font-size: 12px; }
 ";
 
 fn main() {
@@ -316,6 +328,17 @@ fn build_ui(
         } else {
             // No session -- create the default first workspace.
             state.borrow_mut().create_workspace();
+        }
+    }
+
+    // Phase 9: Wire close buttons + context menus on all sidebar rows created above.
+    {
+        let n = sidebar_list.observe_children().n_items();
+        for i in 0..n {
+            if let Some(row) = sidebar_list.row_at_index(i as i32) {
+                crate::sidebar::wire_row_close_button(&row, state.clone(), app);
+                crate::sidebar::attach_sidebar_context_menu(&row, state.clone());
+            }
         }
     }
 

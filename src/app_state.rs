@@ -86,22 +86,8 @@ impl AppState {
         let mut workspace = Workspace::new(id, display_number);
         let name = workspace.name.clone();
 
-        // Phase 4: Row layout: GtkBox(H, 4) > [GtkBox(V, 0) > [GtkLabel(name)], GtkLabel(dot)]
-        // VBox allows Plan 04 to add a connection-state subtitle without restructuring.
-        let hbox = gtk4::Box::new(gtk4::Orientation::Horizontal, 4);
-        let vbox = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
-        let label = gtk4::Label::new(Some(&name));
-        label.set_halign(gtk4::Align::Start);
-        label.set_hexpand(true);
-        vbox.append(&label);
-        vbox.set_hexpand(true);
-        hbox.append(&vbox);
-
-        // Attention dot — hidden by default, shown when has_attention
-        let dot = gtk4::Label::new(None);
-        dot.add_css_class("attention-dot");
-        dot.set_visible(false);
-        hbox.append(&dot);
+        // Phase 9: Use shared row builder for consistent layout including close button
+        let hbox = crate::sidebar::rebuild_sidebar_row_content(&name);
 
         let row = gtk4::ListBoxRow::new();
         row.set_child(Some(&hbox));
@@ -154,20 +140,8 @@ impl AppState {
         let mut workspace = Workspace::new(id, display_number);
         workspace.name = ws.name.clone();
 
-        // Build sidebar row (same pattern as create_workspace)
-        let hbox = gtk4::Box::new(gtk4::Orientation::Horizontal, 4);
-        let vbox = gtk4::Box::new(gtk4::Orientation::Vertical, 0);
-        let label = gtk4::Label::new(Some(&workspace.name));
-        label.set_halign(gtk4::Align::Start);
-        label.set_hexpand(true);
-        vbox.append(&label);
-        vbox.set_hexpand(true);
-        hbox.append(&vbox);
-
-        let dot = gtk4::Label::new(None);
-        dot.add_css_class("attention-dot");
-        dot.set_visible(false);
-        hbox.append(&dot);
+        // Phase 9: Use shared row builder for consistent layout including close button
+        let hbox = crate::sidebar::rebuild_sidebar_row_content(&workspace.name);
 
         let row = gtk4::ListBoxRow::new();
         row.set_child(Some(&hbox));

@@ -61,6 +61,9 @@ pub enum SocketCommand {
     BrowserSnapshot      { req_id: Value, resp_tx: RespTx },
     BrowserScreenshot    { req_id: Value, resp_tx: RespTx },
 
+    // -- browser.* generic proxy (P0/P1 parity) --
+    BrowserAction    { req_id: Value, action: String, params: Value, resp_tx: RespTx },
+
     // -- Tier-2 stub (not_implemented) --
     NotImplemented   { req_id: Value, method: String, resp_tx: RespTx },
 }
