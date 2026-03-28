@@ -246,6 +246,10 @@ impl AppState {
         self.workspaces.push(workspace);
         self.split_engines.push(engine);
 
+        // Register pane in bridge.streams so run_proxy_routing can find it
+        // and open a remote stream after SSH handshake completes.
+        bridge.register_pane_placeholder(pane_id);
+
         // Store IoWriteContext for stream_id wiring when StreamOpened arrives
         self.remote_pane_contexts.insert(pane_id, io_ctx);
 

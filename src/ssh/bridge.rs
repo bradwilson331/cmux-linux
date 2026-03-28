@@ -101,6 +101,18 @@ impl SshBridge {
         }
     }
 
+    /// Register a pane with placeholder stream state (no stream_id yet).
+    /// Called at workspace creation time so run_proxy_routing can find the pane
+    /// and open a remote stream for it after SSH handshake.
+    pub fn register_pane_placeholder(&self, pane_id: u64) {
+        if let Ok(mut streams) = self.streams.lock() {
+            streams.insert(pane_id, PaneStream {
+                stream_id: String::new(),
+                subscribed: false,
+            });
+        }
+    }
+
     /// Mark a pane's stream as subscribed.
     pub fn mark_subscribed(&self, pane_id: u64) {
         if let Ok(mut streams) = self.streams.lock() {
