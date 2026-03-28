@@ -166,6 +166,7 @@ Recent decisions affecting current work:
 ### Roadmap Evolution
 
 - Phase 8 added: add agent-browser
+- Phase 9 added: UI buttons and menus
 
 ### Pending Todos
 
