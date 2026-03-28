@@ -266,6 +266,28 @@ impl SplitNode {
     }
 }
 
+/// Attach right-click context menu to a terminal GLArea (D-08).
+/// Uses button 3 (right-click only) to avoid interfering with Ghostty's mouse handling.
+fn attach_terminal_context_menu(gl_area: &gtk4::GLArea) {
+    let menu_model = crate::menus::build_terminal_context_menu();
+    let popover = gtk4::PopoverMenu::from_model(Some(&menu_model));
+    popover.set_parent(gl_area);
+    popover.set_has_arrow(false);
+
+    let gesture = gtk4::GestureClick::new();
+    gesture.set_button(3); // Right-click only
+    gesture.connect_released({
+        let popover = popover.clone();
+        move |_, _, x, y| {
+            popover.set_pointing_to(Some(&gtk4::gdk::Rectangle::new(
+                x as i32, y as i32, 1, 1,
+            )));
+            popover.popup();
+        }
+    });
+    gl_area.add_controller(gesture);
+}
+
 /// SplitEngine manages one workspace's pane layout tree.
 pub struct SplitEngine {
     pub root: SplitNode,
@@ -293,6 +315,8 @@ impl SplitEngine {
         // that run after realize, we read from the cell.
         // For the tree structure, we store null initially and update after realize.
         let surface_placeholder: ffi::ghostty_surface_t = std::ptr::null_mut();
+        // Phase 9: Attach right-click context menu (D-08)
+        attach_terminal_context_menu(&initial_gl_area);
         let root = SplitNode::Leaf {
             pane_id,
             gl_area: initial_gl_area,
@@ -377,6 +401,8 @@ impl SplitEngine {
                 // Create surface — realize callback will create Ghostty surface and wire registries
                 let (gl_area, _surface_cell) =
                     crate::ghostty::surface::create_surface(app, ghostty_app, None, pane_id, crate::ghostty::surface::SurfaceIoMode::Exec);
+                // Phase 9: Attach right-click context menu (D-08)
+                attach_terminal_context_menu(&gl_area);
                 // D-06: preserve UUID from session
                 let uuid = *surface_uuid;
                 let surface_placeholder: ffi::ghostty_surface_t = std::ptr::null_mut();
@@ -579,6 +605,8 @@ impl SplitEngine {
             new_pane_id,
             crate::ghostty::surface::SurfaceIoMode::Exec,
         );
+        // Phase 9: Attach right-click context menu (D-08)
+        attach_terminal_context_menu(&new_gl_area);
 
         // Replace the active leaf in the tree with a Split node.
         let new_surface_placeholder: ffi::ghostty_surface_t = std::ptr::null_mut();
@@ -644,6 +672,28 @@ impl SplitEngine {
 
         // Create preview pane widgets
         let widgets = crate::browser::create_preview_pane(new_pane_id);
+
+        // Phase 9: Attach right-click context menu to browser preview (D-09)
+        {
+            let menu_model = crate::menus::build_browser_context_menu();
+            let popover = gtk4::PopoverMenu::from_model(Some(&menu_model));
+            popover.set_parent(&widgets.container);
+            popover.set_has_arrow(false);
+
+            let gesture = gtk4::GestureClick::new();
+            gesture.set_button(3); // Right-click only
+            gesture.connect_released({
+                let popover = popover.clone();
+                move |_, _, x, y| {
+                    popover.set_pointing_to(Some(&gtk4::gdk::Rectangle::new(
+                        x as i32, y as i32, 1, 1,
+                    )));
+                    popover.popup();
+                }
+            });
+            widgets.container.add_controller(gesture);
+        }
+
         let preview_node = SplitNode::Preview {
             pane_id: new_pane_id,
             container: widgets.container.clone(),
