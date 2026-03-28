@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A full Linux port of cmux — a GPU-accelerated terminal multiplexer with tabs, pane splits, workspaces, and programmatic socket control. The macOS version is built on Swift/SwiftUI/AppKit + GhosttyKit; the Linux port is a ground-up rewrite in Rust using Ghostty's existing Linux GTK4 frontend as the terminal engine, targeting full feature parity with the macOS app.
+A full Linux port of cmux — a GPU-accelerated terminal multiplexer with tabs, pane splits, workspaces, SSH remote sessions, browser automation, and programmatic socket control. Built in Rust on GTK4 with Ghostty as the terminal engine, achieving feature parity with the macOS Swift/AppKit app.
 
 ## Core Value
 
@@ -12,29 +12,23 @@ A Linux user should get the same cmux experience as a Mac user: tabs, splits, wo
 
 ### Validated
 
-<!-- These represent what the macOS app already delivers — the target for the Linux port. -->
-
-- ✓ GPU-accelerated terminal rendering via Ghostty (libghostty C API) — existing (macOS)
-- ✓ Workspace (tab) management — create, close, switch, persist — existing (macOS)
-- ✓ Pane splitting — horizontal/vertical splits, drag dividers, tree-based layout — existing (macOS)
-- ✓ Unix socket control API — v1 text protocol + v2 JSON-RPC for scripting/automation — existing (macOS)
-- ✓ Session persistence — restore workspaces/panes on relaunch — existing (macOS)
-- ✓ Configurable keyboard shortcuts — existing (macOS)
-- ✓ Notification/attention state — track terminal activity per pane — existing (macOS)
-- ✓ SSH remote workspaces via cmuxd-remote daemon — existing (macOS)
+- ✓ GPU-accelerated terminal rendering via Ghostty (libghostty C API + GTK4 GtkGLArea) — v1.0
+- ✓ Workspace (tab) management — create, close, switch, rename, persist — v1.0
+- ✓ Pane splitting — horizontal/vertical splits, drag dividers, immutable tree layout (SplitEngine) — v1.0
+- ✓ Unix socket control API — v2 JSON-RPC, 47 commands, SO_PEERCRED auth — v1.0
+- ✓ Session persistence — atomic save/restore of full split tree topology with divider ratios — v1.0
+- ✓ Configurable keyboard shortcuts via TOML config file — v1.0
+- ✓ Notification/attention state — per-pane bell tracking, sidebar indicators, desktop notifications — v1.0
+- ✓ SSH remote workspaces — cmuxd-remote deployment, bidirectional PTY proxy, reconnect — v1.0
+- ✓ HiDPI/fractional scaling — correct at 1x, 1.5x, 2x with dynamic scale updates — v1.0
+- ✓ Agent-browser integration — CDP screencast preview, navigation toolbar — v1.0
+- ✓ GTK4 HeaderBar, hamburger menu, context menus, shortcuts window — v1.0
+- ✓ Native Rust CLI (`cmux`) with 34+ subcommands and socket auto-discovery — v1.0
+- ✓ GitHub Actions CI + AppImage distribution — v1.0
 
 ### Active
 
-- [x] Rust project scaffolding with GTK4 bindings (gtk4-rs) wrapping Ghostty terminal surfaces — Validated in Phase 01: ghostty-foundation
-- [x] Tab/workspace management in Rust — create, close, switch, named workspaces — Validated in Phase 02: workspaces-pane-splits
-- [x] Pane splitting in Rust — horizontal/vertical splits, divider dragging, tree layout (port Bonsplit logic) — Validated in Phase 02: workspaces-pane-splits
-- [x] Unix socket server in Rust — v2 JSON-RPC protocol compatibility with macOS cmux — Validated in Phase 03: socket-api-session-persistence
-- [x] Keyboard shortcut configuration — load from config file, bind to actions — Validated in Phase 05: config-distribution
-- [x] Session persistence — save/restore workspace+pane layout to JSON on disk — Validated in Phase 03: socket-api-session-persistence; full split tree topology with divider ratios validated in Phase 06: session-layout-surface-wiring
-- [x] Terminal notification/attention state — activity detection per pane — Validated in Phase 04: notifications-hidpi-ssh
-- [x] SSH remote workspaces — deploy cmuxd-remote, PTY bridge, bidirectional I/O, reconnect lifecycle — Validated in Phase 07: ssh-terminal-io (disconnect/reconnect deferred)
-- [x] CI/CD for Linux (GitHub Actions, Ubuntu runners) — Validated in Phase 05: config-distribution
-- [x] Distribution packaging — .deb, .AppImage, or Flatpak — Validated in Phase 05: config-distribution (AppImage)
+(None — planning next milestone)
 
 ### Out of Scope
 
@@ -42,44 +36,43 @@ A Linux user should get the same cmux experience as a Mac user: tabs, splits, wo
 - Sparkle auto-update — replaced by Linux-native update mechanism (e.g. Flatpak/apt)
 - Metal/IOSurface rendering — Linux uses OpenGL/Vulkan via Ghostty's GTK4 renderer
 - macOS code signing/notarization — not applicable on Linux
-- Browser panel (WebKit) — deferred; WebKit embedding in GTK4/Rust is complex, not core
+- WASM plugin system — premature complexity; not in roadmap
 
 ## Context
 
-**Existing macOS codebase:**
-- Swift + SwiftUI + AppKit hybrid, macOS 13+
-- Ghostty embedded via `GhosttyKit.xcframework` (built from `ghostty/` submodule — manaflow-ai fork)
-- Pane layout via `vendor/bonsplit` (Swift library — needs Rust reimplementation)
-- Socket control: `TerminalController.swift` handles v1/v2 protocol
-- Zig daemon (`cmuxd`) handles CLI — may be partially reusable on Linux
-- Go remote daemon (`daemon/remote/`) for SSH relay — platform-agnostic, potentially reusable
+Shipped v1.0 with 9,478 LOC Rust across 2,044 commits in 65 days.
+Tech stack: Rust, GTK4 (gtk4-rs), Ghostty (libghostty C FFI), tokio, serde, clap.
+Ghostty fork: manaflow-ai/ghostty with GHOSTTY_PLATFORM_GTK4 platform variant.
+Go remote daemon (cmuxd-remote) reused from macOS codebase for SSH workspaces.
 
-**Ghostty on Linux:**
-- Ghostty already ships a GTK4 Linux frontend — the terminal engine is cross-platform
-- cmux-linux will build on top of Ghostty's Linux app architecture rather than re-embedding from scratch
-- libghostty C API is the integration point (same as macOS GhosttyKit)
-
-**Key technical unknowns:**
-- How to embed multiple Ghostty terminal surfaces in a GTK4 + Rust application
-- Whether iced (Elm-style) or gtk4-rs is the right UI layer (iced is preferred but GTK4 may be necessary for Ghostty surface embedding)
-- cmuxd (Zig) reuse on Linux vs. Rust reimplementation
-
-## Constraints
-
-- **Tech Stack**: Rust primary language — idiomatic, memory-safe, good GTK4 bindings available
-- **Terminal Engine**: Ghostty (manaflow-ai fork) — must remain the terminal emulator, not replaced
-- **Protocol Compatibility**: Socket v2 JSON-RPC must be wire-compatible with macOS cmux so shared tooling works across platforms
-- **UI Toolkit**: GTK4 via gtk4-rs likely required for Ghostty surface hosting, even if iced is preferred for application logic
-- **Dependencies**: libghostty C API — Linux build requires Zig toolchain (same as macOS)
+**Known tech debt (14 items):**
+- SurfaceReadText returns empty (needs Ghostty screen buffer API)
+- ~40 browser P0/P1 methods return NotImplemented (dispatch not wired)
+- BrowserAction variant unreachable, SshBridge::output_tx dead code
+- Human UAT pending: desktop notifications, SSH deploy/retry, HiDPI multi-monitor
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Rewrite in Rust (not Swift) | Swift has no Linux UI story; Rust has strong GTK4 bindings and system programming capability | — Pending |
-| Build on Ghostty's Linux GTK4 frontend | Ghostty already solves terminal rendering on Linux; avoids reinventing surface embedding | — Pending |
-| Preserve v2 JSON-RPC socket protocol | Cross-platform tooling compatibility; existing CLI scripts work on both Mac and Linux | — Pending |
-| Defer browser panel | WebKit/GTK4 embedding is non-trivial; not core to terminal multiplexer value | — Pending |
+| Rewrite in Rust (not Swift) | Swift has no Linux UI story; Rust has strong GTK4 bindings | ✓ Good |
+| Build on Ghostty's Linux GTK4 frontend | Avoids reinventing terminal surface embedding | ✓ Good |
+| Preserve v2 JSON-RPC socket protocol | Cross-platform CLI/tooling compatibility | ✓ Good |
+| gtk4-rs (not iced/egui/slint) | Ghostty surfaces require GtkGLArea; no viable alternative | ✓ Good |
+| tokio + glib spawn_local bridge | Async socket I/O on tokio, UI on GTK main thread | ✓ Good |
+| SplitEngine immutable tree | Port of Bonsplit logic; clean recursive layout model | ✓ Good |
+| RefCell<AppState> on GTK main thread | Single-threaded GTK model; Rc<RefCell> avoids Arc overhead | ✓ Good |
+| SO_PEERCRED for socket auth | Linux-native uid validation, no token management needed | ✓ Good |
+| Agent-browser via CDP screencast | Headless Chrome reuse; WebSocket frame pipeline to GTK Picture | ✓ Good |
+| Defer browser dispatch wiring | ~40 P0/P1 methods advertised but not routed; v2 work | ⚠️ Revisit |
+
+## Constraints
+
+- **Tech Stack**: Rust primary language — idiomatic, memory-safe, good GTK4 bindings
+- **Terminal Engine**: Ghostty (manaflow-ai fork) — must remain the terminal emulator
+- **Protocol Compatibility**: Socket v2 JSON-RPC wire-compatible with macOS cmux
+- **UI Toolkit**: GTK4 via gtk4-rs (required for Ghostty GtkGLArea surface hosting)
+- **Dependencies**: libghostty C API — Linux build requires Zig 0.15.2 toolchain
 
 ## Evolution
 
@@ -99,4 +92,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-28 after Phase 07 completion — SSH terminal I/O pipeline: deploy, PTY bridge, bidirectional routing, shell exit handling*
+*Last updated: 2026-03-28 after v1.0 milestone completion*
