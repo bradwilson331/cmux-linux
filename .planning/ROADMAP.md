@@ -220,7 +220,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 7. SSH Terminal I/O | 3/4 | In Progress|  |
 | 8. Agent-Browser Integration | 4/6 | In Progress|  |
 | 9. UI Buttons and Menus | 0/3 | Not started | - |
-| 10. CLI Socket Commands | 0/2 | Not started | - |
+| 10. CLI Socket Commands | 1/2 | In Progress|  |
 
 ### Phase 10: CLI Socket Commands
 
@@ -236,5 +236,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
   6. GUI binary renamed to cmux-app; CI and packaging updated
 **Plans**: 2 plans
 Plans:
-- [ ] 10-01-PLAN.md — Cargo config, binary rename, CI updates, CLI scaffold with socket client, discovery, and core commands
+- [x] 10-01-PLAN.md — Cargo config, binary rename, CI updates, CLI scaffold with socket client, discovery, and core commands
 - [ ] 10-02-PLAN.md — Complete all subcommand dispatch and human-readable output formatting with color support

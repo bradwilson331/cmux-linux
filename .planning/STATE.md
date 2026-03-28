@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase complete — ready for verification
-stopped_at: Phase 10 context gathered
-last_updated: "2026-03-28T03:33:01.984Z"
+status: Ready to execute
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-03-28T03:56:39.975Z"
 progress:
   total_phases: 11
   completed_phases: 9
-  total_plans: 51
-  completed_plans: 50
+  total_plans: 53
+  completed_plans: 51
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control — powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** Phase 09 — ui-buttons-and-menus
+**Current focus:** Phase 10 — cli-socket-commands
 
 ## Current Position
 
-Phase: 09 (ui-buttons-and-menus) — EXECUTING
-Plan: 3 of 3
+Phase: 10 (cli-socket-commands) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -90,6 +90,7 @@ Plan: 3 of 3
 | Phase 09 P01 | 6 | 2 tasks | 6 files |
 | Phase 09 P02 | 3 | 2 tasks | 2 files |
 | Phase 09 P03 | 6 | 2 tasks | 7 files |
+| Phase 10 P01 | 5 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -170,6 +171,8 @@ Recent decisions affecting current work:
 - [Phase 09]: All header bar buttons use set_action_name for GIO action dispatch -- no manual click handlers
 - [Phase 09]: Sidebar + button outside ScrolledWindow per RESEARCH.md Pitfall 5
 - [Phase 09]: Terminal context menu on GLArea via GestureClick button-3, no Ghostty interference
+- [Phase 10]: Used #[path] attribute for CLI module inclusion to maintain GTK4 isolation
+- [Phase 10]: Renamed binary from cmux-linux to cmux-app; package name stays cmux-linux
 
 ### Roadmap Evolution
 
@@ -189,6 +192,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T03:33:01.980Z
-Stopped at: Phase 10 context gathered
-Resume file: .planning/phases/10-cli-socket-commands/10-CONTEXT.md
+Last session: 2026-03-28T03:56:39.973Z
+Stopped at: Completed 10-01-PLAN.md
+Resume file: None
