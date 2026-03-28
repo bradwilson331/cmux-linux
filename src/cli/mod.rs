@@ -4,6 +4,7 @@
 //! It connects to the cmux-app via Unix socket JSON-RPC.
 
 pub mod discovery;
+pub mod format;
 pub mod socket_client;
 
 pub use socket_client::CliError;
@@ -55,7 +56,7 @@ pub enum Commands {
         params: String,
     },
 
-    // -- Workspace management (stubs for Plan 02) --
+    // -- Workspace management --
     /// Create a new workspace
     NewWorkspace,
     /// Select a workspace by ID
@@ -89,7 +90,7 @@ pub enum Commands {
         position: usize,
     },
 
-    // -- Surface commands (stubs for Plan 02) --
+    // -- Surface commands --
     /// List all surfaces
     ListSurfaces,
     /// Split a surface
@@ -146,7 +147,7 @@ pub enum Commands {
         id: Option<String>,
     },
 
-    // -- Pane commands (stubs for Plan 02) --
+    // -- Pane commands --
     /// List all panes
     ListPanes,
     /// Focus a pane
@@ -157,13 +158,13 @@ pub enum Commands {
     /// Switch to last focused pane
     LastPane,
 
-    // -- Window commands (stubs for Plan 02) --
+    // -- Window commands --
     /// List all windows
     ListWindows,
     /// Show current window info
     CurrentWindow,
 
-    // -- Debug commands (stubs for Plan 02) --
+    // -- Debug commands --
     /// Show layout tree
     Layout,
     /// Type text into the focused terminal
@@ -172,7 +173,7 @@ pub enum Commands {
         text: String,
     },
 
-    // -- Notification commands (stubs for Plan 02) --
+    // -- Notification commands --
     /// List notifications
     ListNotifications,
     /// Clear a notification
@@ -181,7 +182,7 @@ pub enum Commands {
         id: String,
     },
 
-    // -- Browser commands (stubs for Plan 02) --
+    // -- Browser commands --
     /// Open a URL in the browser pane
     BrowserOpen {
         /// URL to open
@@ -219,26 +220,25 @@ pub fn run(cli: Cli) -> Result<(), CliError> {
         eprintln!("Connected to {}", socket_path);
     }
 
+    let use_color = format::use_color(&cli.color);
+
     // Handle Raw command separately (dynamic method name)
-    let result = if let Commands::Raw { ref method, ref params } = cli.command {
+    let (method_name, result) = if let Commands::Raw { ref method, ref params } = cli.command {
         let params_val: serde_json::Value = serde_json::from_str(params).map_err(|e| {
             CliError::ProtocolError(format!("invalid JSON params: {}", e))
         })?;
-        client.call(method, params_val)?
+        let result = client.call(method, params_val)?;
+        (method.clone(), result)
     } else {
         let (method, params) = command_to_rpc(&cli.command);
-        client.call(method, params)?
+        let result = client.call(method, params)?;
+        (method.to_string(), result)
     };
 
-    // Output result
-    if cli.json {
-        println!("{}", serde_json::to_string(&result).unwrap_or_default());
-    } else {
-        // For now, pretty-print JSON. Human formatting added in Plan 02.
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&result).unwrap_or_default()
-        );
+    // Output formatted result
+    let output = format::format_response(&method_name, &result, cli.json, use_color);
+    if !output.is_empty() {
+        println!("{}", output);
     }
 
     Ok(())
@@ -247,7 +247,7 @@ pub fn run(cli: Cli) -> Result<(), CliError> {
 /// Convert a CLI command to a JSON-RPC method and params.
 /// Raw is handled separately in run() — panics if called with Raw.
 fn command_to_rpc(cmd: &Commands) -> (&'static str, serde_json::Value) {
-    use serde_json::json;
+    use serde_json::{json, Value};
     match cmd {
         Commands::Ping => ("system.ping", json!({})),
         Commands::Identify => ("system.identify", json!({})),
@@ -272,22 +272,61 @@ fn command_to_rpc(cmd: &Commands) -> (&'static str, serde_json::Value) {
 
         Commands::ListSurfaces => ("surface.list", json!({})),
         Commands::Split { direction, id } => {
-            ("surface.split", json!({"direction": direction, "id": id}))
+            let mut p = serde_json::Map::new();
+            p.insert("direction".into(), json!(direction));
+            if let Some(ref id) = id {
+                p.insert("id".into(), json!(id));
+            }
+            ("surface.split", Value::Object(p))
         }
         Commands::FocusSurface { id } => ("surface.focus", json!({"id": id})),
         Commands::CloseSurface { id } => ("surface.close", json!({"id": id})),
         Commands::SendText { text, id } => {
-            ("surface.send_text", json!({"text": text, "id": id}))
+            let mut p = serde_json::Map::new();
+            p.insert("text".into(), json!(text));
+            if let Some(ref id) = id {
+                p.insert("id".into(), json!(id));
+            }
+            ("surface.send_text", Value::Object(p))
         }
         Commands::SendKey { key, id } => {
-            ("surface.send_key", json!({"key": key, "id": id}))
+            let mut p = serde_json::Map::new();
+            p.insert("key".into(), json!(key));
+            if let Some(ref id) = id {
+                p.insert("id".into(), json!(id));
+            }
+            ("surface.send_key", Value::Object(p))
         }
-        Commands::ReadText { id } => ("surface.read_text", json!({"id": id})),
-        Commands::Health { id } => ("surface.health", json!({"id": id})),
-        Commands::Refresh { id } => ("surface.refresh", json!({"id": id})),
+        Commands::ReadText { id } => {
+            let mut p = serde_json::Map::new();
+            if let Some(ref id) = id {
+                p.insert("id".into(), json!(id));
+            }
+            ("surface.read_text", Value::Object(p))
+        }
+        Commands::Health { id } => {
+            let mut p = serde_json::Map::new();
+            if let Some(ref id) = id {
+                p.insert("id".into(), json!(id));
+            }
+            ("surface.health", Value::Object(p))
+        }
+        Commands::Refresh { id } => {
+            let mut p = serde_json::Map::new();
+            if let Some(ref id) = id {
+                p.insert("id".into(), json!(id));
+            }
+            ("surface.refresh", Value::Object(p))
+        }
 
         Commands::ListPanes => ("pane.list", json!({})),
-        Commands::FocusPane { id } => ("pane.focus", json!({"id": id})),
+        Commands::FocusPane { id } => {
+            let mut p = serde_json::Map::new();
+            if let Some(ref id) = id {
+                p.insert("id".into(), json!(id));
+            }
+            ("pane.focus", Value::Object(p))
+        }
         Commands::LastPane => ("pane.last", json!({})),
 
         Commands::ListWindows => ("window.list", json!({})),
