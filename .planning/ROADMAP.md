@@ -144,11 +144,12 @@ Plans:
   1. `proxy.stream` in tunnel.rs routes terminal I/O between the local Ghostty surface and the remote cmuxd shell
   2. Keystrokes typed in an SSH workspace pane appear in the remote shell
   3. Remote shell output renders in the local terminal surface
-**Plans**: 3 plans
+**Plans**: 4 plans
 Plans:
 - [x] 07-01-PLAN.md — FFI + bridge module: ghostty.h manual I/O fields, bridge.rs types, cmuxd-remote PTY spawn, tunnel.rs proxy routing
 - [x] 07-02-PLAN.md — Remote surface wiring: manual I/O mode surface creation, app_state integration, disconnect/reconnect/exit handling
 - [x] 07-03-PLAN.md — Gap closure: connect write channel, call open_remote_stream after handshake/reconnect
+- [ ] 07-04-PLAN.md — Gap closure: register initial pane in bridge.streams so run_proxy_routing can open remote stream
 
 ### Phase 7.1: SSH Workspace UI
 **Goal**: Provide keyboard shortcut and GTK dialog for creating SSH workspaces — unblocks Phase 7 UAT
@@ -196,5 +197,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 4. Notifications + HiDPI + SSH | 4/7 | In Progress | - |
 | 5. Config + Distribution | 0/2 | Not started | - |
 | 6. Session Layout Restore + Surface Wiring | 0/2 | Not started | - |
-| 7. SSH Terminal I/O | 2/3 | In Progress|  |
+| 7. SSH Terminal I/O | 3/4 | In Progress|  |
 | 8. Agent-Browser Integration | 4/6 | In Progress|  |
