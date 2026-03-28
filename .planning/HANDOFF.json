@@ -1,48 +1,29 @@
 {
   "version": "1.0",
-  "timestamp": "2026-03-27T05:56:39.261Z",
-  "phase": "08",
-  "phase_name": "add-agent-browser",
-  "phase_dir": ".planning/phases/08-add-agent-browser",
-  "plan": "post-phase",
-  "task": "browser-interaction",
-  "total_tasks": 5,
+  "timestamp": "2026-03-28T03:25:24.406Z",
+  "phase": "10",
+  "phase_name": "cli-socket-commands",
+  "phase_dir": ".planning/phases/10-cli-socket-commands",
+  "plan": 0,
+  "task": 0,
+  "total_tasks": 0,
   "status": "paused",
-  "completed_tasks": [
-    {"id": 1, "name": "Add browser keybindings (Ctrl+Shift+B/Q)", "status": "done"},
-    {"id": 2, "name": "Add URL bar to preview pane", "status": "done"},
-    {"id": 3, "name": "Wire full daemon lifecycle (stream_enable+launch+navigate+screencast_start+start_stream)", "status": "done"},
-    {"id": 4, "name": "Frame rendering pipeline (WebSocket→JPEG→Texture→Picture)", "status": "done"},
-    {"id": 5, "name": "Viewport resize to match pane", "status": "done"},
-    {"id": 6, "name": "Mouse click+hover forwarding", "status": "done", "progress": "Code written, untested by user"},
-    {"id": 7, "name": "Focus navigation to Preview panes", "status": "done"},
-    {"id": 8, "name": "Close protection (last terminal pane)", "status": "done"}
-  ],
+  "completed_tasks": [],
   "remaining_tasks": [
-    {"id": 9, "name": "Verify mouse click forwarding works", "status": "not_started"},
-    {"id": 10, "name": "Add keyboard input forwarding to Chrome", "status": "not_started"},
-    {"id": 11, "name": "Add scroll wheel forwarding", "status": "not_started"},
-    {"id": 12, "name": "Clean up diagnostic logging", "status": "not_started"}
+    {"id": 1, "name": "Complete discuss-phase gray area discussions", "status": "in_progress", "progress": "CLI architecture and Command coverage areas done; Output format and Socket discovery still to discuss"},
+    {"id": 2, "name": "Write CONTEXT.md from all discussion decisions", "status": "not_started"},
+    {"id": 3, "name": "Run /gsd:plan-phase 10", "status": "not_started"}
   ],
-  "blockers": [
-    {"description": "Ghostty UAF crash when closing last terminal pane next to Preview", "type": "technical", "workaround": "Prevented by count_terminals guard in close_active"}
-  ],
+  "blockers": [],
   "human_actions_pending": [],
   "decisions": [
-    {"decision": "Cargo workspace for agent-browser co-build", "rationale": "Puts both binaries in target/debug/ so which_agent_browser finds it automatically", "phase": "08"},
-    {"decision": "SplitNode::Preview container changed from Overlay to Box", "rationale": "Needed to accommodate URL bar + overlay layout vertically", "phase": "08"},
-    {"decision": "Synchronous send_command for mouse events", "rationale": "Acceptable latency for click events, avoids async channel complexity", "phase": "08"}
+    {"decision": "Rust binary via [[bin]] in same Cargo crate, not Python wrapper", "rationale": "Zero runtime deps, fast startup, ships in AppImage", "phase": "10"},
+    {"decision": "Flat verb subcommands (cmux list-workspaces, cmux split, cmux send-text) not noun-verb", "rationale": "Match existing macOS cmux CLI style", "phase": "10"},
+    {"decision": "Also include `cmux raw` passthrough subcommand", "rationale": "Power users and scripting can access raw socket methods", "phase": "10"},
+    {"decision": "Binary named 'cmux', GUI app renamed to 'cmux-app'", "rationale": "CLI gets the primary name; clear distinction from GUI", "phase": "10"},
+    {"decision": "All command groups covered: core workspace/surface/pane, browser, notification, debug/system", "rationale": "Full coverage of all socket commands", "phase": "10"}
   ],
-  "uncommitted_files": [
-    "Cargo.toml",
-    "Cargo.lock",
-    "src/browser.rs",
-    "src/config.rs",
-    "src/main.rs",
-    "src/shortcuts.rs",
-    "src/socket/handlers.rs",
-    "src/split_engine.rs"
-  ],
-  "next_action": "Test mouse click forwarding, then add keyboard input forwarding via EventControllerKey on Picture",
-  "context_notes": "Post-phase-08 feature work. Phase plans complete. Building interactive browser preview with keybindings, URL bar, viewport sizing, input forwarding. Frame rendering confirmed working. Input forwarding code written but untested."
+  "uncommitted_files": [".planning/ROADMAP.md", ".planning/STATE.md", "Cargo.lock", "ghostty"],
+  "next_action": "Resume /gsd:discuss-phase 10 — continue from Output format gray area, then Socket discovery, then write CONTEXT.md",
+  "context_notes": "In the middle of /gsd:discuss-phase 10. Completed CLI architecture (4 questions) and Command coverage (1 question, selected all groups). Two areas remain: Output format and Socket discovery. After discussion completes, need to write 10-CONTEXT.md and 10-DISCUSSION-LOG.md, commit, then run /gsd:plan-phase 10."
 }
