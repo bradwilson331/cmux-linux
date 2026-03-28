@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 09-01-PLAN.md
-last_updated: "2026-03-28T02:04:05.523Z"
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-03-28T02:09:20.157Z"
 progress:
   total_phases: 10
   completed_phases: 8
   total_plans: 51
-  completed_plans: 48
+  completed_plans: 49
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 09 (ui-buttons-and-menus) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -88,6 +88,7 @@ Plan: 2 of 3
 | Phase 04 P06 | 1 | 1 tasks | 3 files |
 | Phase 04 P07 | 191 | 2 tasks | 3 files |
 | Phase 09 P01 | 6 | 2 tasks | 6 files |
+| Phase 09 P02 | 3 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -165,6 +166,7 @@ Recent decisions affecting current work:
 - [Phase 04]: MAX_RETRIES=10 as bounded retry count for transient SSH failures
 - [Phase 09]: Browser open-external and copy-url actions disabled until BrowserManager exposes current_url()
 - [Phase 09]: Added immutable active_split_engine() to AppState for copy/paste menu action closures
+- [Phase 09]: All header bar buttons use set_action_name for GIO action dispatch -- no manual click handlers
 
 ### Roadmap Evolution
 
@@ -183,6 +185,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T02:04:05.520Z
-Stopped at: Completed 09-01-PLAN.md
+Last session: 2026-03-28T02:09:18.671Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None
