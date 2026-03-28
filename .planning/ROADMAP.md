@@ -151,7 +151,7 @@ Plans:
 - [x] 07-01-PLAN.md — FFI + bridge module: ghostty.h manual I/O fields, bridge.rs types, cmuxd-remote PTY spawn, tunnel.rs proxy routing
 - [x] 07-02-PLAN.md — Remote surface wiring: manual I/O mode surface creation, app_state integration, disconnect/reconnect/exit handling
 - [x] 07-03-PLAN.md — Gap closure: connect write channel, call open_remote_stream after handshake/reconnect
-- [ ] 07-04-PLAN.md — Gap closure: register initial pane in bridge.streams so run_proxy_routing can open remote stream
+- [x] 07-04-PLAN.md — Gap closure: register initial pane in bridge.streams so run_proxy_routing can open remote stream
 
 ### Phase 7.1: SSH Workspace UI
 **Goal**: Provide keyboard shortcut and GTK dialog for creating SSH workspaces — unblocks Phase 7 UAT

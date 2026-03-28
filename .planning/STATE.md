@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Milestone complete
-stopped_at: Completed 10-02-PLAN.md
-last_updated: "2026-03-28T04:05:10.500Z"
+status: Ready to execute
+stopped_at: Completed 07-04-PLAN.md
+last_updated: "2026-03-28T04:36:59.604Z"
 progress:
   total_phases: 11
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 53
-  completed_plans: 52
+  completed_plans: 53
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control — powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** Phase 10 — cli-socket-commands
+**Current focus:** Phase 07 — ssh-terminal-io
 
 ## Current Position
 
-Phase: 10
-Plan: Not started
+Phase: 07 (ssh-terminal-io) — EXECUTING
+Plan: 2 of 4
 
 ## Performance Metrics
 
@@ -92,6 +92,7 @@ Plan: Not started
 | Phase 09 P03 | 6 | 2 tasks | 7 files |
 | Phase 10 P01 | 5 | 2 tasks | 9 files |
 | Phase 10 P02 | 3 | 2 tasks | 2 files |
+| Phase 07 P04 | 1 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -176,6 +177,7 @@ Recent decisions affecting current work:
 - [Phase 10]: Renamed binary from cmux-linux to cmux-app; package name stays cmux-linux
 - [Phase 10]: Conditional param building omits keys when Option is None rather than sending null
 - [Phase 10]: format_response dispatches on method string to pick per-command formatter
+- [Phase 07]: Placeholder PaneStream with empty stream_id inserted at creation time; overwritten by register_pane when proxy.open succeeds
 
 ### Roadmap Evolution
 
@@ -195,6 +197,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T04:01:47.889Z
-Stopped at: Completed 10-02-PLAN.md
+Last session: 2026-03-28T04:36:59.601Z
+Stopped at: Completed 07-04-PLAN.md
 Resume file: None
