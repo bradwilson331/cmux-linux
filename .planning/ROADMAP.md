@@ -184,6 +184,24 @@ Plans:
 - [x] 08-05-PLAN.md — Navigation toolbar: Back/Forward/Reload/Go/DevTools buttons, auto-refocus on viewport click
 - [x] 08-06-PLAN.md — Async mouse motion forwarding, DevTools snapshot overlay toggle
 
+### Phase 9: UI Buttons and Menus
+**Goal**: All operations are mouse-accessible via HeaderBar toolbar, hamburger menu, sidebar controls, and right-click context menus
+**Depends on**: Phase 8
+**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14, D-15, D-16, D-17, D-18
+**Success Criteria** (what must be TRUE):
+  1. GTK4 HeaderBar replaces default titlebar with toolbar buttons for New Workspace, Browser, Split H/V, Toggle Sidebar, and Hamburger menu
+  2. Hamburger menu shows organized File/Edit/View/Help sections with accelerator hints
+  3. Sidebar has '+' button at bottom and hover-visible close button on each row
+  4. Right-click context menus on sidebar rows, terminal panes, and browser panes
+  5. GtkShortcutsWindow and GtkAboutDialog accessible from Help menu
+  6. Header bar configurable via config.toml [ui.header_bar] section (style: gtk/custom/none)
+**Plans**: 3 plans
+Plans:
+- [ ] 09-01-PLAN.md — Config extension + GIO actions: UiConfig/HeaderBarConfig structs, menus.rs with action registration and menu models, v4_14 feature flag
+- [ ] 09-02-PLAN.md — HeaderBar + hamburger menu: header_bar.rs module, toolbar buttons, window titlebar integration, CSS
+- [ ] 09-03-PLAN.md — Sidebar controls + context menus: '+' button, hover close, sidebar/terminal/browser right-click menus
+**UI hint**: yes
+
 ## Progress
 
 **Execution Order:**
@@ -199,13 +217,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 6. Session Layout Restore + Surface Wiring | 0/2 | Not started | - |
 | 7. SSH Terminal I/O | 3/4 | In Progress|  |
 | 8. Agent-Browser Integration | 4/6 | In Progress|  |
-
-### Phase 9: UI buttons and menus
-
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 8
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 9 to break down)
+| 9. UI Buttons and Menus | 0/3 | Not started | - |
