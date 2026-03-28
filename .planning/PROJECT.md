@@ -32,6 +32,7 @@ A Linux user should get the same cmux experience as a Mac user: tabs, splits, wo
 - [x] Keyboard shortcut configuration — load from config file, bind to actions — Validated in Phase 05: config-distribution
 - [x] Session persistence — save/restore workspace+pane layout to JSON on disk — Validated in Phase 03: socket-api-session-persistence; full split tree topology with divider ratios validated in Phase 06: session-layout-surface-wiring
 - [x] Terminal notification/attention state — activity detection per pane — Validated in Phase 04: notifications-hidpi-ssh
+- [x] SSH remote workspaces — deploy cmuxd-remote, PTY bridge, bidirectional I/O, reconnect lifecycle — Validated in Phase 07: ssh-terminal-io (disconnect/reconnect deferred)
 - [x] CI/CD for Linux (GitHub Actions, Ubuntu runners) — Validated in Phase 05: config-distribution
 - [x] Distribution packaging — .deb, .AppImage, or Flatpak — Validated in Phase 05: config-distribution (AppImage)
 
@@ -98,4 +99,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-28 after Phase 10 completion — Native Rust cmux CLI binary with 38 subcommands, Unix socket JSON-RPC client, human-readable and JSON output modes, color auto-detection*
+*Last updated: 2026-03-28 after Phase 07 completion — SSH terminal I/O pipeline: deploy, PTY bridge, bidirectional routing, shell exit handling*
