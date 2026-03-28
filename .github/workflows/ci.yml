@@ -111,7 +111,7 @@ jobs:
         run: cargo build
 
       - name: Test
-        run: cargo test --bin cmux-linux
+        run: cargo test --bin cmux-app
 
   tests:
     # Never run WarpBuild jobs for fork pull requests (avoid billing on external PRs).

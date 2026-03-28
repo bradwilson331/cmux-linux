@@ -391,7 +391,7 @@ jobs:
         run: |
           DEPLOY_GTK_VERSION=4 ./linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
-            --executable target/release/cmux-linux \
+            --executable target/release/cmux-app \
             --desktop-file resources/cmux.desktop \
             --icon-file resources/cmux.svg \
             --plugin gtk \

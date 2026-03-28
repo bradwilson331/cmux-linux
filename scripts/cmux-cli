@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
-# cmux CLI wrapper — invokes tests_v2/cmux.py as a command-line tool.
-# Per D-04: the Python client IS the Phase 3 CLI; a native Rust CLI comes in Phase 5.
-
+# cmux CLI wrapper — invokes the Rust binary if available, falls back to Python.
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+RUST_CLI="$REPO_ROOT/target/release/cmux"
+if [ -x "$RUST_CLI" ]; then
+    exec "$RUST_CLI" "$@"
+fi
+RUST_CLI_DEBUG="$REPO_ROOT/target/debug/cmux"
+if [ -x "$RUST_CLI_DEBUG" ]; then
+    exec "$RUST_CLI_DEBUG" "$@"
+fi
 exec python3 "$REPO_ROOT/tests_v2/cmux.py" "$@"

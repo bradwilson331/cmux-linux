@@ -2,7 +2,7 @@
 Type=Application
 Name=cmux
 Comment=GPU-accelerated terminal multiplexer
-Exec=cmux-linux
+Exec=cmux-app
 Icon=cmux
 Terminal=false
 Categories=System;TerminalEmulator;
