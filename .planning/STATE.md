@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-03-28T02:09:20.157Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 09-03-PLAN.md
+last_updated: "2026-03-28T02:13:24.861Z"
 progress:
   total_phases: 10
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 51
-  completed_plans: 49
+  completed_plans: 50
 ---
 
 # Project State
@@ -89,6 +89,7 @@ Plan: 3 of 3
 | Phase 04 P07 | 191 | 2 tasks | 3 files |
 | Phase 09 P01 | 6 | 2 tasks | 6 files |
 | Phase 09 P02 | 3 | 2 tasks | 2 files |
+| Phase 09 P03 | 6 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -167,6 +168,8 @@ Recent decisions affecting current work:
 - [Phase 09]: Browser open-external and copy-url actions disabled until BrowserManager exposes current_url()
 - [Phase 09]: Added immutable active_split_engine() to AppState for copy/paste menu action closures
 - [Phase 09]: All header bar buttons use set_action_name for GIO action dispatch -- no manual click handlers
+- [Phase 09]: Sidebar + button outside ScrolledWindow per RESEARCH.md Pitfall 5
+- [Phase 09]: Terminal context menu on GLArea via GestureClick button-3, no Ghostty interference
 
 ### Roadmap Evolution
 
@@ -185,6 +188,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T02:09:18.671Z
-Stopped at: Completed 09-02-PLAN.md
+Last session: 2026-03-28T02:13:24.858Z
+Stopped at: Completed 09-03-PLAN.md
 Resume file: None

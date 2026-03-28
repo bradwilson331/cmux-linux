@@ -199,7 +199,7 @@ Plans:
 Plans:
 - [x] 09-01-PLAN.md — Config extension + GIO actions: UiConfig/HeaderBarConfig structs, menus.rs with action registration and menu models, v4_14 feature flag
 - [x] 09-02-PLAN.md — HeaderBar + hamburger menu: header_bar.rs module, toolbar buttons, window titlebar integration, CSS
-- [ ] 09-03-PLAN.md — Sidebar controls + context menus: '+' button, hover close, sidebar/terminal/browser right-click menus
+- [x] 09-03-PLAN.md — Sidebar controls + context menus: '+' button, hover close, sidebar/terminal/browser right-click menus
 **UI hint**: yes
 
 ## Progress
