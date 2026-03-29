@@ -1,566 +1,612 @@
-# Architecture Research
+# Architecture: Linux Packaging & Distribution
 
-**Domain:** Linux terminal multiplexer — Rust + GTK4 + Ghostty libghostty C API
-**Researched:** 2026-03-23
-**Confidence:** MEDIUM — Ghostty submodule not initialized; analysis based on ghostty.h C API contract, macOS embedding patterns, and GTK4/Rust ecosystem knowledge.
-
----
-
-## Critical Constraint: The libghostty Embedding API
-
-The `ghostty.h` file in this repo reveals a hard constraint that shapes the entire architecture.
-
-The current embedding API defines only two platform types:
-
-```c
-typedef struct { void* nsview; } ghostty_platform_macos_s;
-typedef struct { void* uiview;  } ghostty_platform_ios_s;
-```
-
-There is no `ghostty_platform_linux_s` or GTK widget pointer. This means the macOS embedding model — where the host app creates a native view and passes it to `ghostty_surface_new()` — does not have a direct Linux equivalent in the current public API.
-
-**What this means for the port:** The manaflow-ai fork must be extended to add a Linux platform variant to `ghostty_platform_u` that accepts a GDK/GTK drawing context or an OpenGL/Vulkan surface handle. This is a required prerequisite before any Rust GTK4 embedding can occur. This fork work is the single highest-risk item in the project.
-
-**Ghostty's own Linux app** bypasses this entirely — it is written in Zig and uses Ghostty's internal `apprt/gtk` module directly, not the embedding C API. That route is not available to a Rust host app.
+**Domain:** Linux packaging (.deb, .rpm, AppImage, Flatpak) + Gitea CI for a multi-language Rust/Zig/Go terminal multiplexer
+**Researched:** 2026-03-28
+**Confidence:** HIGH for .deb/.rpm/AppImage, MEDIUM for Flatpak (Zig build inside Flatpak sandbox is unusual), HIGH for Gitea Actions
 
 ---
 
-## How Ghostty Surfaces Work (C API Model)
+## Existing Build Chain (What We Have)
 
-Based on `ghostty.h`:
+The current build produces three artifacts from three languages:
 
-**Lifecycle:**
-1. `ghostty_init()` — one-time global init (must call before anything else)
-2. `ghostty_config_new()` / `ghostty_config_load_*()` / `ghostty_config_finalize()` — load config
-3. `ghostty_app_new(runtime_config, config)` — create one app instance; pass callback table
-4. `ghostty_surface_new(app, surface_config)` — create one surface per terminal pane
-5. App is responsible for pumping the event loop: `ghostty_app_tick()` must be called periodically
-6. `ghostty_surface_free()` / `ghostty_app_free()` — teardown
-
-**Callback contract (`ghostty_runtime_config_s`):**
-
-The host app provides these callbacks at `ghostty_app_new` time:
-- `wakeup_cb` — Ghostty signals it needs a redraw; host must schedule a draw call
-- `action_cb` — Ghostty requests a UI action (new tab, close, split, goto tab, set title, ring bell, etc.)
-- `read_clipboard_cb` / `write_clipboard_cb` — clipboard bridge
-- `close_surface_cb` — surface wants to close (child process exited)
-
-**Input contract:**
-- Host feeds keyboard: `ghostty_surface_key()`, `ghostty_surface_text()`
-- Host feeds mouse: `ghostty_surface_mouse_button()`, `ghostty_surface_mouse_pos()`, `ghostty_surface_mouse_scroll()`
-- Host feeds sizing: `ghostty_surface_set_size()`, `ghostty_surface_set_content_scale()`
-- Host feeds focus: `ghostty_surface_set_focus()`, `ghostty_surface_set_occlusion()`
-
-**Render contract:**
-- Ghostty renders internally; on macOS it uses Metal + IOSurface
-- On Linux it will need to render into an OpenGL or Vulkan context
-- `ghostty_surface_draw()` triggers a synchronous draw; `ghostty_surface_refresh()` marks dirty
-
-**Context types for surfaces:**
-```c
-GHOSTTY_SURFACE_CONTEXT_WINDOW = 0
-GHOSTTY_SURFACE_CONTEXT_TAB = 1
-GHOSTTY_SURFACE_CONTEXT_SPLIT = 2
 ```
-This context affects inherited config (font size can differ between window/tab/split contexts).
+ghostty submodule ──[zig build]──► ghostty/zig-out/lib/libghostty.a  (static lib)
+Cargo.toml        ──[cargo build]──► target/release/cmux-app          (GUI binary)
+                                     target/release/cmux              (CLI binary)
+daemon/remote/    ──[go build]──► cmuxd-remote                        (Go binary)
+```
+
+**Build order is strict:** Zig must complete before Cargo (build.rs links libghostty.a). Go is independent.
+
+Existing files that ship with the app:
+- `resources/cmux.desktop` -- freedesktop .desktop entry
+- `resources/cmux.svg` -- scalable icon (256x256 viewBox SVG)
+- `ghostty.h` -- C header for bindgen (build-time only)
+
+Missing files needed for packaging (must create):
+- `resources/com.cmuxterm.cmux.metainfo.xml` -- AppStream metadata (required for Flatpak, recommended for .deb/.rpm)
+- `resources/icons/` -- rasterized PNG icons at standard sizes (48x48 minimum, 128x128 and 256x256 recommended)
+- Flatpak manifest
+- Cargo.toml `[package.metadata.deb]` and `[package.metadata.generate-rpm]` sections
 
 ---
 
-## System Overview
+## Source Tree Organization for Packaging
+
+All packaging configuration lives in a new `packaging/` directory at the repo root, except for tool-specific metadata in Cargo.toml.
 
 ```
-┌───────────────────────────────────────────────────────────────────┐
-│                        GTK4 Main Thread                           │
-│                                                                   │
-│  ┌─────────────────────────────────────────────────────────────┐  │
-│  │                    AppShell (GtkApplicationWindow)          │  │
-│  │  ┌──────────────┐  ┌────────────────────────────────────┐   │  │
-│  │  │  Sidebar     │  │  WorkspaceView                     │   │  │
-│  │  │  (workspace  │  │  ┌──────────┐  ┌──────────────┐   │   │  │
-│  │  │   list)      │  │  │ PaneNode │  │  PaneNode    │   │   │  │
-│  │  │              │  │  │ (leaf)   │  │  (branch)    │   │   │  │
-│  │  │              │  │  │          │  │ ┌────┐ ┌───┐ │   │   │  │
-│  │  │              │  │  │ GhosttyWi│  │ │    │ │   │ │   │   │  │
-│  │  │              │  │  │ dget     │  │ └────┘ └───┘ │   │   │  │
-│  │  └──────────────┘  │  └──────────┘  └──────────────┘   │   │  │
-│  │                    └────────────────────────────────────┘   │  │
-│  └─────────────────────────────────────────────────────────────┘  │
-│                                                                   │
-│  ┌────────────────┐  ┌──────────────────┐  ┌──────────────────┐  │
-│  │  AppState      │  │  WorkspaceManager│  │  SplitEngine     │  │
-│  │  (Rc<RefCell>) │  │                  │  │  (tree layout)   │  │
-│  └────────────────┘  └──────────────────┘  └──────────────────┘  │
-│                                                                   │
-│  ┌────────────────────────────────────────────────────────────┐   │
-│  │              GhosttyBridge (unsafe FFI)                    │   │
-│  │  ghostty_app_t  +  per-surface ghostty_surface_t handles   │   │
-│  └────────────────────────────────────────────────────────────┘   │
-└───────────────────────────────────────────────────────────────────┘
-                              │ glib::idle_add / channel
-┌───────────────────────────────────────────────────────────────────┐
-│                    Tokio Async Runtime (separate thread pool)     │
-│                                                                   │
-│  ┌─────────────────────────────────────┐  ┌────────────────────┐  │
-│  │  SocketServer (UnixListener)        │  │  SessionPersist    │  │
-│  │  v1 line protocol + v2 JSON-RPC     │  │  (async file I/O)  │  │
-│  └─────────────────────────────────────┘  └────────────────────┘  │
-└───────────────────────────────────────────────────────────────────┘
+cmux-linux/
+├── resources/                          # EXISTING — desktop integration files
+│   ├── cmux.desktop                    # EXISTING — freedesktop .desktop file
+│   ├── cmux.svg                        # EXISTING — scalable icon
+│   └── com.cmuxterm.cmux.metainfo.xml  # NEW — AppStream metadata
+│
+├── packaging/                          # NEW — all packaging scripts and configs
+│   ├── build-all.sh                    # NEW — master script: build all formats
+│   ├── build-deb.sh                    # NEW — .deb build script
+│   ├── build-rpm.sh                    # NEW — .rpm build script
+│   ├── build-appimage.sh              # NEW — AppImage build script
+│   ├── build-flatpak.sh              # NEW — Flatpak build script
+│   ├── detect-deps.sh                 # NEW — ldd/readelf runtime dep scanner
+│   └── flatpak/                        # NEW — Flatpak-specific files
+│       ├── com.cmuxterm.cmux.yml       # NEW — Flatpak manifest
+│       └── flatpak-cargo-generator.py  # NEW — vendored script to generate cargo-sources.json
+│
+├── .gitea/                             # NEW — Gitea CI workflows
+│   └── workflows/
+│       ├── build-packages.yml          # NEW — triggered on tag push
+│       └── ci.yml                      # NEW — PR/push validation (Linux build + clippy)
+│
+├── Cargo.toml                          # MODIFY — add [package.metadata.deb] and [package.metadata.generate-rpm]
+└── ...
 ```
+
+### Why This Layout
+
+- `resources/` already exists with desktop files; adding metainfo.xml there keeps desktop integration files together.
+- `packaging/` isolates build scripts from the source tree. Each format has its own script for independent testing.
+- `.gitea/workflows/` is the Gitea Actions convention (mirrors `.github/workflows/`).
+- Flatpak manifests reference source modules; keeping the manifest in `packaging/flatpak/` avoids cluttering the repo root.
 
 ---
 
-## Component Boundaries
+## Component Architecture: How Each Format Works
 
-| Component | Responsibility | Communicates With |
-|-----------|---------------|-------------------|
-| **AppShell** | GTK4 `GtkApplicationWindow`, menu bar, keyboard shortcut routing, window lifecycle | WorkspaceManager, GhosttyBridge, SplitEngine |
-| **WorkspaceManager** | Ordered list of workspaces; create/close/switch/rename; owns workspace state | AppShell (UI updates), SessionPersistence, SocketServer (command dispatch) |
-| **SplitEngine** | Recursive tree of pane nodes (branch = split axis + ratio, leaf = surface ID); layout math | WorkspaceManager (owns tree per workspace), AppShell (triggers GTK layout) |
-| **GhosttyBridge** | Owns `ghostty_app_t`; creates/frees `ghostty_surface_t` handles; feeds input; routes action callbacks | All components via callback dispatch, GTK main thread only |
-| **GhosttyWidget** | GTK4 custom widget per surface; hosts OpenGL/Vulkan context; forwards GTK events to GhosttyBridge | GhosttyBridge (draw/input), SplitEngine (sizing) |
-| **SocketServer** | Tokio async `UnixListener`; parses v1/v2 protocol; sends commands to main thread via channel | WorkspaceManager via `glib::idle_add` dispatch channel |
-| **ConfigLoader** | Loads `~/.config/cmux/config.toml` and Ghostty config; provides merged config to all components | GhosttyBridge (ghostty config), AppShell (shortcuts), WorkspaceManager (defaults) |
-| **SessionPersistence** | Serialize/deserialize workspace+pane tree to `~/.local/share/cmux/session.json` | WorkspaceManager (save/restore), async file I/O via Tokio |
-| **NotificationStore** | Per-surface unread/attention state; parses OSC 99 / bell signals from action callbacks | GhosttyBridge (bell/notification actions), AppShell (sidebar badge rendering) |
+### Component 1: Shared Build Foundation
+
+All four package formats depend on the same compiled artifacts. A shared build step produces them:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Shared Build Stage                     │
+│                                                          │
+│  1. zig build (ghostty submodule → libghostty.a)        │
+│  2. cargo build --release (→ cmux-app, cmux binaries)   │
+│  3. go build (daemon/remote → cmuxd-remote)             │
+│                                                          │
+│  Outputs:                                                │
+│    target/release/cmux-app     (GUI application)         │
+│    target/release/cmux         (CLI tool)                │
+│    daemon/remote/cmuxd-remote  (SSH remote daemon)       │
+└─────────────────┬───────────────────────────────────────┘
+                  │
+    ┌─────────────┼─────────────┬─────────────┐
+    ▼             ▼             ▼             ▼
+ .deb          .rpm        AppImage      Flatpak
+```
+
+### Component 2: .deb Package (cargo-deb)
+
+**Tool:** `cargo-deb` (v3.6.x) -- reads metadata from `Cargo.toml [package.metadata.deb]`.
+
+**How it integrates:** cargo-deb calls `cargo build --release` internally, then packages the resulting binaries with debian metadata. Since our build requires the Zig step first, the build script must:
+1. Run `zig build` to produce libghostty.a
+2. Run `cargo deb` which handles cargo build + .deb packaging in one step
+
+**Cargo.toml additions:**
+
+```toml
+[package.metadata.deb]
+maintainer = "cmux team"
+copyright = "2025-2026 Manaflow AI"
+license-file = ["LICENSE", "0"]
+extended-description = "GPU-accelerated terminal multiplexer with tabs, splits, workspaces, and socket control"
+section = "utils"
+priority = "optional"
+depends = "$auto"  # auto-detect from ldd
+assets = [
+    ["target/release/cmux-app", "usr/bin/", "755"],
+    ["target/release/cmux", "usr/bin/", "755"],
+    ["daemon/remote/cmuxd-remote", "usr/libexec/cmux/", "755"],
+    ["resources/cmux.desktop", "usr/share/applications/", "644"],
+    ["resources/cmux.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+    ["resources/com.cmuxterm.cmux.metainfo.xml", "usr/share/metainfo/", "644"],
+]
+```
+
+**Key detail:** `$auto` dependency detection uses `dpkg-shlibdeps` to scan the binary's linked shared libraries and generate the correct `Depends:` line. This handles GTK4, fontconfig, freetype, libonig, libGL automatically.
+
+**Output:** `target/debian/cmux-linux_0.1.0-1_amd64.deb`
+
+### Component 3: .rpm Package (cargo-generate-rpm)
+
+**Tool:** `cargo-generate-rpm` (v0.15.x) -- reads metadata from `Cargo.toml [package.metadata.generate-rpm]`.
+
+**How it integrates:** Unlike cargo-deb, this tool does NOT run cargo build. It only packages pre-built binaries. The build script must:
+1. Run `zig build`
+2. Run `cargo build --release`
+3. Build cmuxd-remote with `go build`
+4. Run `cargo generate-rpm`
+
+**Cargo.toml additions:**
+
+```toml
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/cmux-app", dest = "/usr/bin/cmux-app", mode = "755" },
+    { source = "target/release/cmux", dest = "/usr/bin/cmux", mode = "755" },
+    { source = "daemon/remote/cmuxd-remote", dest = "/usr/libexec/cmux/cmuxd-remote", mode = "755" },
+    { source = "resources/cmux.desktop", dest = "/usr/share/applications/cmux.desktop", mode = "644" },
+    { source = "resources/cmux.svg", dest = "/usr/share/icons/hicolor/scalable/apps/cmux.svg", mode = "644" },
+    { source = "resources/com.cmuxterm.cmux.metainfo.xml", dest = "/usr/share/metainfo/com.cmuxterm.cmux.metainfo.xml", mode = "644" },
+]
+
+[package.metadata.generate-rpm.requires]
+gtk4 = ">= 4.12"
+fontconfig = "*"
+freetype = "*"
+```
+
+**Key difference from .deb:** No automatic dependency detection. Runtime deps must be listed explicitly. The `detect-deps.sh` script scans `ldd` output and maps .so names to RPM package names for the target distro.
+
+**Output:** `target/generate-rpm/cmux-linux-0.1.0-1.x86_64.rpm`
+
+### Component 4: AppImage (linuxdeploy)
+
+**Tool:** `linuxdeploy` + `linuxdeploy-plugin-gtk` -- bundles binary with all shared libraries into a portable executable.
+
+**How it integrates:** linuxdeploy takes a pre-built binary plus an AppDir structure and produces a self-contained AppImage. The GTK plugin handles bundling GTK4 schemas, icons, and theme engine libraries.
+
+**Build flow:**
+
+```
+1. Build all binaries (zig → cargo → go)
+2. Create AppDir structure:
+   AppDir/
+   ├── AppRun → usr/bin/cmux-app (symlink)
+   ├── cmux.desktop
+   ├── cmux.svg
+   └── usr/
+       ├── bin/
+       │   ├── cmux-app
+       │   └── cmux
+       ├── libexec/cmux/
+       │   └── cmuxd-remote
+       └── share/
+           ├── applications/cmux.desktop
+           ├── icons/hicolor/scalable/apps/cmux.svg
+           └── metainfo/com.cmuxterm.cmux.metainfo.xml
+3. Run linuxdeploy:
+   DEPLOY_GTK_VERSION=4 linuxdeploy \
+     --appdir AppDir \
+     --desktop-file resources/cmux.desktop \
+     --icon-file resources/cmux.svg \
+     --plugin gtk \
+     --output appimage
+```
+
+**Critical: GTK4 plugin.** Without `DEPLOY_GTK_VERSION=4`, the plugin defaults to GTK3 and will bundle wrong libraries. The plugin copies GLib schemas, pixbuf loaders, and GTK modules into the AppImage.
+
+**Output:** `cmux-x86_64.AppImage`
+
+### Component 5: Flatpak (flatpak-builder)
+
+**Tool:** `flatpak-builder` -- builds in an isolated sandbox from a manifest file.
+
+**This is the most complex format** because Flatpak's sandbox means:
+- No network access during build (all deps must be pre-declared)
+- Zig must be available inside the sandbox (not in standard SDK)
+- Go must be available inside the sandbox (not in standard SDK)
+- Cargo deps must be vendored via `flatpak-cargo-generator.py`
+
+**Manifest structure** (`packaging/flatpak/com.cmuxterm.cmux.yml`):
+
+```yaml
+app-id: com.cmuxterm.cmux
+runtime: org.gnome.Platform
+runtime-version: '46'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+  - org.freedesktop.Sdk.Extension.golang
+command: cmux-app
+
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri          # GPU access for OpenGL rendering
+  - --socket=pulseaudio   # terminal bell audio
+  - --share=network       # SSH workspaces, browser automation
+  - --talk-name=org.freedesktop.Notifications
+  - --filesystem=home     # terminal needs home directory access
+
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/golang/bin
+  env:
+    CARGO_HOME: /run/build/cmux/cargo
+    GOPATH: /run/build/cmux/go
+
+modules:
+  # Module 1: Zig toolchain (downloaded as tarball)
+  - name: zig
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 zig /app/bin/zig
+      - cp -r lib /app/lib/zig
+    sources:
+      - type: archive
+        url: https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
+        sha256: <pinned-hash>
+
+  # Module 2: cmux (builds ghostty, then Rust, then Go)
+  - name: cmux
+    buildsystem: simple
+    build-commands:
+      - cd ghostty && /app/bin/zig build -Dapp-runtime=none -Doptimize=ReleaseFast -Dgtk-x11=true -Dgtk-wayland=true
+      - cargo --offline fetch --manifest-path Cargo.toml
+      - cargo --offline build --release
+      - cd daemon/remote && go build -o cmuxd-remote .
+      - install -Dm755 target/release/cmux-app /app/bin/cmux-app
+      - install -Dm755 target/release/cmux /app/bin/cmux
+      - install -Dm755 daemon/remote/cmuxd-remote /app/libexec/cmux/cmuxd-remote
+      - install -Dm644 resources/cmux.desktop /app/share/applications/com.cmuxterm.cmux.desktop
+      - install -Dm644 resources/cmux.svg /app/share/icons/hicolor/scalable/apps/com.cmuxterm.cmux.svg
+      - install -Dm644 resources/com.cmuxterm.cmux.metainfo.xml /app/share/metainfo/com.cmuxterm.cmux.metainfo.xml
+    sources:
+      - type: dir
+        path: ../..
+      # Generated from: python3 flatpak-cargo-generator.py ../../Cargo.lock -o cargo-sources.json
+      - cargo-sources.json
+```
+
+**Flatpak-specific complications:**
+1. **Zig toolchain:** Not available in any Flatpak SDK extension. Must be downloaded as a tarball module and installed into `/app/bin/`.
+2. **Cargo offline build:** `flatpak-cargo-generator.py` parses `Cargo.lock` and produces a JSON file listing every crate as a downloadable source. This must be regenerated whenever `Cargo.lock` changes.
+3. **Go modules:** The `golang` SDK extension provides Go, but `go.sum` deps must also be vendored or pre-fetched. Simplest approach: `go mod vendor` in the source tree before building.
+4. **Ghostty submodule:** Must be included in the Flatpak source. The `type: dir` source pulls the full repo including submodules.
 
 ---
 
-## Ghostty Embedding Strategy (Concrete)
+## Desktop Integration File Specifications
 
-### Required Fork Work
+### .desktop File (EXISTING -- needs minor update)
 
-The manaflow-ai/ghostty fork needs a Linux platform entry added to the embedding API:
+Current `resources/cmux.desktop` is correct. One change needed: for Flatpak, the desktop file must use the app ID as filename (`com.cmuxterm.cmux.desktop`). The build scripts handle this rename at install time.
 
-```c
-// NEW: to be added to ghostty.h + Zig apprt/embedded.zig
-typedef struct {
-  // Pointer to the host's GDK/EGL surface or OpenGL context handle.
-  // Exact type determined during fork investigation.
-  void* gl_context;  // or: GdkGLContext*, EGLSurface, etc.
-} ghostty_platform_linux_s;
+### AppStream Metainfo (NEW)
+
+Required for Flatpak submission (Flathub), strongly recommended for .deb/.rpm (shows in GNOME Software/KDE Discover).
+
+`resources/com.cmuxterm.cmux.metainfo.xml`:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.cmuxterm.cmux</id>
+  <name>cmux</name>
+  <summary>GPU-accelerated terminal multiplexer</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>cmux is a terminal multiplexer with tabs, pane splits, workspaces,
+    SSH remote sessions, and programmatic socket control. Powered by
+    Ghostty's GPU-accelerated terminal engine.</p>
+  </description>
+  <launchable type="desktop-id">cmux.desktop</launchable>
+  <url type="homepage">https://cmuxterm.com</url>
+  <provides>
+    <binary>cmux-app</binary>
+    <binary>cmux</binary>
+  </provides>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="0.1.0" date="2026-03-28" />
+  </releases>
+</component>
 ```
 
-Until this exists, the embedding approach on Linux is **blocked**. The initial phase of the project must include a spike/investigation into what Ghostty's embedded renderer needs on Linux to render into a host-provided GL context.
+### Icons
 
-**Alternative approach to investigate:** Rather than extending the C embedding API, the host Rust app could instantiate a Ghostty GTK4 app runtime (`apprt/gtk`) as a library — treating Ghostty as the outer event loop and the Rust app as a plugin. This is architecturally inverted from the macOS model but may be the path of least resistance if Ghostty's GTK apprt exposes enough hooks. LOW confidence — needs investigation.
-
-### Preferred Embedding Model (if fork extension succeeds)
-
-Each terminal pane = one `ghostty_surface_t` + one custom `GtkWidget`:
+The existing `cmux.svg` works as the scalable icon. For compatibility with older icon themes and notification areas, generate rasterized PNGs:
 
 ```
-GhosttyWidget (GtkGLArea or GtkDrawingArea subclass)
-  owns: ghostty_surface_t
-  on realize: create GL context, call ghostty_surface_set_size()
-  on draw: call ghostty_surface_draw()
-  on key-press: call ghostty_surface_key()
-  on focus-in/out: call ghostty_surface_set_focus()
-  on resize: call ghostty_surface_set_size() + ghostty_surface_set_content_scale()
+resources/
+├── cmux.svg                              # scalable (already exists)
+└── icons/
+    ├── 48x48/apps/cmux.png              # minimum required
+    ├── 128x128/apps/cmux.png            # recommended
+    └── 256x256/apps/cmux.png            # recommended
 ```
 
-`GtkGLArea` is the natural host widget — it manages an OpenGL context and calls `realize`/`render` signals that map directly to the Ghostty surface lifecycle.
+Install paths in packages:
+- `/usr/share/icons/hicolor/scalable/apps/cmux.svg`
+- `/usr/share/icons/hicolor/48x48/apps/cmux.png`
+- `/usr/share/icons/hicolor/128x128/apps/cmux.png`
+- `/usr/share/icons/hicolor/256x256/apps/cmux.png`
 
-### Action Callback Routing
-
-Ghostty calls back into the host via `action_cb` for user-initiated actions (new tab, split, close, goto tab, etc.). These arrive on whatever thread Ghostty's internal renderer runs on — **not necessarily the GTK main thread**. The bridge must:
-
-1. Receive the action callback (any thread)
-2. Package it as a message and send it to the GTK main thread via `glib::idle_add` or a `glib::MainContext::channel`
-3. Execute the state mutation on the GTK main thread
-
-This is the primary concurrency boundary. All GTK and AppState mutations must happen on the GTK main thread.
-
----
-
-## Thread Model
-
-```
-GTK Main Thread                   Tokio Thread Pool
-─────────────────────────────     ──────────────────────────────────
-GtkApplication event loop         SocketServer accept loop
-AppState mutations                Command parsing (off-thread)
-GhosttyBridge calls               SessionPersistence async I/O
-SplitEngine layout
-Widget draw/input
-                │                              │
-                └──── glib::MainContext ────────┘
-                      channel (mpsc sender)
-                      idle_add callbacks
-```
-
-**Rule:** GTK APIs and `ghostty_*` calls are GTK-main-thread-only. Tokio tasks send work to the main thread via a `glib::MainContext::channel` sender; they never call GTK or Ghostty APIs directly.
-
-**Ghostty wakeup callback:** When Ghostty calls `wakeup_cb`, this may arrive from an internal Ghostty renderer thread. The wakeup handler must call `widget.queue_draw()` via `glib::idle_add` — never directly from the callback if called off-main-thread.
-
----
-
-## GTK4 Event Loop + Tokio Integration
-
-GTK4's GLib event loop and Tokio's async runtime cannot share the same thread pool directly. The standard Rust pattern:
-
-```rust
-fn main() {
-    // Start Tokio runtime on background threads
-    let rt = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(2)
-        .build()
-        .unwrap();
-    let _guard = rt.enter();
-
-    // Create a glib channel for cross-thread communication
-    let (sender, receiver) = glib::MainContext::channel(glib::Priority::DEFAULT);
-
-    // Attach receiver to GTK main context — runs on GTK main thread
-    receiver.attach(None, move |msg: AppCommand| {
-        handle_command(msg);
-        glib::ControlFlow::Continue
-    });
-
-    // Pass sender clone to Tokio tasks (SocketServer, etc.)
-    rt.spawn(socket_server(sender.clone()));
-    rt.spawn(session_persistence_loop(sender.clone()));
-
-    // GTK main loop — blocks until app exits
-    app.run();
-
-    // Shutdown Tokio after GTK exits
-    rt.shutdown_background();
-}
-```
-
-**Do not use** `tokio::main` as the outer runtime — GTK must own the main thread. Tokio runs on worker threads with `rt.spawn()`.
-
-**gtk4-rs `glib::MainContext::spawn_local`** can schedule async tasks on the GTK main thread for lightweight async work (e.g., a debounced save), but this is cooperative not preemptive and must not block.
-
----
-
-## Data Flow
-
-### Keyboard Input → Terminal
-
-```
-GtkWidget key-press-event (GTK main thread)
-  → GhosttyWidget::on_key_press()
-  → ghostty_surface_key(surface, key_event)     [C FFI, synchronous]
-  → Ghostty internal: key → PTY stdin
-  → Terminal renders → Ghostty wakeup_cb fires
-  → wakeup_cb: glib::idle_add(|| widget.queue_draw())
-  → GTK schedules redraw → GhosttyWidget::on_draw()
-  → ghostty_surface_draw(surface)               [C FFI, synchronous]
-```
-
-### Socket Command → State Change
-
-```
-Tokio: UnixListener accept() → read line(s)
-  → parse v1/v2 command (off-thread)
-  → validate args (off-thread)
-  → sender.send(AppCommand::WorkspaceCreate { ... })
-  → glib::MainContext receiver fires on GTK main thread
-  → WorkspaceManager::create_workspace()
-  → SplitEngine creates initial leaf node
-  → GhosttyBridge::create_surface()
-  → AppShell updates GTK widget tree
-  → sender.send(AppResponse::Ok { ... }) back to Tokio
-  → Tokio writes JSON response to socket
-```
-
-### Split Divider Drag → Layout Update
-
-```
-GtkGestureDrag on divider widget (GTK main thread)
-  → SplitEngine::update_ratio(node_id, delta)
-  → Returns new tree (immutable update)
-  → WorkspaceManager stores updated tree
-  → AppShell triggers GTK re-layout
-  → Each GhosttyWidget receives new allocation
-  → ghostty_surface_set_size() for each resized surface
-```
-
-### Session Persistence
-
-```
-WorkspaceManager state change
-  → debounce timer (glib::timeout_add)
-  → serialize AppState to SessionSnapshot struct
-  → sender.send(AppCommand::PersistSession(snapshot))
-  → Tokio task: serde_json::to_string() + async file write
-  → atomic write to ~/.local/share/cmux/session.json
-
-App launch:
-  → ConfigLoader reads session.json synchronously before GTK show
-  → WorkspaceManager::restore_from_snapshot()
-  → GhosttyBridge creates surfaces for each pane in snapshot
-  → initial_input replayed per pane (working dir, shell cmd)
-```
-
-### Terminal Output → Notification State
-
-```
-Ghostty internal: terminal output parsed
-  → action_cb fires: GHOSTTY_ACTION_RING_BELL or notification OSC 99
-  → GhosttyBridge packages: NotificationEvent { surface_id, kind }
-  → glib::idle_add delivers to GTK main thread
-  → NotificationStore::update(surface_id, kind)
-  → AppShell sidebar re-renders badge for affected workspace
-```
-
----
-
-## Recommended Project Structure
-
-```
-src/
-├── main.rs                    # Entry point: Tokio + GTK setup, channel wiring
-├── app/
-│   ├── mod.rs                 # AppShell: GtkApplicationWindow, menus
-│   ├── state.rs               # AppState: Rc<RefCell<AppStateInner>>, command enum
-│   └── commands.rs            # AppCommand enum (cross-thread message types)
-├── workspace/
-│   ├── mod.rs                 # WorkspaceManager: create/close/switch
-│   ├── workspace.rs           # Workspace struct: id, name, split_tree, notification state
-│   └── session.rs             # SessionSnapshot serde types, save/restore
-├── split/
-│   ├── mod.rs                 # SplitEngine: layout tree operations
-│   └── tree.rs                # SplitNode enum (Branch { axis, ratio, left, right }, Leaf { surface_id })
-├── ghostty/
-│   ├── mod.rs                 # GhosttyBridge: app/surface lifecycle, callback routing
-│   ├── ffi.rs                 # Raw bindgen bindings to ghostty.h
-│   ├── surface.rs             # GhosttyWidget (GtkGLArea subclass)
-│   └── callbacks.rs           # Action callback dispatch (wakeup, action, clipboard, close)
-├── socket/
-│   ├── mod.rs                 # SocketServer: Tokio UnixListener, request routing
-│   ├── v1.rs                  # V1 line protocol parser
-│   └── v2.rs                  # V2 JSON-RPC parser + handler
-├── config/
-│   ├── mod.rs                 # ConfigLoader: cmux TOML + Ghostty config
-│   └── shortcuts.rs           # Keybinding config → GTK shortcut registration
-├── notifications/
-│   └── mod.rs                 # NotificationStore: per-surface attention state
-└── persistence/
-    └── mod.rs                 # Async session file I/O (Tokio)
-```
-
-### Structure Rationale
-
-- **`ghostty/`:** All unsafe FFI isolated here. GhosttyBridge is the only component allowed to hold raw `ghostty_*` pointers. Everything else works with `SurfaceId` (a typed integer wrapper).
-- **`split/`:** Pure Rust layout logic with no GTK dependencies. Can be unit-tested in isolation. The tree is an immutable value — updates return a new tree.
-- **`socket/`:** Entirely async/Tokio. Zero GTK imports. Communicates via `AppCommand` channel only.
-- **`workspace/`:** Owns the split tree and notification state per workspace. GTK main thread only.
-- **`app/state.rs`:** `AppState` is `Rc<RefCell<...>>` (single-threaded GTK) not `Arc<Mutex<...>>`. Only GTK main thread touches it.
-
----
-
-## Architectural Patterns
-
-### Pattern 1: Surface ID Indirection
-
-**What:** GhosttyBridge owns all `ghostty_surface_t` pointers internally. Other components reference surfaces by `SurfaceId` (a newtype over u64). To perform a surface operation, they call `bridge.with_surface(id, |s| ghostty_surface_key(s, ...))`.
-
-**When to use:** Always. This prevents raw pointer leakage into non-FFI code and makes ownership explicit.
-
-**Trade-offs:** Slight indirection overhead; simplifies lifetime management significantly.
-
-```rust
-pub struct SurfaceId(u64);
-
-impl GhosttyBridge {
-    pub fn with_surface<F, R>(&self, id: SurfaceId, f: F) -> Option<R>
-    where F: FnOnce(ghostty_surface_t) -> R
-    {
-        self.surfaces.get(&id).map(|&ptr| f(ptr))
-    }
-}
-```
-
-### Pattern 2: GTK Main Thread Assertion
-
-**What:** All methods on `AppState`, `WorkspaceManager`, `GhosttyBridge`, and GTK widgets include a debug assertion that they are called on the main thread.
-
-**When to use:** Any type that owns GTK objects or `ghostty_*` handles.
-
-**Trade-offs:** Negligible runtime cost in debug builds; catches threading bugs during development.
-
-```rust
-fn assert_main_thread() {
-    debug_assert!(
-        glib::MainContext::default().is_owner(),
-        "Must be called on GTK main thread"
-    );
-}
-```
-
-### Pattern 3: Command Channel for Cross-Thread State Mutation
-
-**What:** All state mutations from async (Tokio) context are expressed as `AppCommand` enum variants sent through a `glib::MainContext::channel`. The GTK-side receiver is the single point of entry for async-originated mutations.
-
-**When to use:** Any Tokio task that needs to mutate app state or trigger UI changes.
-
-**Trade-offs:** All async→main operations are serialized through one channel; for high-frequency telemetry (socket polling), use a bounded channel with backpressure.
-
-### Pattern 4: Immutable Split Tree Updates
-
-**What:** `SplitNode` is an immutable recursive enum. Every split/close/resize operation returns a new tree root. WorkspaceManager stores the current root and replaces it atomically.
-
-**When to use:** All layout operations.
-
-**Trade-offs:** Clone cost for large trees (typically shallow — rarely >20 nodes); enables trivial undo/session snapshot via tree comparison.
-
-```rust
-pub enum SplitNode {
-    Leaf { surface_id: SurfaceId },
-    Branch { axis: SplitAxis, ratio: f64, left: Box<SplitNode>, right: Box<SplitNode> },
-}
+Generate PNGs from SVG at build time with `rsvg-convert` (from librsvg):
+```bash
+for size in 48 128 256; do
+  rsvg-convert -w $size -h $size resources/cmux.svg -o resources/icons/${size}x${size}/apps/cmux.png
+done
 ```
 
 ---
 
-## Build Order / Dependency Graph
+## Install Path Conventions
 
-Components must be built in this order because of hard dependencies:
+All formats install to the same logical paths:
+
+| File | Install Path | Notes |
+|------|-------------|-------|
+| cmux-app | `/usr/bin/cmux-app` | GUI binary |
+| cmux | `/usr/bin/cmux` | CLI binary |
+| cmuxd-remote | `/usr/libexec/cmux/cmuxd-remote` | SSH remote daemon (not in PATH) |
+| cmux.desktop | `/usr/share/applications/cmux.desktop` | Desktop entry |
+| cmux.svg | `/usr/share/icons/hicolor/scalable/apps/cmux.svg` | Scalable icon |
+| metainfo.xml | `/usr/share/metainfo/com.cmuxterm.cmux.metainfo.xml` | AppStream metadata |
+
+Flatpak uses `/app/` prefix instead of `/usr/`. AppImage bundles everything inside the AppDir.
+
+---
+
+## Build Order (Full Pipeline)
 
 ```
-1. ghostty/ffi.rs           — bindgen from ghostty.h; no Rust deps
-      ↓
-2. ghostty/callbacks.rs     — defines action callback types; depends on ffi
-      ↓
-3. split/tree.rs            — pure Rust; no external deps
-      ↓
-4. app/commands.rs          — AppCommand enum; depends on split/tree (for layout commands)
-      ↓
-5. ghostty/surface.rs       — GtkGLArea subclass; depends on ffi + commands
-6. ghostty/mod.rs           — GhosttyBridge; depends on surface + callbacks
-      ↓
-7. notifications/mod.rs     — depends on commands (for bell/notification actions)
-8. workspace/workspace.rs   — depends on split/tree + notifications
-9. workspace/session.rs     — serde types; depends on workspace
-10. workspace/mod.rs        — WorkspaceManager; depends on workspace + session + GhosttyBridge
-      ↓
-11. config/mod.rs            — ConfigLoader; depends on workspace defaults
-12. socket/v1.rs + v2.rs    — protocol parsers; depend on commands
-13. socket/mod.rs            — SocketServer; depends on v1/v2 + commands
-      ↓
-14. persistence/mod.rs       — depends on workspace/session
-      ↓
-15. app/mod.rs               — AppShell; depends on everything
-      ↓
-16. main.rs                  — wires Tokio + GTK + channel; entry point
+Phase 1: Environment Setup
+├── Install system deps (GTK4-dev, Zig 0.15.2, Go, Rust)
+└── Install packaging tools (cargo-deb, cargo-generate-rpm, linuxdeploy)
+
+Phase 2: Compile Artifacts (sequential where noted)
+├── [MUST BE FIRST] cd ghostty && zig build -Dapp-runtime=none -Doptimize=ReleaseFast -Dgtk-x11=true -Dgtk-wayland=true
+├── [AFTER ZIG]     cargo build --release  (produces cmux-app + cmux)
+└── [PARALLEL OK]   cd daemon/remote && go build -o cmuxd-remote .
+
+Phase 3: Package (all parallel, all read-only on build artifacts)
+├── cargo deb --no-build              (.deb — uses pre-built binary)
+├── cargo generate-rpm                (.rpm — uses pre-built binary)
+├── linuxdeploy + appimagetool       (AppImage)
+└── flatpak-builder                   (Flatpak — rebuilds inside sandbox)
 ```
 
-**Phase implications:**
-- Phases 1-2: Items 1-4 (FFI scaffolding + split tree — can be built and tested without GTK)
-- Phase 3: Items 5-10 (GTK widget + workspace management — first runnable app)
-- Phase 4: Items 11-13 (config + socket server — CLI-controllable app)
-- Phase 5: Items 14-16 (persistence + polish)
+**Key constraint:** Flatpak cannot reuse Phase 2 artifacts because it builds in its own sandbox. The Flatpak build repeats the full compile chain inside `flatpak-builder`. The other three formats all reuse the same `target/release/` binaries.
 
 ---
 
-## Integration Points
+## Gitea Actions Runner Architecture
 
-### External: libghostty (C FFI)
+### How Gitea Actions Works
 
-| Integration | Pattern | Notes |
-|-------------|---------|-------|
-| Build | `build.rs` with `bindgen` on `ghostty.h` + link to `libghostty.a` | Zig build step required first; see CLAUDE.md |
-| Thread safety | `ghostty_*` calls: GTK main thread only | `ghostty_app_t` and `ghostty_surface_t` are not `Send`; wrap in `Rc` not `Arc` |
-| Render loop | GTK drives redraws via `GtkGLArea::render` signal | Do not add independent render loop — causes typing lag (per macOS CLAUDE.md pitfall) |
+Gitea Actions uses `act_runner` -- a standalone binary that polls the Gitea server for jobs and executes them. It is architecturally identical to GitHub Actions self-hosted runners.
 
-### External: GTK4 (gtk4-rs)
+```
+┌──────────────────────┐         ┌──────────────────────────┐
+│   Gitea Server       │  HTTP   │    act_runner             │
+│   192.168.7.6:8418   │◄───────►│    (on build machine)     │
+│                      │  poll   │                            │
+│   - Stores workflows │         │   Execution modes:         │
+│   - Dispatches jobs  │         │   ├── Docker (default)     │
+│   - Receives results │         │   ├── Host (bare metal)    │
+│   - Hosts packages   │         │   └── LXC                  │
+└──────────────────────┘         └──────────────────────────┘
+```
 
-| Integration | Pattern | Notes |
-|-------------|---------|-------|
-| Custom widget | `GtkGLArea` subclass via `glib::subclass` | Use `glib-macros::Properties` for surface_id binding |
-| Event handling | `GtkEventControllerKey`, `GtkGestureClick`, `GtkEventControllerMotion` | Attach to each GhosttyWidget instance |
-| Cross-thread | `glib::MainContext::channel` + `glib::idle_add` | Never call GTK APIs from Tokio threads |
+### Runner Registration
 
-### Internal: Socket ↔ AppState
+```bash
+# 1. Download act_runner binary
+wget https://gitea.com/gitea/act_runner/releases/latest/download/act_runner-linux-amd64
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Tokio → GTK | `glib::MainContext::channel` mpsc sender | Bounded channel with backpressure for high-frequency commands |
-| GTK → Tokio | `tokio::sync::oneshot` via `AppCommand` response field | Socket server awaits response for synchronous RPC methods |
-| GhosttyBridge → GTK | `glib::idle_add` from Ghostty callbacks | Wakeup and action callbacks may fire from non-main threads |
+# 2. Generate config
+./act_runner generate-config > config.yaml
+
+# 3. Register with Gitea instance (get token from Gitea admin UI)
+./act_runner register \
+  --instance http://192.168.7.6:8418 \
+  --token <registration-token> \
+  --name linux-builder \
+  --labels ubuntu-latest:host
+
+# 4. Run as daemon (systemd service recommended)
+./act_runner daemon --config config.yaml
+```
+
+### Runner Mode: Host vs Docker
+
+**Use `host` mode** for this project because:
+1. Zig build of Ghostty requires ~4GB RAM and takes minutes -- Docker container spin-up adds overhead
+2. The runner needs GPU access for testing (OpenGL)
+3. System dependencies (GTK4-dev, libfontconfig-dev, etc.) are easier to manage on the host than in custom Docker images
+4. Flatpak builds require access to the host's flatpak installation
+
+**Labels configuration:** The runner registers with labels that map to `runs-on:` in workflows. Use `ubuntu-latest:host` so existing GitHub Actions workflow syntax works.
+
+### Workflow Syntax (Gitea vs GitHub)
+
+Gitea Actions uses the same YAML syntax as GitHub Actions with these differences relevant to this project:
+
+| Feature | GitHub Actions | Gitea Actions |
+|---------|---------------|---------------|
+| Workflow dir | `.github/workflows/` | `.gitea/workflows/` |
+| `uses:` actions | `actions/checkout@v4` | Same, or full URL: `https://github.com/actions/checkout@v4` |
+| `concurrency:` | Supported | **Ignored** -- must handle manually |
+| `runs-on:` | Complex matrix | Simple string or array only |
+| Secrets | `${{ secrets.X }}` | Same syntax |
+| Package registry | N/A | Built-in Debian/RPM/Generic registries |
+| Cache | `actions/cache@v4` | Supported (same syntax) |
+
+### Gitea Package Registry Upload
+
+Gitea has built-in package registries for Debian and RPM. Upload from CI:
+
+```bash
+# Debian package
+curl --user "${GITEA_USER}:${GITEA_TOKEN}" \
+  --upload-file target/debian/cmux-linux_*.deb \
+  "http://192.168.7.6:8418/api/packages/${GITEA_USER}/debian/pool/jammy/main/upload"
+
+# RPM package
+curl --user "${GITEA_USER}:${GITEA_TOKEN}" \
+  --upload-file target/generate-rpm/cmux-linux-*.rpm \
+  "http://192.168.7.6:8418/api/packages/${GITEA_USER}/rpm/upload"
+
+# AppImage + Flatpak bundle (generic registry)
+curl --user "${GITEA_USER}:${GITEA_TOKEN}" \
+  --upload-file cmux-x86_64.AppImage \
+  "http://192.168.7.6:8418/api/packages/${GITEA_USER}/generic/cmux/${VERSION}/cmux-x86_64.AppImage"
+```
+
+Users can then add the Gitea instance as an apt/dnf repository:
+```bash
+# Debian/Ubuntu
+echo "deb http://192.168.7.6:8418/api/packages/USER/debian jammy main" | sudo tee /etc/apt/sources.list.d/cmux.list
+sudo apt update && sudo apt install cmux-linux
+
+# Fedora/RHEL
+dnf config-manager --add-repo http://192.168.7.6:8418/api/packages/USER/rpm.repo
+dnf install cmux-linux
+```
 
 ---
 
-## Architectural Risks
+## Gitea CI Workflow Design
 
-### Risk 1: Linux Platform Missing from Embedding API (HIGH severity)
+```yaml
+# .gitea/workflows/build-packages.yml
+name: Build Packages
 
-**What:** `ghostty.h` has no `ghostty_platform_linux_s`. The surface config only supports macOS/iOS platform pointers. Without a Linux platform variant, `ghostty_surface_new()` cannot be called from a Rust/GTK host.
+on:
+  push:
+    tags:
+      - 'v*'
 
-**Mitigation:** First milestone deliverable must be a fork investigation spike: either (a) add a Linux GTK platform struct to the embedding API in manaflow-ai/ghostty, or (b) determine if Ghostty's GTK apprt can be used as a library with the Rust app driving the GLib main loop.
+jobs:
+  build:
+    runs-on: ubuntu-latest  # maps to host runner label
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-**Detection:** If this is not resolved, no terminal surfaces can be displayed. It will block Phase 3 entirely.
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libclang-dev libfontconfig1-dev \
+            libfreetype6-dev libonig-dev libgl-dev librsvg2-bin
 
-### Risk 2: Ghostty Renderer Thread Model on Linux (MEDIUM severity)
+      - name: Install Zig 0.15.2
+        run: |
+          curl -fSL "https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz" -o /tmp/zig.tar.xz
+          tar xf /tmp/zig.tar.xz -C /tmp
+          sudo cp /tmp/zig-x86_64-linux-0.15.2/zig /usr/local/bin/
+          sudo cp -r /tmp/zig-x86_64-linux-0.15.2/lib /usr/local/lib/zig
 
-**What:** On macOS, Ghostty renders via a CVDisplayLink callback on a separate Metal renderer thread. On Linux (GTK4), rendering likely uses a GDK frame clock or GtkGLArea render signal. The wakeup callback threading model may differ from macOS, affecting how `glib::idle_add` should be used.
+      - name: Build libghostty
+        run: cd ghostty && zig build -Dapp-runtime=none -Doptimize=ReleaseFast -Dgtk-x11=true -Dgtk-wayland=true
 
-**Mitigation:** After the embedding API is established, validate that `wakeup_cb` → `queue_draw()` round-trip produces correct rendering without stutter. Test with high-frequency terminal output (e.g., `cat /dev/urandom | head -c 10M`).
+      - name: Build Rust binaries
+        run: cargo build --release
 
-### Risk 3: GTK4 + Tokio Event Loop Contention (MEDIUM severity)
+      - name: Build Go remote daemon
+        run: cd daemon/remote && go build -o cmuxd-remote .
 
-**What:** GLib and Tokio both want to drive their own event loops. Integrating them requires care — blocking the GTK main thread (e.g., with `block_on`) will freeze the UI.
+      - name: Build .deb
+        run: cargo deb --no-build
 
-**Mitigation:** Use the `glib::MainContext::channel` pattern exclusively. Never use `tokio::runtime::Handle::current().block_on()` from GTK callbacks. For async GTK work, use `glib::MainContext::spawn_local` with non-blocking futures.
+      - name: Build .rpm
+        run: cargo generate-rpm
 
-### Risk 4: Ghostty Config API Ownership (LOW severity)
+      - name: Build AppImage
+        run: ./packaging/build-appimage.sh
 
-**What:** `ghostty_config_t` is heap-allocated by Ghostty and must be freed with `ghostty_config_free`. On Linux, the config file path conventions differ from macOS (`~/.config/ghostty/` vs macOS app support dir). The Rust config layer needs to bridge cmux's own config to Ghostty's config loader.
+      - name: Upload to Gitea packages
+        run: ./packaging/upload-packages.sh
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
 
-**Mitigation:** Call `ghostty_config_load_default_files()` to handle platform-specific defaults, then apply cmux overrides with `ghostty_config_load_file()` for a cmux-managed config fragment.
+      - name: Create release with assets
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          # Gitea release creation via API
+```
 
 ---
 
-## Anti-Patterns
+## Data Flow: Source to Package
 
-### Anti-Pattern 1: Independent Render Loop
+```
+Source Tree
+    │
+    ├── ghostty/ (submodule)
+    │     └──[zig build]──► ghostty/zig-out/lib/libghostty.a
+    │
+    ├── src/ (Rust)
+    │     └──[cargo build --release]──► target/release/cmux-app
+    │                                    target/release/cmux
+    │
+    ├── daemon/remote/ (Go)
+    │     └──[go build]──► daemon/remote/cmuxd-remote
+    │
+    ├── resources/
+    │     ├── cmux.desktop ──────────────────────────┐
+    │     ├── cmux.svg ─────────────────────────────┐│
+    │     └── com.cmuxterm.cmux.metainfo.xml ──────┐││
+    │                                              │││
+    └── Cargo.toml                                 │││
+          ├── [package.metadata.deb] ──► cargo-deb │││
+          │     └──► target/debian/cmux-linux_*.deb ◄┘│
+          │                                          ││
+          ├── [package.metadata.generate-rpm]         ││
+          │     └──► cargo generate-rpm              ││
+          │           └──► target/generate-rpm/*.rpm ◄┘│
+          │                                           │
+          └── packaging/build-appimage.sh             │
+                └──► linuxdeploy + plugin-gtk        │
+                      └──► cmux-x86_64.AppImage ◄────┘
+```
 
-**What people do:** Call `ghostty_surface_draw()` on a timer or in a background thread to ensure smooth rendering.
+---
 
-**Why it's wrong:** Causes input latency (same macOS pitfall documented in CLAUDE.md). Ghostty's wakeup callback already signals when a redraw is needed. Adding an independent loop creates double-renders and competes with GTK's frame clock.
+## Scalability Considerations
 
-**Do this instead:** Only draw in response to wakeup_cb → `queue_draw()` → GtkGLArea `render` signal.
-
-### Anti-Pattern 2: Shared Mutable State Across Threads
-
-**What people do:** Wrap `AppState` in `Arc<Mutex<>>` so Tokio tasks can mutate it directly.
-
-**Why it's wrong:** GTK objects (`GtkWidget`, etc.) are not `Send`. Ghostty surface handles are not thread-safe. `Arc<Mutex<AppState>>` that contains GTK refs will panic or cause UB when accessed from Tokio threads.
-
-**Do this instead:** `AppState` is `Rc<RefCell<>>` (main thread only). Tokio tasks send `AppCommand` messages via channel. The GTK-side receiver applies mutations on the main thread.
-
-### Anti-Pattern 3: One GhosttyBridge Per Surface
-
-**What people do:** Create a separate `ghostty_app_t` for each terminal surface to avoid coordination.
-
-**Why it's wrong:** `ghostty_app_t` represents the entire application runtime including config, font cache, and global keybind state. Multiple app instances cause config duplication, memory bloat, and incorrect keybind behavior.
-
-**Do this instead:** One `ghostty_app_t` per process. Multiple `ghostty_surface_t` per app (one per pane).
-
-### Anti-Pattern 4: Blocking Socket Responses on GTK Main Thread
-
-**What people do:** Handle socket commands synchronously on the GTK main thread by blocking until a response is ready.
-
-**Why it's wrong:** A slow or misbehaving socket client can freeze the entire UI.
-
-**Do this instead:** Socket parsing and validation happens entirely in Tokio. State queries that need the main thread use a `oneshot::channel` — the Tokio task awaits the oneshot while the GTK-side handler computes the result and sends it back. GTK main thread is never blocked.
+| Concern | Now (single arch) | Later (multi-arch) |
+|---------|-------------------|-------------------|
+| Architectures | x86_64 only | Add aarch64 via cross-compilation or QEMU runner |
+| Zig cross-compile | Not needed | Zig natively cross-compiles; add `-Dtarget=aarch64-linux-gnu` |
+| Cargo cross-compile | Not needed | Use `cross` tool or `cargo-zigbuild` |
+| Go cross-compile | Not needed | `GOARCH=arm64 go build` |
+| CI runners | 1 host runner | Add aarch64 runner or use QEMU in Docker |
 
 ---
 
 ## Sources
 
-- `ghostty.h` in this repo — definitive C API contract (confidence: HIGH, first-party)
-- `.planning/codebase/ARCHITECTURE.md` — macOS embedding patterns to mirror (confidence: HIGH, first-party analysis)
-- `docs/ghostty-fork.md` — manaflow fork scope and current patches (confidence: HIGH, first-party)
-- `docs/v2-api-migration.md` — V2 JSON-RPC wire protocol (confidence: HIGH, first-party)
-- `Sources/GhosttyTerminalView.swift` — macOS rendering contract patterns (confidence: HIGH, first-party)
-- `Sources/TerminalController.swift` — macOS socket server patterns (confidence: HIGH, first-party)
-- gtk4-rs book (https://gtk-rs.org/gtk4-rs/stable/latest/book/) — GTK4 Rust patterns (confidence: MEDIUM, not verified during this session due to WebFetch restriction)
-- GLib main context channel pattern — standard gtk-rs cross-thread communication (confidence: MEDIUM, based on training knowledge, needs verification against current gtk4-rs docs)
+- [cargo-deb](https://github.com/kornelski/cargo-deb) -- Debian package builder for Rust (HIGH confidence, official repo)
+- [cargo-generate-rpm](https://crates.io/crates/cargo-generate-rpm) -- RPM package builder for Rust (HIGH confidence, crates.io)
+- [linuxdeploy](https://docs.appimage.org/packaging-guide/from-source/linuxdeploy-user-guide.html) -- AppImage packaging tool (HIGH confidence, official docs)
+- [linuxdeploy-plugin-gtk](https://github.com/linuxdeploy/linuxdeploy-plugin-gtk) -- GTK bundling for AppImage (HIGH confidence, official repo)
+- [Flatpak manifest docs](https://docs.flatpak.org/en/latest/manifests.html) -- Flatpak build specification (HIGH confidence, official docs)
+- [How to Flatpak a Rust application](https://belmoussaoui.com/blog/8-how-to-flatpak-a-rust-application/) -- Rust-specific Flatpak guide (MEDIUM confidence, community)
+- [Gitea Actions docs](https://docs.gitea.com/usage/actions/overview) -- CI system documentation (HIGH confidence, official docs)
+- [Gitea vs GitHub Actions comparison](https://docs.gitea.com/usage/actions/comparison) -- Syntax differences (HIGH confidence, official docs)
+- [Gitea Debian package registry](https://docs.gitea.com/usage/packages/debian) -- Package hosting API (HIGH confidence, official docs)
+- [Gitea RPM package registry](https://docs.gitea.com/next/usage/packages/rpm) -- RPM hosting API (HIGH confidence, official docs)
+- [Freedesktop icon theme spec](https://specifications.freedesktop.org/icon-theme/latest/) -- Icon installation paths (HIGH confidence, official spec)
+- [Freedesktop desktop entry spec](https://specifications.freedesktop.org/desktop-entry/desktop-entry-spec-latest.html) -- .desktop file format (HIGH confidence, official spec)
 
 ---
 
-*Architecture research for: cmux Linux port (Rust + GTK4 + Ghostty)*
-*Researched: 2026-03-23*
+*Architecture research for: cmux Linux Packaging & Distribution (v1.1 milestone)*
+*Researched: 2026-03-28*

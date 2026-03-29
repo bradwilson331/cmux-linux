@@ -1,161 +1,191 @@
-# Technology Stack
+# Technology Stack: Linux Packaging & Distribution
 
-**Project:** cmux-linux
-**Researched:** 2026-03-23
-**Overall confidence:** MEDIUM (C API analysis is HIGH from source; gtk4-rs/Rust ecosystem from training data + crates.io knowledge, capped at MEDIUM without live verification)
-
----
-
-## Critical Pre-Decision: The Embedded C API Does Not Support Linux
-
-Before listing the stack, this constraint must be understood because it shapes every other decision.
-
-The `ghostty.h` C API in this repo (and upstream Ghostty) only defines two platform variants:
-
-```c
-typedef enum {
-  GHOSTTY_PLATFORM_INVALID,
-  GHOSTTY_PLATFORM_MACOS,
-  GHOSTTY_PLATFORM_IOS,
-} ghostty_platform_e;
-```
-
-The `ghostty_surface_config_s.platform` union only has `macos` (void* nsview) and `ios` (void* uiview) members. There is no Linux/GTK4 platform entry. The `#ifdef __APPLE__` blocks guard Metal-specific surface functions.
-
-**Conclusion (HIGH confidence — from source):** The embedded C API (`ghostty_surface_new` + platform union) cannot embed Ghostty terminal surfaces into a custom Linux application today. On Linux, Ghostty operates via its own full GTK4 application runtime (`src/apprt/gtk`), not via the embedding API.
-
-**Implication:** The Linux port cannot simply call `ghostty_surface_new` with a GTK4 widget pointer the way macOS calls it with an NSView. There are three viable approaches, ranked:
-
-| Approach | What it means | Feasibility |
-|----------|---------------|-------------|
-| A: Extend libghostty C API for Linux | Add `GHOSTTY_PLATFORM_GTK4` + GdkSurface/GtkWidget pointer to the platform union; build libghostty.so with an embedded GTK4 apprt | HIGH effort, requires Zig + upstream contribution |
-| B: Fork Ghostty's GTK4 apprt as a multi-surface host | Instead of a separate Rust app, add multi-tab/split/socket control to Ghostty's own GTK4 app, written in Zig + C | Not Rust, departs from project goals |
-| C: IPC/Process approach | Run multiple Ghostty instances, position their windows inside a Rust GTK4 container via GtkSocket/XEmbed or Wayland foreign-toplevel protocols | Fragile on Wayland (XEmbed is X11-only); not recommended |
-
-**Recommended path: Approach A.** Extend the Ghostty manaflow-ai fork to add a Linux embedded apprt (`GHOSTTY_PLATFORM_GTK4`) that accepts a `GtkWidget*` (specifically a `GtkGLArea` or `GdkSurface`), builds as libghostty.so on Linux, and exposes the same C API surface as macOS. This is significant upfront work but the only path to a clean multi-surface Rust app matching the macOS architecture. The fork infrastructure already exists for macOS-specific patches; this is the same mechanism.
+**Project:** cmux-linux v1.1 Packaging & Distribution
+**Researched:** 2026-03-28
+**Scope:** New tools for .deb, .rpm, AppImage, Flatpak packaging and Gitea CI. Does NOT re-research existing Rust/GTK4/Ghostty stack (validated in v1.0).
 
 ---
 
 ## Recommended Stack
 
-### Core Language
+### .deb Packaging (Debian/Ubuntu)
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| Rust | 1.77+ (stable) | Application layer | Memory safety, strong GTK4 bindings, system programming, no GC |
-| Zig | 0.14+ | Build libghostty.so | Same toolchain already used for macOS GhosttyKit; required to build Ghostty |
+| cargo-deb | 3.6.x | Generate .deb from Cargo.toml metadata | Native Rust integration -- reads `[package.metadata.deb]` from Cargo.toml, handles asset layout, dependency declaration, and DEBIAN/control generation in one step. Actively maintained (3.6.3 released ~Feb 2026). Standard tool for Rust binary .deb packaging. |
+| dpkg-deb | system | Underlying .deb assembly (used by cargo-deb internally) | Already present on Debian/Ubuntu build hosts. cargo-deb shells out to it. No separate install needed. |
 
-### UI Framework
+**Why cargo-deb over raw dpkg-deb:** Eliminates manual DEBIAN/control, postinst/postrm, and directory structure creation. Reads version, description, license from Cargo.toml. RustDesk, Alacritty, and other Rust terminal apps use this approach.
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| gtk4-rs (`gtk4` crate) | 0.9.x | Application shell — sidebar, tab bar, split layout, dialogs | GTK4 is the only viable choice for embedding Ghostty terminal surfaces on Linux. GTK4 widgets host `GtkGLArea` surfaces where Ghostty renders via OpenGL/Vulkan. No other Rust GUI framework (iced, egui, slint) can host a GTK4 GdkSurface. |
-| gtk4-rs (`gdk4` crate) | 0.9.x | GDK display, surface, and event plumbing | Companion crate; needed for content scale, focus, input events |
-| gtk4-rs (`glib` crate) | 0.20.x | GLib main loop integration, signals | GTK4 requires GLib event loop; used for idle/timeout callbacks |
+**Why NOT debcargo:** debcargo packages Rust crate libraries into Debian archives (one .deb per crate dependency). Wrong tool for packaging a binary application.
 
-**Why NOT iced:** iced is an Elm-style Rust framework backed by wgpu (its own GPU renderer). It has no concept of hosting a GTK4 widget or GdkSurface. iced cannot receive GTK4 input events on behalf of embedded native widgets. To use iced, you would need to also run a GTK4 main loop in parallel and bridge input/render — this is architecturally broken and not supported. **iced is eliminated.** (MEDIUM confidence — based on iced architecture as of 0.12.x; confirmed by the fact that iced's renderer bypasses GTK entirely.)
-
-**Why NOT egui:** Same issue — egui runs on wgpu or glow, not GTK4. Cannot host GTK4 surfaces.
-
-**Why NOT slint:** Slint has a GTK4 backend in experimental state, but it renders its own widgets — it cannot embed a `GtkGLArea` from Ghostty. Eliminated.
-
-**gtk4-rs maturity:** gtk-rs is the official Rust binding project maintained by the GTK team. The `gtk4` crate follows GTK4's release cadence. As of GTK 4.14/4.16 (2024-2025), the bindings are stable and production-ready. Used in production by GNOME apps written in Rust (e.g., Loupe image viewer). (MEDIUM confidence — from training data; verify exact version at `https://crates.io/crates/gtk4` before pinning.)
-
-### Terminal Engine Integration
+### .rpm Packaging (Fedora/RHEL/openSUSE)
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| libghostty (custom Linux build) | manaflow fork | Terminal rendering, PTY management, VTE protocol | Must remain Ghostty; this is a hard project constraint |
-| bindgen | 0.70.x | Generate Rust FFI bindings from ghostty.h | Automated, tracks API changes; alternative is manual `unsafe extern "C"` bindings |
-| `cc` crate | 1.x | Link libghostty.so from build.rs | Standard approach for linking C libraries in Rust |
+| cargo-generate-rpm | 0.18.x+ | Generate .rpm from Cargo.toml metadata | Same philosophy as cargo-deb: reads `[package.metadata.generate-rpm]` from Cargo.toml, produces binary RPM without a .spec file or rpmbuild toolchain. Single command after `cargo build --release`. |
 
-**FFI approach — bindgen vs manual:**
-- **bindgen** (recommended): Run at build time via `build.rs`. Automatically regenerates when `ghostty.h` changes. Handles the extensive enum/struct surface of the API without manual error. The `ghostty.h` is stable enough for automated bindings.
-- Manual FFI: Only appropriate if bindgen output needs heavy curation. Given ~1,169 lines of `ghostty.h` with ~100 function declarations and many enums/structs, manual is too error-prone.
+**Why NOT rpmbuild:** Requires a full .spec file, mock chroot setup, and rpmbuild installation. Heavyweight for self-distributed binary packages.
 
-**Linux surface embedding (what needs to be built):** The `ghostty_surface_config_s.platform` union needs a new `linux` variant containing a `GtkWidget*` (specifically the `GtkGLArea` that Ghostty will render into). The Zig embedded apprt on Linux will need to:
-1. Accept the `GtkGLArea` widget pointer
-2. Set up OpenGL context via GDK
-3. Connect GTK4 `realize`/`resize`/`render` signals to Ghostty's renderer
-4. Forward key/mouse events from GTK4 signal handlers to `ghostty_surface_key`/`ghostty_surface_mouse_pos` etc.
+**Why NOT cargo-rpm:** End-of-life since 2022. Its own README redirects to cargo-generate-rpm.
 
-This mirrors what the macOS NSView does: the host app provides the view, Ghostty renders into it via the platform's GPU API.
+**Why NOT rust2rpm:** Generates Fedora .spec files for inclusion in Fedora's official package repos. Useful for distro maintainers, wrong tool for self-distribution.
 
-### Pane/Split Layout
+### AppImage (Portable/Universal)
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| Custom Rust tree (port of Bonsplit) | n/a | Recursive binary split tree for pane layout | Bonsplit is Swift; reimplement the same `enum SplitNode { Leaf(PaneId), Branch { left, right, direction, ratio } }` data model in Rust. It's ~500 lines of logic. No crate exactly matches Bonsplit's API needs. |
-| GTK4 `GtkPaned` | system | Physical divider widget between panes | Use `GtkPaned` (horizontal/vertical) as the GTK4 widget backing each Branch node in the tree. The Rust tree tracks layout state; `GtkPaned` provides the actual draggable divider. |
+| linuxdeploy | continuous | AppDir creation, shared library bundling | Recursively resolves and copies shared libraries into the AppDir. Plugin system handles GTK-specific resources. Official AppImage project recommendation. |
+| linuxdeploy-plugin-gtk | latest | GTK resource bundling | Auto-detects GTK version (supports 2/3/4), bundles GLib schemas, GdkPixbuf loaders, icon themes, locale data. Without this plugin, GTK4 apps fail at runtime inside AppImage due to missing schemas/loaders. |
+| appimagetool | continuous | Final AppImage assembly from AppDir | Takes the prepared AppDir and produces the self-extracting .AppImage binary. linuxdeploy calls it internally via `--output appimage`. |
 
-**Why NOT a crate for split layout:** The split tree itself is simple business logic (enum + update functions). Bringing in a tiling layout crate adds more complexity than it saves. Port Bonsplit's model directly.
+**Pipeline:**
+```
+cargo build --release
+  -> linuxdeploy --appdir AppDir --plugin gtk \
+       --executable target/release/cmux-app \
+       --desktop-file resources/cmux.desktop \
+       --icon-file resources/cmux.svg \
+       --output appimage
+  -> cmux-x86_64.AppImage
+```
 
-### Unix Socket IPC
+**Why linuxdeploy over appimage-builder:** linuxdeploy is the official recommended tool from the AppImage project. appimage-builder uses Docker + apt-based dependency resolution -- unnecessary complexity for a project that already builds natively. linuxdeploy directly inspects the binary's ELF dependencies.
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| tokio | 1.x | Async runtime for socket server | Standard choice for async I/O in Rust; `tokio::net::UnixListener` provides the socket accept loop. Eliminates the per-client thread spawn pattern (a known concern in the macOS codebase). |
-| serde_json | 1.x | Parse/serialize v2 JSON-RPC commands | Protocol compatibility with macOS cmux is a hard constraint; JSON-RPC v2 protocol. |
-| serde | 1.x | Derive ser/deserialize for command types | Pair with serde_json; `#[derive(Serialize, Deserialize)]` on all command structs |
+**GTK4 note (MEDIUM confidence):** linuxdeploy-plugin-gtk claims GTK4 auto-detection. This is well-tested for GTK3; GTK4 support is newer. May need testing and minor patching of the plugin script if it misses GTK4-specific paths.
 
-**tokio vs std threads:** The macOS codebase uses per-connection thread spawning with `nonisolated(unsafe)` state — explicitly flagged as tech debt in CONCERNS.md. tokio's async model avoids this entirely: one thread pool, async accept loop, per-client tasks. Use tokio from day one.
-
-**Socket path:** Mirror macOS — `~/.config/cmux/cmux.sock` (Linux XDG convention).
-
-### Session Persistence
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| serde | 1.x | Derive serialization for session types | Same serde already used for IPC |
-| serde_json | 1.x | JSON format for session file | Protocol-compatible with macOS `session.json` format; allows cross-platform tooling |
-
-**Session file location:** `~/.local/share/cmux/session.json` (XDG_DATA_HOME convention on Linux).
-
-### Config File Parsing
+### Flatpak
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| toml | 0.8.x (via `toml` crate) | Parse cmux-specific config (shortcuts, socket path, etc.) | TOML is idiomatic Rust config format; used by Cargo, rust-analyzer, most Rust tooling. Simple, well-specified. |
-| serde | 1.x | Deserialize TOML config into typed structs | Same serde used elsewhere; `#[derive(Deserialize)]` on config structs |
+| flatpak-builder | system | Build Flatpak from JSON/YAML manifest | Standard tool. Builds in sandboxed environment, handles source fetching, caching. |
+| org.gnome.Platform | 47 | Runtime (provides GTK4, glib, pango, etc.) | GNOME 47 is current stable runtime with GTK4. GNOME 46 is EOL (April 2025). Version 48 exists but 47 has broader install base. |
+| org.gnome.Sdk | 47 | Build SDK (compiler toolchain + platform libs) | Paired with Platform 47. |
+| org.freedesktop.Sdk.Extension.rust-stable | 24.08 | Rust toolchain for Flatpak sandbox builds | Provides cargo/rustc inside the Flatpak build environment. Required because Flatpak builds happen in isolation from host. |
 
-**Note on Ghostty config:** Ghostty reads its own config (`~/.config/ghostty/config`) via the C API (`ghostty_config_load_default_files`, `ghostty_config_load_file`). cmux-linux does not re-parse Ghostty's config format. The Rust config layer handles cmux-specific settings only (keyboard shortcuts, socket path, theme overrides passed to the Ghostty config API).
+**Why org.gnome.Platform over org.freedesktop.Platform:** The Freedesktop runtime does NOT include GTK4. The GNOME runtime bundles GTK4, glib, pango, and all libraries cmux needs at runtime. Using Freedesktop would require building GTK4 from source inside the manifest -- unnecessary complexity.
 
-**Config file location:** `~/.config/cmux/config.toml` (XDG_CONFIG_HOME convention).
+**Manifest:** A single `com.cmuxterm.cmux.json` file that:
+1. Sets `runtime: org.gnome.Platform//47` and `sdk: org.gnome.Sdk//47`
+2. Adds `org.freedesktop.Sdk.Extension.rust-stable` SDK extension
+3. Builds libghostty.a via Zig (vendored in sources)
+4. Builds cmux-app and cmux CLI via cargo
+5. Installs binaries, .desktop file, icon, and AppStream metainfo
 
-### Supporting Libraries
+**Zig in Flatpak sandbox:** Zig must be vendored as a source/archive in the manifest since there is no Flatpak SDK extension for Zig. Download the Zig 0.15.2 tarball as a manifest source and extract it during build.
 
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| `tracing` | 0.1.x | Structured logging | Replace `dlog()` equivalent; structured spans for socket commands, surface lifecycle |
-| `tracing-subscriber` | 0.3.x | Log output formatting | Debug builds write to file; release builds configurable |
-| `anyhow` | 1.x | Error handling | Application-level error propagation; not for library boundaries |
-| `thiserror` | 1.x | Define typed error enums | For socket command parsing errors, config errors |
-| `uuid` | 1.x | Workspace/pane/surface UUIDs | Protocol compatibility with macOS (uses UUID-based IDs) |
-| `dirs` | 5.x | XDG path resolution | `dirs::config_dir()`, `dirs::data_dir()` for cross-distro correctness |
-
-### Build System
+### Dependency Detection
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| Cargo | (Rust stable) | Rust dependency management and build | Standard |
-| `build.rs` | n/a | Compile/link libghostty.so, run bindgen | Standard Cargo build script pattern for native dependencies |
-| Zig | 0.14+ | Build libghostty.so from Ghostty source | Same toolchain as macOS; Ghostty's build system is Zig-native |
+| readelf | system (binutils) | Extract NEEDED shared libraries from ELF binary | Safe on any binary (unlike ldd which executes it). `readelf -d <binary> \| grep NEEDED` gets direct deps. |
+| ldd | system (glibc) | Resolve full transitive dependency tree with paths | Shows all libraries including transitive deps. ONLY use on trusted binaries (own build output). |
+| dpkg -S | system | Map .so files to deb package names | After ldd identifies libfoo.so.1, `dpkg -S libfoo.so.1` returns the owning deb package. |
+| rpm -qf | system | Map .so files to rpm package names | `rpm -qf /usr/lib64/libfoo.so.1` returns the owning RPM package. |
 
-### Distribution
+**Recommended approach:** A `scripts/detect-deps.sh` script that:
+1. Runs `readelf -d target/release/cmux-app | grep NEEDED` for direct .so deps
+2. Uses `ldd target/release/cmux-app` to resolve full paths
+3. Maps each .so to its owning package via `dpkg -S` (deb) or `rpm -qf` (rpm)
+4. Outputs a dependency list for packaging metadata
 
-| Technology | Purpose | Why |
-|------------|---------|-----|
-| Flatpak | Primary distribution target | Handles GTK4/GLib runtime dependencies; standard for Linux GUI apps |
-| `.deb` | Ubuntu/Debian secondary | Broad coverage for common distros |
-| AppImage | Portable fallback | No installation required; useful for CI artifacts |
+**Why readelf over objdump:** readelf is focused on ELF inspection; objdump is heavier, designed for disassembly.
 
-### CI/CD
+**Critical caveat:** Auto-detection misses dlopen'd libraries (GTK4 modules, GL drivers, GdkPixbuf loaders). The detected list is a starting point; the final dependency list in Cargo.toml metadata must be human-reviewed and include known dlopen'd deps like `libgtk-4-1`, `libgl1`, `libfontconfig1`.
 
-| Technology | Purpose |
-|------------|---------|
-| GitHub Actions (ubuntu-latest runners) | Build, test, release |
-| `cargo test` | Unit tests |
-| `cargo clippy` | Linting |
+### Gitea CI
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| act_runner | 0.2.13+ | Gitea Actions job execution | Official Gitea runner. Runs jobs in Docker containers. GitHub Actions YAML-compatible -- can adapt the existing `linux-build` job from `.github/workflows/ci.yml`. |
+| Docker | system | Container runtime for CI jobs | act_runner executes each job in a Docker container. Required for reproducible builds. |
+
+**Gitea instance:** `http://192.168.7.6:8418/` (from PROJECT.md)
+
+**Compatibility with existing CI:**
+- Workflow files go in `.gitea/workflows/` (not `.github/`)
+- Accepts `GITHUB_` context prefix for compatibility (also supports `GITEA_`)
+- `actions/checkout`, `actions/cache`, `dtolnay/rust-toolchain` work unchanged
+- `mlugg/setup-zig` should work but needs testing (LOW confidence)
+- **Limitation:** Concurrency groups are ignored -- no built-in queue management. Not a blocker.
+- **Limitation:** No WarpBuild-equivalent runners -- all jobs on self-hosted act_runner
+
+**Runner setup:**
+1. Install act_runner binary on build host (or dedicated machine)
+2. Register with `./act_runner register --instance http://192.168.7.6:8418/ --token <TOKEN>`
+3. Mount Docker socket: `/var/run/docker.sock`
+4. Disk: ~10GB for Zig cache + Rust target dir + Docker images
+5. Run: `./act_runner daemon` (or systemd unit)
+
+### Validation Utilities
+
+| Tool | Version | Purpose | When to Use |
+|------|---------|---------|-------------|
+| file | system | Verify ELF binary type (x86_64, aarch64) | Smoke test in CI after build |
+| strip | system (binutils) | Remove debug symbols from release binary | Before packaging -- reduces binary size 50-80% |
+| desktop-file-validate | system (desktop-file-utils) | Validate .desktop file syntax | CI lint step |
+| appstreamcli validate | system (appstream) | Validate AppStream metainfo.xml | Required for Flatpak/Flathub submission |
+
+---
+
+## Existing Assets (Reuse, Do Not Recreate)
+
+| Asset | Path | Status |
+|-------|------|--------|
+| Desktop entry | `resources/cmux.desktop` | Exists, well-formed |
+| SVG icon | `resources/cmux.svg` | Exists |
+| CI linux-build job | `.github/workflows/ci.yml` (lines 77-114) | Working build pipeline to adapt for Gitea |
+| System deps list | `scripts/setup-linux.sh` | apt/dnf package names for build deps |
+| Two binaries | `cmux-app` (GUI) + `cmux` (CLI) | Both defined in Cargo.toml `[[bin]]` |
+
+---
+
+## New Files Needed
+
+| File | Purpose |
+|------|---------|
+| `packaging/build-deb.sh` | Shell script: cargo build + cargo deb |
+| `packaging/build-rpm.sh` | Shell script: cargo build + cargo generate-rpm |
+| `packaging/build-appimage.sh` | Shell script: cargo build + linuxdeploy pipeline |
+| `packaging/build-flatpak.sh` | Shell script: flatpak-builder wrapper |
+| `packaging/build-all.sh` | Orchestrator: calls all four |
+| `packaging/com.cmuxterm.cmux.json` | Flatpak manifest |
+| `packaging/com.cmuxterm.cmux.metainfo.xml` | AppStream metadata (for Flatpak + deb) |
+| `.gitea/workflows/release.yml` | Gitea CI: build all packages on tag push |
+| `scripts/detect-deps.sh` | Dependency detection utility |
+
+---
+
+## Cargo.toml Metadata Additions
+
+```toml
+[package.metadata.deb]
+maintainer = "cmux maintainers"
+copyright = "2025-2026 Manaflow"
+license-file = ["LICENSE", "0"]
+depends = "libgtk-4-1 (>= 4.12), libglib2.0-0 (>= 2.76), libc6 (>= 2.35), libfontconfig1, libfreetype6, libgl1"
+section = "utils"
+priority = "optional"
+assets = [
+    ["target/release/cmux-app", "usr/bin/", "755"],
+    ["target/release/cmux", "usr/bin/", "755"],
+    ["resources/cmux.desktop", "usr/share/applications/", "644"],
+    ["resources/cmux.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+]
+
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/cmux-app", dest = "/usr/bin/cmux-app", mode = "755" },
+    { source = "target/release/cmux", dest = "/usr/bin/cmux", mode = "755" },
+    { source = "resources/cmux.desktop", dest = "/usr/share/applications/cmux.desktop", mode = "644" },
+    { source = "resources/cmux.svg", dest = "/usr/share/icons/hicolor/scalable/apps/cmux.svg", mode = "644" },
+]
+
+[package.metadata.generate-rpm.requires]
+gtk4 = ">= 4.12"
+fontconfig = "*"
+freetype = "*"
+```
 
 ---
 
@@ -163,80 +193,78 @@ This mirrors what the macOS NSView does: the host app provides the view, Ghostty
 
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| UI framework | gtk4-rs | iced | iced cannot host GTK4 native surfaces; different renderer entirely |
-| UI framework | gtk4-rs | egui | Same issue as iced; wgpu-based, no GTK4 widget hosting |
-| UI framework | gtk4-rs | slint | No GTK4 widget embedding; experimental GTK backend for Slint's own widgets only |
-| UI framework | gtk4-rs | raw GTK4 via bindgen | gtk4-rs provides safe wrappers and type system integration; raw FFI is unsafe and verbose |
-| Async runtime | tokio | std threads | Per-thread model is tech debt in macOS codebase; tokio's async model is cleaner |
-| Config format | TOML | YAML | TOML is simpler, more Rust-idiomatic; YAML has edge cases around types |
-| Config format | TOML | Ghostty config format | Ghostty's format is intentionally not a standard; parsing it in Rust duplicates Ghostty's parser |
-| FFI | bindgen | Manual FFI | ghostty.h is ~1,169 lines; manual maintenance is error-prone; bindgen is standard practice |
-| Split layout | Custom Rust enum | `tui-layout` or similar | TUI layout crates target text/ncurses grids, not pixel-accurate GTK4 split panes |
-
----
-
-## The iced vs GTK4 Question — Resolved
-
-**Decision: GTK4 via gtk4-rs. iced is not viable.**
-
-The project context noted this as the key tension. The analysis resolves it definitively:
-
-Ghostty's terminal surfaces on Linux render via OpenGL/Vulkan into a GDK surface (backed by a `GtkGLArea`). The libghostty embedded API (once extended for Linux) will hand Ghostty a GtkWidget to render into. That widget must live inside a GTK4 widget hierarchy with a live GDK display connection.
-
-iced, egui, and slint all run their own GPU rendering pipeline outside of GTK4. They cannot provide a `GtkWidget*` to libghostty because they do not speak GTK4. Bridging them would require:
-- Running a GTK4 main loop alongside the iced event loop
-- X11/Wayland window embedding hacks to place one renderer's output inside another
-
-This is not a viable architecture. GTK4 is the only choice.
-
-The Rust developer experience with gtk4-rs is acceptable for this project's needs: the crate provides safe, idiomatic wrappers with `#[derive]`-style signal handlers and builder patterns. It is not as ergonomic as SwiftUI, but it is the right tool.
-
----
-
-## Key Unknowns / Research Flags
-
-1. **libghostty Linux embedded apprt** (HIGH priority): The exact API extension needed — specifically, whether `GHOSTTY_PLATFORM_GTK4` should pass a `GtkGLArea*`, a `GdkSurface*`, or a `GdkGLContext*` — requires reading Ghostty's `src/apprt/gtk` source and `src/apprt/embedded.zig` to understand what the embedded apprt expects vs. what the GTK4 apprt provides. This is the single most critical technical unknown for Phase 1.
-
-2. **gtk4-rs version** (LOW priority): Verify the exact latest stable version at crates.io before pinning in Cargo.toml. Training data suggests 0.9.x but patch versions change frequently.
-
-3. **Wayland + OpenGL surface embedding** (MEDIUM priority): On Wayland, `GtkGLArea` gets a `wl_surface`. Confirm that Ghostty's renderer can target a `GtkGLArea`'s GL context on Wayland, not just X11. Ghostty's GTK4 app already runs on Wayland, so this should work — but confirm the embedded path behaves the same.
-
-4. **GLib main loop + tokio integration** (MEDIUM priority): GTK4 requires the GLib main loop (`gtk4::main()`). tokio has its own runtime. The standard pattern is to run GTK4's main loop on the main thread and use `glib::MainContext::spawn_local` for GTK4-thread tasks, while tokio handles socket I/O on a background thread. Verify this architecture doesn't cause event loop conflicts.
+| .deb | cargo-deb | Raw dpkg-deb | Unnecessary boilerplate for a Cargo project |
+| .deb | cargo-deb | debcargo | debcargo is for library crates, not app binaries |
+| .rpm | cargo-generate-rpm | rpmbuild + .spec | Spec file maintenance overhead for self-distributed binary |
+| .rpm | cargo-generate-rpm | cargo-rpm | EOL since 2022 |
+| .rpm | cargo-generate-rpm | rust2rpm | For Fedora repo maintainers, not self-distribution |
+| AppImage | linuxdeploy + plugin-gtk | appimage-builder | Extra Docker/apt layer; linuxdeploy is official recommendation |
+| Flatpak runtime | org.gnome.Platform 47 | org.freedesktop.Platform | No GTK4 in freedesktop runtime; would need to build GTK4 from source |
+| Flatpak runtime | org.gnome.Platform 47 | org.gnome.Platform 48 | 48 exists but 47 has broader install base today |
+| Dep detection | readelf + ldd + manual review | Fully automated | dlopen'd deps (GL, GTK modules) need human review |
+| CI | Gitea Actions (act_runner) | Jenkins | Gitea Actions is built-in, YAML-compatible with existing GitHub Actions |
+| CI | Gitea Actions (act_runner) | Drone CI | Another option but Gitea Actions is native, no extra service to run |
+| Universal pkg | NOT adding Snap | snapd/snapcraft | Requires snapd daemon, Canonical-centric, poor GTK4 theming, adds maintenance with no benefit over AppImage + Flatpak |
 
 ---
 
 ## Installation
 
-```toml
-# Cargo.toml [dependencies]
-gtk4 = "0.9"
-gdk4 = "0.9"
-glib = "0.20"
-tokio = { version = "1", features = ["full"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-toml = "0.8"
-anyhow = "1"
-thiserror = "1"
-uuid = { version = "1", features = ["v4"] }
-tracing = "0.1"
-dirs = "5"
+```bash
+# === Packaging tools (install on build host) ===
 
-# Cargo.toml [dev-dependencies]
-tracing-subscriber = "0.3"
+# .deb and .rpm generators
+cargo install cargo-deb
+cargo install cargo-generate-rpm
 
-# build.rs dependencies
-[build-dependencies]
-bindgen = "0.70"
-cc = "1"
+# === AppImage tools (download pre-built binaries) ===
+mkdir -p tools/
+wget -O tools/linuxdeploy-x86_64.AppImage \
+  https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+wget -O tools/linuxdeploy-plugin-gtk.sh \
+  https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh
+wget -O tools/appimagetool-x86_64.AppImage \
+  https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+chmod +x tools/linuxdeploy-x86_64.AppImage tools/linuxdeploy-plugin-gtk.sh tools/appimagetool-x86_64.AppImage
+
+# === Flatpak tools ===
+sudo apt-get install -y flatpak flatpak-builder
+flatpak install -y flathub org.gnome.Platform//47 org.gnome.Sdk//47
+flatpak install -y flathub org.freedesktop.Sdk.Extension.rust-stable//24.08
+
+# === Validation tools ===
+sudo apt-get install -y desktop-file-utils appstream
+
+# === Dependency detection (already on most Linux systems) ===
+# readelf (part of binutils), ldd (part of glibc) -- no install needed
 ```
+
+---
+
+## Confidence Assessment
+
+| Area | Confidence | Notes |
+|------|------------|-------|
+| cargo-deb | HIGH | Widely used, verified v3.6.3 on crates.io, standard for Rust .deb |
+| cargo-generate-rpm | HIGH | Standard Rust RPM tool, actively maintained |
+| linuxdeploy + GTK plugin | MEDIUM | GTK4 auto-detection claimed but not verified first-hand; GTK3 battle-tested, GTK4 newer |
+| Flatpak manifest | MEDIUM | Pattern well-documented, but Zig build inside sandbox needs testing |
+| Gitea Actions compat | MEDIUM | YAML compat confirmed by docs, but specific actions (mlugg/setup-zig) need testing |
+| readelf/ldd dep detection | HIGH | Standard Linux tooling, straightforward |
+| act_runner setup | MEDIUM | Docs clear, but local instance specifics (http://192.168.7.6:8418/) need validation |
+
+---
 
 ## Sources
 
-- `ghostty.h` in this repo (HIGH confidence — authoritative C API source, read directly)
-- macOS `GhosttyTerminalView.swift` (HIGH confidence — shows exact libghostty usage patterns to port)
-- `docs/ghostty-fork.md` (HIGH confidence — fork patch inventory; all patches are macOS-specific, no Linux embedded apprt work yet)
-- `.planning/codebase/CONCERNS.md` (HIGH confidence — per-thread socket model flagged as tech debt, confirms tokio is the right fix)
-- gtk-rs project architecture (MEDIUM confidence — from training data; official project at https://gtk-rs.org)
-- iced architecture (MEDIUM confidence — from training data; project at https://iced.rs)
-- tokio async runtime (HIGH confidence — widely used, stable API)
+- [cargo-deb on GitHub](https://github.com/kornelski/cargo-deb) -- v3.6.3, actively maintained
+- [cargo-generate-rpm on crates.io](https://crates.io/crates/cargo-generate-rpm) -- v0.18.x+
+- [linuxdeploy on GitHub](https://github.com/linuxdeploy/linuxdeploy) -- continuous releases
+- [linuxdeploy-plugin-gtk](https://github.com/linuxdeploy/linuxdeploy-plugin-gtk) -- supports GTK 2/3/4
+- [How to Flatpak a Rust application](https://belmoussaoui.com/blog/8-how-to-flatpak-a-rust-application/) -- canonical guide
+- [Flatpak Available Runtimes](https://docs.flatpak.org/en/latest/available-runtimes.html) -- GNOME 47 current
+- [Gitea Actions Quick Start](https://docs.gitea.com/usage/actions/quickstart) -- workflow YAML compat
+- [Gitea act_runner docs](https://docs.gitea.com/usage/actions/act-runner) -- runner setup, v0.2.13+
+- [ldd(1) man page](https://man7.org/linux/man-pages/man1/ldd.1.html) -- security note about untrusted binaries
+- [RustDesk Linux Packaging (DeepWiki)](https://deepwiki.com/rustdesk/rustdesk/7.4-platform-packaging) -- reference Rust app packaging
+- [Linux packaging format comparison](https://michaelneuper.com/posts/what-linux-packaging-format-to-use/)
