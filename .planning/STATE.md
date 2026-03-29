@@ -2,16 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Linux Packaging & Distribution
-status: planning
-stopped_at: Phase 11 context gathered
-last_updated: "2026-03-29T16:39:54.051Z"
-last_activity: 2026-03-29 -- Roadmap created for v1.1 (4 phases, 25 requirements)
+status: Ready to execute
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-03-29T17:21:21.079Z"
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 3
+  completed_plans: 1
 ---
 
 # Project State
@@ -21,16 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control -- powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** Phase 11 - Desktop Integration & Dependency Detection
+**Current focus:** Phase 11 — desktop-integration-dependency-detection
 
 ## Current Position
 
-Phase: 11 of 14 (Desktop Integration & Dependency Detection)
-Plan: --
-Status: Ready to plan
-Last activity: 2026-03-29 -- Roadmap created for v1.1 (4 phases, 25 requirements)
-
-Progress: [..........] 0%
+Phase: 11 (desktop-integration-dependency-detection) — EXECUTING
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -47,6 +41,8 @@ Progress: [..........] 0%
 
 All v1.0 decisions archived in milestones/v1.0-phases/ and PROJECT.md Key Decisions table.
 
+- [Phase 11]: Used underscore in reverse-DNS ID (com.cmux_lx.terminal) - appstreamcli rejects hyphens
+
 ### Roadmap Evolution
 
 - v1.0 milestone archived to .planning/milestones/
@@ -62,6 +58,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-29T16:39:54.048Z
-Stopped at: Phase 11 context gathered
-Resume file: .planning/phases/11-desktop-integration-dependency-detection/11-CONTEXT.md
+Last session: 2026-03-29T17:21:21.077Z
+Stopped at: Completed 11-01-PLAN.md
+Resume file: None
