@@ -27,6 +27,12 @@ base64 = "0.22.1"
 tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
 futures-util = "0.3"
 clap = { version = "4", features = ["derive", "color", "env"] }
+clap_complete = "4.6"
+clap_mangen = "0.3"
+
+[[bin]]
+name = "cmux-generate"
+path = "src/bin/generate.rs"
 
 [build-dependencies]
 bindgen = "0.72.1"
