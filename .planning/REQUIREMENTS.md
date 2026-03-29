@@ -1,7 +1,7 @@
 # Requirements: cmux Linux Packaging & Distribution
 
 **Defined:** 2026-03-29
-**Core Value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control — powered by Ghostty's GPU-accelerated terminal.
+**Core Value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control -- powered by Ghostty's GPU-accelerated terminal.
 
 ## v1.1 Requirements
 
@@ -79,41 +79,39 @@ Requirements for packaging and distribution milestone. Each maps to roadmap phas
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| META-01 | — | Pending |
-| META-02 | — | Pending |
-| META-03 | — | Pending |
-| META-04 | — | Pending |
-| META-05 | — | Pending |
-| DEB-01 | — | Pending |
-| DEB-02 | — | Pending |
-| DEB-03 | — | Pending |
-| DEB-04 | — | Pending |
-| RPM-01 | — | Pending |
-| RPM-02 | — | Pending |
-| RPM-03 | — | Pending |
-| APPIMG-01 | — | Pending |
-| APPIMG-02 | — | Pending |
-| APPIMG-03 | — | Pending |
-| FLAT-01 | — | Pending |
-| FLAT-02 | — | Pending |
-| FLAT-03 | — | Pending |
-| BUILD-01 | — | Pending |
-| BUILD-02 | — | Pending |
-| BUILD-03 | — | Pending |
-| CI-01 | — | Pending |
-| CI-02 | — | Pending |
-| CI-03 | — | Pending |
-| CI-04 | — | Pending |
+| META-01 | Phase 11 | Pending |
+| META-02 | Phase 11 | Pending |
+| META-03 | Phase 11 | Pending |
+| META-04 | Phase 11 | Pending |
+| META-05 | Phase 11 | Pending |
+| BUILD-02 | Phase 11 | Pending |
+| DEB-01 | Phase 12 | Pending |
+| DEB-02 | Phase 12 | Pending |
+| DEB-03 | Phase 12 | Pending |
+| DEB-04 | Phase 12 | Pending |
+| RPM-01 | Phase 12 | Pending |
+| RPM-02 | Phase 12 | Pending |
+| RPM-03 | Phase 12 | Pending |
+| APPIMG-01 | Phase 13 | Pending |
+| APPIMG-02 | Phase 13 | Pending |
+| APPIMG-03 | Phase 13 | Pending |
+| FLAT-01 | Phase 13 | Pending |
+| FLAT-02 | Phase 13 | Pending |
+| FLAT-03 | Phase 13 | Pending |
+| BUILD-01 | Phase 14 | Pending |
+| BUILD-03 | Phase 14 | Pending |
+| CI-01 | Phase 14 | Pending |
+| CI-02 | Phase 14 | Pending |
+| CI-03 | Phase 14 | Pending |
+| CI-04 | Phase 14 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-29*
-*Last updated: 2026-03-29 after initial definition*
+*Last updated: 2026-03-29 after roadmap creation*

@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Linux Packaging & Distribution
-status: Defining requirements
-stopped_at: null
+status: Ready to plan
+stopped_at: Roadmap created, ready to plan phase 11
 last_updated: "2026-03-29T00:00:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,15 +18,25 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-03-29)
 
-**Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control — powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** v1.1 Linux Packaging & Distribution
+**Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control -- powered by Ghostty's GPU-accelerated terminal.
+**Current focus:** Phase 11 - Desktop Integration & Dependency Detection
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-29 — Milestone v1.1 started
+Phase: 11 of 14 (Desktop Integration & Dependency Detection)
+Plan: --
+Status: Ready to plan
+Last activity: 2026-03-29 -- Roadmap created for v1.1 (4 phases, 25 requirements)
+
+Progress: [..........] 0%
+
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed: 52 (v1.0)
+- v1.1 plans completed: 0
+
+*Updated after each plan completion*
 
 ## Accumulated Context
 
@@ -37,7 +47,7 @@ All v1.0 decisions archived in milestones/v1.0-phases/ and PROJECT.md Key Decisi
 ### Roadmap Evolution
 
 - v1.0 milestone archived to .planning/milestones/
-- v1.1 milestone started: Linux Packaging & Distribution
+- v1.1 roadmap: 4 phases (coarse granularity), 25 requirements mapped
 
 ### Pending Todos
 
@@ -45,10 +55,10 @@ None.
 
 ### Blockers/Concerns
 
-None.
+- Research flags AppImage GTK4 bundling and Flatpak GPU sandbox as areas needing validation (Phase 13)
 
 ## Session Continuity
 
 Last session: 2026-03-29
-Stopped at: Milestone v1.1 started, defining requirements
+Stopped at: Roadmap created for v1.1, ready to plan phase 11
 Resume file: None
