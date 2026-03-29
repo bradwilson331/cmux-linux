@@ -12,8 +12,8 @@ Requirements for packaging and distribution milestone. Each maps to roadmap phas
 - [x] **META-01**: App uses reverse-DNS ID `com.cmux-lx.terminal` across .desktop, metainfo, and icons
 - [x] **META-02**: AppStream metainfo XML provides app description, screenshots section, and content rating
 - [x] **META-03**: PNG icons generated from SVG at 48px, 128px, 256px for hicolor icon theme
-- [ ] **META-04**: Shell completions installed for bash, zsh, and fish for cmux CLI
-- [ ] **META-05**: Man page installed at `/usr/share/man/man1/cmux.1.gz`
+- [x] **META-04**: Shell completions installed for bash, zsh, and fish for cmux CLI
+- [x] **META-05**: Man page installed at `/usr/share/man/man1/cmux.1.gz`
 
 ### Debian Package
 
@@ -84,8 +84,8 @@ Requirements for packaging and distribution milestone. Each maps to roadmap phas
 | META-01 | Phase 11 | Complete |
 | META-02 | Phase 11 | Complete |
 | META-03 | Phase 11 | Complete |
-| META-04 | Phase 11 | Pending |
-| META-05 | Phase 11 | Pending |
+| META-04 | Phase 11 | Complete |
+| META-05 | Phase 11 | Complete |
 | BUILD-02 | Phase 11 | Pending |
 | DEB-01 | Phase 12 | Pending |
 | DEB-02 | Phase 12 | Pending |
