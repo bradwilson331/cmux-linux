@@ -19,7 +19,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control -- powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** Phase 11 — desktop-integration-dependency-detection
+**Current focus:** Phase 12 — native-packages-(.deb-+-.rpm)
 
 ## Current Position
 
@@ -31,7 +31,7 @@ Plan: Not started
 **Velocity:**
 
 - Total plans completed: 52 (v1.0)
-- v1.1 plans completed: 0
+- v1.1 plans completed: 3
 
 *Updated after each plan completion*
 
@@ -61,6 +61,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-29T17:23:25.392Z
-Stopped at: Completed 11-03-PLAN.md
+Last session: 2026-03-29
+Stopped at: Phase 11 complete, ready to plan Phase 12
 Resume file: None
