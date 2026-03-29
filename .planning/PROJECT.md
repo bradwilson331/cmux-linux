@@ -28,7 +28,25 @@ A Linux user should get the same cmux experience as a Mac user: tabs, splits, wo
 
 ### Active
 
-(None — planning next milestone)
+- [ ] .deb package for Debian/Ubuntu
+- [ ] .rpm package for Fedora/RHEL
+- [ ] AppImage portable binary
+- [ ] Flatpak package
+- [ ] Local build scripts for each format
+- [ ] Gitea CI workflows for automated builds on tag
+- [ ] Publish to Gitea package registry + release assets
+- [ ] Auto-detect runtime dependencies from binary
+
+## Current Milestone: v1.1 Linux Packaging & Distribution
+
+**Goal:** Ship cmux as installable packages (.deb, .rpm, AppImage, Flatpak) with local build scripts and Gitea CI pipelines.
+
+**Target features:**
+- .deb, .rpm, AppImage, Flatpak packages
+- Local shell scripts to build each or all formats
+- Gitea-compatible CI workflows (http://192.168.7.6:8418/)
+- Publish to Gitea package registry + release assets
+- Runtime dependency auto-detection via ldd/readelf
 
 ### Out of Scope
 
@@ -92,4 +110,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-28 after v1.0 milestone completion*
+*Last updated: 2026-03-29 after v1.1 milestone start*
