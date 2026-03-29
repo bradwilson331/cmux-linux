@@ -35,7 +35,9 @@ A Linux user should get the same cmux experience as a Mac user: tabs, splits, wo
 - [ ] Local build scripts for each format
 - [ ] Gitea CI workflows for automated builds on tag
 - [ ] Publish to Gitea package registry + release assets
-- [ ] Auto-detect runtime dependencies from binary
+- ✓ Auto-detect runtime dependencies from binary — Validated in Phase 11: Desktop Integration & Dependency Detection
+- ✓ Desktop metadata (.desktop, AppStream metainfo, hicolor icons) — Validated in Phase 11
+- ✓ Shell completions (bash, zsh, fish) and man page — Validated in Phase 11
 
 ## Current Milestone: v1.1 Linux Packaging & Distribution
 
@@ -110,4 +112,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-29 after v1.1 milestone start*
+*Last updated: 2026-03-29 after Phase 11 completion*
