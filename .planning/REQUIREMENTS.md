@@ -24,9 +24,9 @@ Requirements for packaging and distribution milestone. Each maps to roadmap phas
 
 ### RPM Package
 
-- [ ] **RPM-01**: User can install cmux via `dnf install cmux.rpm` on Fedora 38+/RHEL 9+
-- [ ] **RPM-02**: Runtime dependencies mapped to Fedora/RHEL package names and declared
-- [ ] **RPM-03**: Both binaries and cmuxd-remote installed to correct paths
+- [x] **RPM-01**: User can install cmux via `dnf install cmux.rpm` on Fedora 38+/RHEL 9+
+- [x] **RPM-02**: Runtime dependencies mapped to Fedora/RHEL package names and declared
+- [x] **RPM-03**: Both binaries and cmuxd-remote installed to correct paths
 
 ### AppImage
 
@@ -43,7 +43,7 @@ Requirements for packaging and distribution milestone. Each maps to roadmap phas
 ### Build Scripts
 
 - [ ] **BUILD-01**: Local script builds all four package formats (or individually)
-- [ ] **BUILD-02**: Runtime dependencies auto-detected from binary via ldd/readelf and mapped to package names
+- [x] **BUILD-02**: Runtime dependencies auto-detected from binary via ldd/readelf and mapped to package names
 - [ ] **BUILD-03**: GPG signing supported for .deb and .rpm packages
 
 ### Gitea CI
@@ -86,14 +86,14 @@ Requirements for packaging and distribution milestone. Each maps to roadmap phas
 | META-03 | Phase 11 | Complete |
 | META-04 | Phase 11 | Complete |
 | META-05 | Phase 11 | Complete |
-| BUILD-02 | Phase 11 | Pending |
+| BUILD-02 | Phase 11 | Complete |
 | DEB-01 | Phase 12 | Pending |
 | DEB-02 | Phase 12 | Pending |
 | DEB-03 | Phase 12 | Pending |
 | DEB-04 | Phase 12 | Pending |
-| RPM-01 | Phase 12 | Pending |
-| RPM-02 | Phase 12 | Pending |
-| RPM-03 | Phase 12 | Pending |
+| RPM-01 | Phase 12 | Complete |
+| RPM-02 | Phase 12 | Complete |
+| RPM-03 | Phase 12 | Complete |
 | APPIMG-01 | Phase 13 | Pending |
 | APPIMG-02 | Phase 13 | Pending |
 | APPIMG-03 | Phase 13 | Pending |

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Linux Packaging & Distribution
-status: Ready to plan
-stopped_at: Phase 12 context gathered
-last_updated: "2026-03-29T17:31:52.190Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 12-01-PLAN.md
+last_updated: "2026-03-29T17:50:18.874Z"
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control -- powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** Phase 12 — native-packages-(.deb-+-.rpm)
+**Current focus:** Phase 12 — native-packages-deb-rpm
 
 ## Current Position
 
-Phase: 12
-Plan: Not started
+Phase: 12 (native-packages-deb-rpm) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -45,6 +45,8 @@ All v1.0 decisions archived in milestones/v1.0-phases/ and PROJECT.md Key Decisi
 - [Phase 11]: Created src/lib.rs exposing only pub mod cli for generator binary access without GTK4 deps
 - [Phase 11]: Standalone generator binary pattern (not build.rs) for shell completions and man page
 - [Phase 11]: Dual fallback tables for cross-distro package name resolution (native manager + static table)
+- [Phase 12]: AutoReqProv disabled for pre-built binary RPM packaging with explicit Fedora Requires
+- [Phase 12]: Non-t64 package names for Ubuntu 22.04 compat (libglib2.0-0 not libglib2.0-0t64)
 
 ### Roadmap Evolution
 
@@ -61,6 +63,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-29T17:31:52.187Z
-Stopped at: Phase 12 context gathered
-Resume file: .planning/phases/12-native-packages-deb-rpm/12-CONTEXT.md
+Last session: 2026-03-29T17:50:18.871Z
+Stopped at: Completed 12-01-PLAN.md
+Resume file: None
