@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Linux Packaging & Distribution
-status: Ready to execute
-stopped_at: Completed 11-02-PLAN.md
-last_updated: "2026-03-29T17:21:53.408Z"
+status: Ready to plan
+stopped_at: Completed 11-03-PLAN.md
+last_updated: "2026-03-29T17:27:54.777Z"
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 
 ## Current Position
 
-Phase: 11 (desktop-integration-dependency-detection) — EXECUTING
-Plan: 3 of 3
+Phase: 12
+Plan: Not started
 
 ## Performance Metrics
 
@@ -44,6 +44,7 @@ All v1.0 decisions archived in milestones/v1.0-phases/ and PROJECT.md Key Decisi
 - [Phase 11]: Used underscore in reverse-DNS ID (com.cmux_lx.terminal) - appstreamcli rejects hyphens
 - [Phase 11]: Created src/lib.rs exposing only pub mod cli for generator binary access without GTK4 deps
 - [Phase 11]: Standalone generator binary pattern (not build.rs) for shell completions and man page
+- [Phase 11]: Dual fallback tables for cross-distro package name resolution (native manager + static table)
 
 ### Roadmap Evolution
 
@@ -60,6 +61,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-29T17:21:53.406Z
-Stopped at: Completed 11-02-PLAN.md
+Last session: 2026-03-29T17:23:25.392Z
+Stopped at: Completed 11-03-PLAN.md
 Resume file: None

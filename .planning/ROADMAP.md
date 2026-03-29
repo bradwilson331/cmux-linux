@@ -28,7 +28,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 ### v1.1 Linux Packaging & Distribution
 
-- [ ] **Phase 11: Desktop Integration & Dependency Detection** - Shared metadata files and runtime dep-detection that all packaging formats consume
+- [x] **Phase 11: Desktop Integration & Dependency Detection** - Shared metadata files and runtime dep-detection that all packaging formats consume (completed 2026-03-29)
 - [ ] **Phase 12: Native Packages (.deb + .rpm)** - Installable packages for Debian/Ubuntu and Fedora/RHEL
 - [ ] **Phase 13: Portable Formats (AppImage + Flatpak)** - Self-contained distribution without package manager dependency
 - [ ] **Phase 14: Build Automation & CI Pipeline** - Unified build script, GPG signing, and Gitea Actions for tag-triggered releases
@@ -44,7 +44,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
   2. PNG icons at 48px, 128px, 256px exist under hicolor icon theme directory structure
   3. Shell completions for bash, zsh, and fish are generated; man page renders via `man ./cmux.1`
   4. A dependency detection script maps ldd output of cmux-app to both Debian and Fedora package names
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 11-01-PLAN.md -- Desktop metadata (desktop entry, metainfo XML, icons, validation script)
@@ -103,7 +103,7 @@ Phases 11 first, then 12 and 13 can run in parallel, then 14 last.
 | 8. Agent-Browser Integration | v1.0 | 6/6 | Complete | 2026-03-25 |
 | 9. UI Buttons and Menus | v1.0 | 3/3 | Complete | 2026-03-27 |
 | 10. CLI Socket Commands | v1.0 | 2/2 | Complete | 2026-03-28 |
-| 11. Desktop Integration & Dep Detection | v1.1 | 2/3 | In Progress|  |
+| 11. Desktop Integration & Dep Detection | v1.1 | 2/3 | Complete    | 2026-03-29 |
 | 12. Native Packages (.deb + .rpm) | v1.1 | 0/0 | Not started | - |
 | 13. Portable Formats (AppImage + Flatpak) | v1.1 | 0/0 | Not started | - |
 | 14. Build Automation & CI Pipeline | v1.1 | 0/0 | Not started | - |
