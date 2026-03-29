@@ -29,7 +29,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 ### v1.1 Linux Packaging & Distribution
 
 - [x] **Phase 11: Desktop Integration & Dependency Detection** - Shared metadata files and runtime dep-detection that all packaging formats consume (completed 2026-03-29)
-- [ ] **Phase 12: Native Packages (.deb + .rpm)** - Installable packages for Debian/Ubuntu and Fedora/RHEL
+- [x] **Phase 12: Native Packages (.deb + .rpm)** - Installable packages for Debian/Ubuntu and Fedora/RHEL (completed 2026-03-29)
 - [ ] **Phase 13: Portable Formats (AppImage + Flatpak)** - Self-contained distribution without package manager dependency
 - [ ] **Phase 14: Build Automation & CI Pipeline** - Unified build script, GPG signing, and Gitea Actions for tag-triggered releases
 
@@ -60,7 +60,7 @@ Plans:
   2. `apt install -f` after dpkg resolves all runtime dependencies (GTK4, GL, fontconfig, freetype, oniguruma)
   3. `dnf install cmux.rpm` installs successfully on Fedora 38+ and cmux launches from terminal
   4. Both packages install cmux-app and cmux CLI to `/usr/bin/` and cmuxd-remote to `/usr/lib/cmux/`
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 12-01-PLAN.md -- .deb packaging script and validation (build-deb.sh, validate-deb.sh)
@@ -108,6 +108,6 @@ Phases 11 first, then 12 and 13 can run in parallel, then 14 last.
 | 9. UI Buttons and Menus | v1.0 | 3/3 | Complete | 2026-03-27 |
 | 10. CLI Socket Commands | v1.0 | 2/2 | Complete | 2026-03-28 |
 | 11. Desktop Integration & Dep Detection | v1.1 | 2/3 | Complete    | 2026-03-29 |
-| 12. Native Packages (.deb + .rpm) | v1.1 | 1/2 | In Progress|  |
+| 12. Native Packages (.deb + .rpm) | v1.1 | 1/2 | Complete    | 2026-03-29 |
 | 13. Portable Formats (AppImage + Flatpak) | v1.1 | 0/0 | Not started | - |
 | 14. Build Automation & CI Pipeline | v1.1 | 0/0 | Not started | - |
