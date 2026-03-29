@@ -9,10 +9,10 @@ check() {
     local desc="$1"; shift
     if "$@" >/dev/null 2>&1; then
         echo "PASS: $desc"
-        ((PASS++))
+        PASS=$((PASS + 1))
     else
         echo "FAIL: $desc"
-        ((FAIL++))
+        FAIL=$((FAIL + 1))
     fi
 }
 
