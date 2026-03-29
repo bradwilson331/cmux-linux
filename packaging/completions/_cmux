@@ -1,0 +1,1132 @@
+#compdef cmux
+
+autoload -U is-at-least
+
+_cmux() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_cmux_commands" \
+"*::: :->cmux" \
+&& ret=0
+    case $state in
+    (cmux)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:cmux-command-$line[1]:"
+        case $line[1] in
+            (ping)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(identify)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(capabilities)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(list-workspaces)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(current-workspace)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(raw)
+_arguments "${_arguments_options[@]}" : \
+'--params=[JSON params string]:PARAMS:_default' \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':method -- The method name (e.g. "workspace.list"):_default' \
+&& ret=0
+;;
+(new-workspace)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(select-workspace)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':id -- Workspace UUID:_default' \
+&& ret=0
+;;
+(close-workspace)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':id -- Workspace UUID:_default' \
+&& ret=0
+;;
+(rename-workspace)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':id -- Workspace UUID:_default' \
+':name -- New name:_default' \
+&& ret=0
+;;
+(next-workspace)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(prev-workspace)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(last-workspace)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(reorder-workspace)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':id -- Workspace UUID:_default' \
+':position -- Target position (0-indexed):_default' \
+&& ret=0
+;;
+(list-surfaces)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(split)
+_arguments "${_arguments_options[@]}" : \
+'--direction=[Split direction\: horizontal or vertical]:DIRECTION:_default' \
+'--id=[Target surface ID (default\: focused)]:ID:_default' \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(focus-surface)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':id -- Surface UUID:_default' \
+&& ret=0
+;;
+(close-surface)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':id -- Surface UUID:_default' \
+&& ret=0
+;;
+(send-text)
+_arguments "${_arguments_options[@]}" : \
+'--id=[Target surface ID (default\: focused)]:ID:_default' \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':text -- Text to send:_default' \
+&& ret=0
+;;
+(send-key)
+_arguments "${_arguments_options[@]}" : \
+'--id=[Target surface ID (default\: focused)]:ID:_default' \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':key -- Key descriptor:_default' \
+&& ret=0
+;;
+(read-text)
+_arguments "${_arguments_options[@]}" : \
+'--id=[Target surface ID (default\: focused)]:ID:_default' \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(health)
+_arguments "${_arguments_options[@]}" : \
+'--id=[Target surface ID (default\: focused)]:ID:_default' \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(refresh)
+_arguments "${_arguments_options[@]}" : \
+'--id=[Target surface ID (default\: focused)]:ID:_default' \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(list-panes)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(focus-pane)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+'::id -- Pane ID (default\: next):_default' \
+&& ret=0
+;;
+(last-pane)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(list-windows)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(current-window)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(layout)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(type)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':text -- Text to type:_default' \
+&& ret=0
+;;
+(list-notifications)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(clear-notification)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':id -- Notification ID:_default' \
+&& ret=0
+;;
+(browser-open)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':url -- URL to open:_default' \
+&& ret=0
+;;
+(browser-close)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(browser-stream-enable)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(browser-stream-disable)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(browser-snapshot)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(browser-screenshot)
+_arguments "${_arguments_options[@]}" : \
+'--socket=[Path to the cmux socket (overrides discovery)]:SOCKET:_default' \
+'--color=[Color mode\: always, never, auto]:COLOR:_default' \
+'--json[Output raw JSON responses]' \
+'-v[Verbose output (connection info to stderr)]' \
+'--verbose[Verbose output (connection info to stderr)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_cmux__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:cmux-help-command-$line[1]:"
+        case $line[1] in
+            (ping)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(identify)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(capabilities)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(list-workspaces)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(current-workspace)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(raw)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(new-workspace)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(select-workspace)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(close-workspace)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(rename-workspace)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(next-workspace)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(prev-workspace)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(last-workspace)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(reorder-workspace)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(list-surfaces)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(split)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(focus-surface)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(close-surface)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(send-text)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(send-key)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(read-text)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(health)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(refresh)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(list-panes)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(focus-pane)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(last-pane)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(list-windows)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(current-window)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(layout)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(type)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(list-notifications)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(clear-notification)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(browser-open)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(browser-close)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(browser-stream-enable)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(browser-stream-disable)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(browser-snapshot)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(browser-screenshot)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+}
+
+(( $+functions[_cmux_commands] )) ||
+_cmux_commands() {
+    local commands; commands=(
+'ping:Ping the running cmux instance' \
+'identify:Show cmux instance identity (version, platform, pid)' \
+'capabilities:List supported socket commands' \
+'list-workspaces:List all workspaces' \
+'current-workspace:Show the current workspace' \
+'raw:Send an arbitrary JSON-RPC method' \
+'new-workspace:Create a new workspace' \
+'select-workspace:Select a workspace by ID' \
+'close-workspace:Close a workspace by ID' \
+'rename-workspace:Rename a workspace' \
+'next-workspace:Switch to next workspace' \
+'prev-workspace:Switch to previous workspace' \
+'last-workspace:Switch to last active workspace' \
+'reorder-workspace:Reorder a workspace' \
+'list-surfaces:List all surfaces' \
+'split:Split a surface' \
+'focus-surface:Focus a surface by ID' \
+'close-surface:Close a surface by ID' \
+'send-text:Send text to a surface' \
+'send-key:Send a key event to a surface' \
+'read-text:Read text from a surface' \
+'health:Check surface health' \
+'refresh:Refresh a surface' \
+'list-panes:List all panes' \
+'focus-pane:Focus a pane' \
+'last-pane:Switch to last focused pane' \
+'list-windows:List all windows' \
+'current-window:Show current window info' \
+'layout:Show layout tree' \
+'type:Type text into the focused terminal' \
+'list-notifications:List notifications' \
+'clear-notification:Clear a notification' \
+'browser-open:Open a URL in the browser pane' \
+'browser-close:Close the browser pane' \
+'browser-stream-enable:Enable browser streaming' \
+'browser-stream-disable:Disable browser streaming' \
+'browser-snapshot:Take a browser snapshot' \
+'browser-screenshot:Take a browser screenshot' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'cmux commands' commands "$@"
+}
+(( $+functions[_cmux__browser-close_commands] )) ||
+_cmux__browser-close_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux browser-close commands' commands "$@"
+}
+(( $+functions[_cmux__browser-open_commands] )) ||
+_cmux__browser-open_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux browser-open commands' commands "$@"
+}
+(( $+functions[_cmux__browser-screenshot_commands] )) ||
+_cmux__browser-screenshot_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux browser-screenshot commands' commands "$@"
+}
+(( $+functions[_cmux__browser-snapshot_commands] )) ||
+_cmux__browser-snapshot_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux browser-snapshot commands' commands "$@"
+}
+(( $+functions[_cmux__browser-stream-disable_commands] )) ||
+_cmux__browser-stream-disable_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux browser-stream-disable commands' commands "$@"
+}
+(( $+functions[_cmux__browser-stream-enable_commands] )) ||
+_cmux__browser-stream-enable_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux browser-stream-enable commands' commands "$@"
+}
+(( $+functions[_cmux__capabilities_commands] )) ||
+_cmux__capabilities_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux capabilities commands' commands "$@"
+}
+(( $+functions[_cmux__clear-notification_commands] )) ||
+_cmux__clear-notification_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux clear-notification commands' commands "$@"
+}
+(( $+functions[_cmux__close-surface_commands] )) ||
+_cmux__close-surface_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux close-surface commands' commands "$@"
+}
+(( $+functions[_cmux__close-workspace_commands] )) ||
+_cmux__close-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux close-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__current-window_commands] )) ||
+_cmux__current-window_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux current-window commands' commands "$@"
+}
+(( $+functions[_cmux__current-workspace_commands] )) ||
+_cmux__current-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux current-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__focus-pane_commands] )) ||
+_cmux__focus-pane_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux focus-pane commands' commands "$@"
+}
+(( $+functions[_cmux__focus-surface_commands] )) ||
+_cmux__focus-surface_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux focus-surface commands' commands "$@"
+}
+(( $+functions[_cmux__health_commands] )) ||
+_cmux__health_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux health commands' commands "$@"
+}
+(( $+functions[_cmux__help_commands] )) ||
+_cmux__help_commands() {
+    local commands; commands=(
+'ping:Ping the running cmux instance' \
+'identify:Show cmux instance identity (version, platform, pid)' \
+'capabilities:List supported socket commands' \
+'list-workspaces:List all workspaces' \
+'current-workspace:Show the current workspace' \
+'raw:Send an arbitrary JSON-RPC method' \
+'new-workspace:Create a new workspace' \
+'select-workspace:Select a workspace by ID' \
+'close-workspace:Close a workspace by ID' \
+'rename-workspace:Rename a workspace' \
+'next-workspace:Switch to next workspace' \
+'prev-workspace:Switch to previous workspace' \
+'last-workspace:Switch to last active workspace' \
+'reorder-workspace:Reorder a workspace' \
+'list-surfaces:List all surfaces' \
+'split:Split a surface' \
+'focus-surface:Focus a surface by ID' \
+'close-surface:Close a surface by ID' \
+'send-text:Send text to a surface' \
+'send-key:Send a key event to a surface' \
+'read-text:Read text from a surface' \
+'health:Check surface health' \
+'refresh:Refresh a surface' \
+'list-panes:List all panes' \
+'focus-pane:Focus a pane' \
+'last-pane:Switch to last focused pane' \
+'list-windows:List all windows' \
+'current-window:Show current window info' \
+'layout:Show layout tree' \
+'type:Type text into the focused terminal' \
+'list-notifications:List notifications' \
+'clear-notification:Clear a notification' \
+'browser-open:Open a URL in the browser pane' \
+'browser-close:Close the browser pane' \
+'browser-stream-enable:Enable browser streaming' \
+'browser-stream-disable:Disable browser streaming' \
+'browser-snapshot:Take a browser snapshot' \
+'browser-screenshot:Take a browser screenshot' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'cmux help commands' commands "$@"
+}
+(( $+functions[_cmux__help__browser-close_commands] )) ||
+_cmux__help__browser-close_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help browser-close commands' commands "$@"
+}
+(( $+functions[_cmux__help__browser-open_commands] )) ||
+_cmux__help__browser-open_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help browser-open commands' commands "$@"
+}
+(( $+functions[_cmux__help__browser-screenshot_commands] )) ||
+_cmux__help__browser-screenshot_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help browser-screenshot commands' commands "$@"
+}
+(( $+functions[_cmux__help__browser-snapshot_commands] )) ||
+_cmux__help__browser-snapshot_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help browser-snapshot commands' commands "$@"
+}
+(( $+functions[_cmux__help__browser-stream-disable_commands] )) ||
+_cmux__help__browser-stream-disable_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help browser-stream-disable commands' commands "$@"
+}
+(( $+functions[_cmux__help__browser-stream-enable_commands] )) ||
+_cmux__help__browser-stream-enable_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help browser-stream-enable commands' commands "$@"
+}
+(( $+functions[_cmux__help__capabilities_commands] )) ||
+_cmux__help__capabilities_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help capabilities commands' commands "$@"
+}
+(( $+functions[_cmux__help__clear-notification_commands] )) ||
+_cmux__help__clear-notification_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help clear-notification commands' commands "$@"
+}
+(( $+functions[_cmux__help__close-surface_commands] )) ||
+_cmux__help__close-surface_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help close-surface commands' commands "$@"
+}
+(( $+functions[_cmux__help__close-workspace_commands] )) ||
+_cmux__help__close-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help close-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__help__current-window_commands] )) ||
+_cmux__help__current-window_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help current-window commands' commands "$@"
+}
+(( $+functions[_cmux__help__current-workspace_commands] )) ||
+_cmux__help__current-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help current-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__help__focus-pane_commands] )) ||
+_cmux__help__focus-pane_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help focus-pane commands' commands "$@"
+}
+(( $+functions[_cmux__help__focus-surface_commands] )) ||
+_cmux__help__focus-surface_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help focus-surface commands' commands "$@"
+}
+(( $+functions[_cmux__help__health_commands] )) ||
+_cmux__help__health_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help health commands' commands "$@"
+}
+(( $+functions[_cmux__help__help_commands] )) ||
+_cmux__help__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help help commands' commands "$@"
+}
+(( $+functions[_cmux__help__identify_commands] )) ||
+_cmux__help__identify_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help identify commands' commands "$@"
+}
+(( $+functions[_cmux__help__last-pane_commands] )) ||
+_cmux__help__last-pane_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help last-pane commands' commands "$@"
+}
+(( $+functions[_cmux__help__last-workspace_commands] )) ||
+_cmux__help__last-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help last-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__help__layout_commands] )) ||
+_cmux__help__layout_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help layout commands' commands "$@"
+}
+(( $+functions[_cmux__help__list-notifications_commands] )) ||
+_cmux__help__list-notifications_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help list-notifications commands' commands "$@"
+}
+(( $+functions[_cmux__help__list-panes_commands] )) ||
+_cmux__help__list-panes_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help list-panes commands' commands "$@"
+}
+(( $+functions[_cmux__help__list-surfaces_commands] )) ||
+_cmux__help__list-surfaces_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help list-surfaces commands' commands "$@"
+}
+(( $+functions[_cmux__help__list-windows_commands] )) ||
+_cmux__help__list-windows_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help list-windows commands' commands "$@"
+}
+(( $+functions[_cmux__help__list-workspaces_commands] )) ||
+_cmux__help__list-workspaces_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help list-workspaces commands' commands "$@"
+}
+(( $+functions[_cmux__help__new-workspace_commands] )) ||
+_cmux__help__new-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help new-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__help__next-workspace_commands] )) ||
+_cmux__help__next-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help next-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__help__ping_commands] )) ||
+_cmux__help__ping_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help ping commands' commands "$@"
+}
+(( $+functions[_cmux__help__prev-workspace_commands] )) ||
+_cmux__help__prev-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help prev-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__help__raw_commands] )) ||
+_cmux__help__raw_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help raw commands' commands "$@"
+}
+(( $+functions[_cmux__help__read-text_commands] )) ||
+_cmux__help__read-text_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help read-text commands' commands "$@"
+}
+(( $+functions[_cmux__help__refresh_commands] )) ||
+_cmux__help__refresh_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help refresh commands' commands "$@"
+}
+(( $+functions[_cmux__help__rename-workspace_commands] )) ||
+_cmux__help__rename-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help rename-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__help__reorder-workspace_commands] )) ||
+_cmux__help__reorder-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help reorder-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__help__select-workspace_commands] )) ||
+_cmux__help__select-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help select-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__help__send-key_commands] )) ||
+_cmux__help__send-key_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help send-key commands' commands "$@"
+}
+(( $+functions[_cmux__help__send-text_commands] )) ||
+_cmux__help__send-text_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help send-text commands' commands "$@"
+}
+(( $+functions[_cmux__help__split_commands] )) ||
+_cmux__help__split_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help split commands' commands "$@"
+}
+(( $+functions[_cmux__help__type_commands] )) ||
+_cmux__help__type_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux help type commands' commands "$@"
+}
+(( $+functions[_cmux__identify_commands] )) ||
+_cmux__identify_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux identify commands' commands "$@"
+}
+(( $+functions[_cmux__last-pane_commands] )) ||
+_cmux__last-pane_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux last-pane commands' commands "$@"
+}
+(( $+functions[_cmux__last-workspace_commands] )) ||
+_cmux__last-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux last-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__layout_commands] )) ||
+_cmux__layout_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux layout commands' commands "$@"
+}
+(( $+functions[_cmux__list-notifications_commands] )) ||
+_cmux__list-notifications_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux list-notifications commands' commands "$@"
+}
+(( $+functions[_cmux__list-panes_commands] )) ||
+_cmux__list-panes_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux list-panes commands' commands "$@"
+}
+(( $+functions[_cmux__list-surfaces_commands] )) ||
+_cmux__list-surfaces_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux list-surfaces commands' commands "$@"
+}
+(( $+functions[_cmux__list-windows_commands] )) ||
+_cmux__list-windows_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux list-windows commands' commands "$@"
+}
+(( $+functions[_cmux__list-workspaces_commands] )) ||
+_cmux__list-workspaces_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux list-workspaces commands' commands "$@"
+}
+(( $+functions[_cmux__new-workspace_commands] )) ||
+_cmux__new-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux new-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__next-workspace_commands] )) ||
+_cmux__next-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux next-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__ping_commands] )) ||
+_cmux__ping_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux ping commands' commands "$@"
+}
+(( $+functions[_cmux__prev-workspace_commands] )) ||
+_cmux__prev-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux prev-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__raw_commands] )) ||
+_cmux__raw_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux raw commands' commands "$@"
+}
+(( $+functions[_cmux__read-text_commands] )) ||
+_cmux__read-text_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux read-text commands' commands "$@"
+}
+(( $+functions[_cmux__refresh_commands] )) ||
+_cmux__refresh_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux refresh commands' commands "$@"
+}
+(( $+functions[_cmux__rename-workspace_commands] )) ||
+_cmux__rename-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux rename-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__reorder-workspace_commands] )) ||
+_cmux__reorder-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux reorder-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__select-workspace_commands] )) ||
+_cmux__select-workspace_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux select-workspace commands' commands "$@"
+}
+(( $+functions[_cmux__send-key_commands] )) ||
+_cmux__send-key_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux send-key commands' commands "$@"
+}
+(( $+functions[_cmux__send-text_commands] )) ||
+_cmux__send-text_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux send-text commands' commands "$@"
+}
+(( $+functions[_cmux__split_commands] )) ||
+_cmux__split_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux split commands' commands "$@"
+}
+(( $+functions[_cmux__type_commands] )) ||
+_cmux__type_commands() {
+    local commands; commands=()
+    _describe -t commands 'cmux type commands' commands "$@"
+}
+
+if [ "$funcstack[1]" = "_cmux" ]; then
+    _cmux "$@"
+else
+    compdef _cmux cmux
+fi

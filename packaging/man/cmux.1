@@ -1,0 +1,143 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH cmux 1  "cmux " 
+.SH NAME
+cmux \- Control cmux terminal multiplexer
+.SH SYNOPSIS
+\fBcmux\fR [\fB\-\-socket\fR] [\fB\-\-json\fR] [\fB\-v\fR|\fB\-\-verbose\fR] [\fB\-\-color\fR] [\fB\-h\fR|\fB\-\-help\fR] <\fIsubcommands\fR>
+.SH DESCRIPTION
+Control cmux terminal multiplexer
+.SH OPTIONS
+.TP
+\fB\-\-socket\fR \fI<SOCKET>\fR
+Path to the cmux socket (overrides discovery)
+.TP
+\fB\-\-json\fR
+Output raw JSON responses
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR
+Verbose output (connection info to stderr)
+.TP
+\fB\-\-color\fR \fI<COLOR>\fR [default: auto]
+Color mode: always, never, auto
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help
+.SH SUBCOMMANDS
+.TP
+cmux\-ping(1)
+Ping the running cmux instance
+.TP
+cmux\-identify(1)
+Show cmux instance identity (version, platform, pid)
+.TP
+cmux\-capabilities(1)
+List supported socket commands
+.TP
+cmux\-list\-workspaces(1)
+List all workspaces
+.TP
+cmux\-current\-workspace(1)
+Show the current workspace
+.TP
+cmux\-raw(1)
+Send an arbitrary JSON\-RPC method
+.TP
+cmux\-new\-workspace(1)
+Create a new workspace
+.TP
+cmux\-select\-workspace(1)
+Select a workspace by ID
+.TP
+cmux\-close\-workspace(1)
+Close a workspace by ID
+.TP
+cmux\-rename\-workspace(1)
+Rename a workspace
+.TP
+cmux\-next\-workspace(1)
+Switch to next workspace
+.TP
+cmux\-prev\-workspace(1)
+Switch to previous workspace
+.TP
+cmux\-last\-workspace(1)
+Switch to last active workspace
+.TP
+cmux\-reorder\-workspace(1)
+Reorder a workspace
+.TP
+cmux\-list\-surfaces(1)
+List all surfaces
+.TP
+cmux\-split(1)
+Split a surface
+.TP
+cmux\-focus\-surface(1)
+Focus a surface by ID
+.TP
+cmux\-close\-surface(1)
+Close a surface by ID
+.TP
+cmux\-send\-text(1)
+Send text to a surface
+.TP
+cmux\-send\-key(1)
+Send a key event to a surface
+.TP
+cmux\-read\-text(1)
+Read text from a surface
+.TP
+cmux\-health(1)
+Check surface health
+.TP
+cmux\-refresh(1)
+Refresh a surface
+.TP
+cmux\-list\-panes(1)
+List all panes
+.TP
+cmux\-focus\-pane(1)
+Focus a pane
+.TP
+cmux\-last\-pane(1)
+Switch to last focused pane
+.TP
+cmux\-list\-windows(1)
+List all windows
+.TP
+cmux\-current\-window(1)
+Show current window info
+.TP
+cmux\-layout(1)
+Show layout tree
+.TP
+cmux\-type(1)
+Type text into the focused terminal
+.TP
+cmux\-list\-notifications(1)
+List notifications
+.TP
+cmux\-clear\-notification(1)
+Clear a notification
+.TP
+cmux\-browser\-open(1)
+Open a URL in the browser pane
+.TP
+cmux\-browser\-close(1)
+Close the browser pane
+.TP
+cmux\-browser\-stream\-enable(1)
+Enable browser streaming
+.TP
+cmux\-browser\-stream\-disable(1)
+Disable browser streaming
+.TP
+cmux\-browser\-snapshot(1)
+Take a browser snapshot
+.TP
+cmux\-browser\-screenshot(1)
+Take a browser screenshot
+.TP
+cmux\-help(1)
+Print this message or the help of the given subcommand(s)
