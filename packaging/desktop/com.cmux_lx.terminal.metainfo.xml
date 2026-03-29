@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.cmux_lx.terminal</id>
+  <name>cmux</name>
+  <summary>GPU-accelerated terminal multiplexer</summary>
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>cmux is a GPU-accelerated terminal multiplexer for Linux with tabs, splits, workspaces, and socket CLI control, powered by Ghostty's terminal rendering.</p>
+  </description>
+  <launchable type="desktop-id">com.cmux_lx.terminal.desktop</launchable>
+  <url type="homepage">https://github.com/manaflow-ai/cmux-linux</url>
+  <developer id="com.cmux_lx">
+    <name>manaflow-ai</name>
+  </developer>
+  <content_rating type="oars-1.1" />
+  <categories>
+    <category>System</category>
+    <category>TerminalEmulator</category>
+  </categories>
+</component>

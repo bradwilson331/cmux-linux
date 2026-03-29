@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=cmux
+GenericName=Terminal Multiplexer
+Comment=GPU-accelerated terminal multiplexer with tabs, splits, and workspaces
+Exec=cmux-app
+Icon=com.cmux_lx.terminal
+Terminal=false
+Categories=System;TerminalEmulator;
+Keywords=terminal;multiplexer;tabs;splits;workspaces;gpu;
+StartupWMClass=cmux
+MimeType=
