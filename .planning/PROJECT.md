@@ -28,8 +28,8 @@ A Linux user should get the same cmux experience as a Mac user: tabs, splits, wo
 
 ### Active
 
-- [ ] .deb package for Debian/Ubuntu
-- [ ] .rpm package for Fedora/RHEL
+- ✓ .deb package for Debian/Ubuntu — Validated in Phase 12: Native Packages
+- ✓ .rpm package for Fedora/RHEL — Validated in Phase 12: Native Packages
 - [ ] AppImage portable binary
 - [ ] Flatpak package
 - [ ] Local build scripts for each format
@@ -112,4 +112,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-29 after Phase 11 completion*
+*Last updated: 2026-03-29 after Phase 12 completion*
