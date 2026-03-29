@@ -60,7 +60,11 @@ Plans:
   2. `apt install -f` after dpkg resolves all runtime dependencies (GTK4, GL, fontconfig, freetype, oniguruma)
   3. `dnf install cmux.rpm` installs successfully on Fedora 38+ and cmux launches from terminal
   4. Both packages install cmux-app and cmux CLI to `/usr/bin/` and cmuxd-remote to `/usr/lib/cmux/`
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 12-01-PLAN.md -- .deb packaging script and validation (build-deb.sh, validate-deb.sh)
+- [ ] 12-02-PLAN.md -- .rpm spec file, packaging script, and validation (cmux.spec, build-rpm.sh, validate-rpm.sh)
 
 ### Phase 13: Portable Formats (AppImage + Flatpak)
 **Goal**: Users can run cmux without a package manager -- either as a download-and-run AppImage or via Flatpak with sandboxed GPU access
@@ -104,6 +108,6 @@ Phases 11 first, then 12 and 13 can run in parallel, then 14 last.
 | 9. UI Buttons and Menus | v1.0 | 3/3 | Complete | 2026-03-27 |
 | 10. CLI Socket Commands | v1.0 | 2/2 | Complete | 2026-03-28 |
 | 11. Desktop Integration & Dep Detection | v1.1 | 2/3 | Complete    | 2026-03-29 |
-| 12. Native Packages (.deb + .rpm) | v1.1 | 0/0 | Not started | - |
+| 12. Native Packages (.deb + .rpm) | v1.1 | 0/2 | In progress | - |
 | 13. Portable Formats (AppImage + Flatpak) | v1.1 | 0/0 | Not started | - |
 | 14. Build Automation & CI Pipeline | v1.1 | 0/0 | Not started | - |
