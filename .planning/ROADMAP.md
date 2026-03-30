@@ -78,12 +78,12 @@ Plans:
   3. `cmux browser surface:N click e1` successfully interacts with the referenced element
   4. Skills are installed to `/usr/share/cmux/skills/` in both .deb and .rpm packages
   5. A generated CLAUDE.md or discoverable config references the installed skills so Claude Code finds them automatically
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 12.1-01-PLAN.md -- CLI restructure: nested browser subcommand, surface ref parsing, JSON-default output
-- [ ] 12.1-02-PLAN.md -- Socket-side surface registry, ref resolution, browser.list handler
-- [ ] 12.1-03-PLAN.md -- Skill packaging: CLAUDE.md, build script updates, validation
+- [x] 12.1-02-PLAN.md -- Socket-side surface registry, ref resolution, browser.list handler
+- [x] 12.1-03-PLAN.md -- Skill packaging: CLAUDE.md, build script updates, validation
 
 ### Phase 13: Portable Formats (AppImage + Flatpak)
 **Goal**: Users can run cmux without a package manager -- either as a download-and-run AppImage or via Flatpak with sandboxed GPU access
@@ -128,6 +128,6 @@ Phases 11 first, then 12 and 13 can run in parallel, then 14 last.
 | 10. CLI Socket Commands | v1.0 | 2/2 | Complete | 2026-03-28 |
 | 11. Desktop Integration & Dep Detection | v1.1 | 2/3 | Complete    | 2026-03-29 |
 | 12. Native Packages (.deb + .rpm) | v1.1 | 1/2 | Complete    | 2026-03-29 |
-| 12.1. CLI Browser Parity & Skill Packaging | v1.1 | 0/3 | In progress | - |
+| 12.1. CLI Browser Parity & Skill Packaging | v1.1 | 2/3 | In Progress|  |
 | 13. Portable Formats (AppImage + Flatpak) | v1.1 | 0/0 | Not started | - |
 | 14. Build Automation & CI Pipeline | v1.1 | 0/0 | Not started | - |

@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Linux Packaging & Distribution
-status: Ready to plan
-stopped_at: Phase 12.1 context gathered
-last_updated: "2026-03-30T03:51:03.122Z"
+status: Ready to execute
+stopped_at: Completed 12.1-03-PLAN.md
+last_updated: "2026-03-30T04:13:21.839Z"
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  completed_phases: 3
+  total_plans: 8
+  completed_plans: 8
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** A Linux user should get the same cmux experience as a Mac user: tabs, splits, workspaces, and socket CLI control -- powered by Ghostty's GPU-accelerated terminal.
-**Current focus:** Phase 12 — native-packages-deb-rpm
+**Current focus:** Phase 12.1 — cli-browser-parity-skill-packaging
 
 ## Current Position
 
-Phase: 13
-Plan: Not started
+Phase: 12.1 (cli-browser-parity-skill-packaging) — EXECUTING
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -47,6 +47,8 @@ All v1.0 decisions archived in milestones/v1.0-phases/ and PROJECT.md Key Decisi
 - [Phase 11]: Dual fallback tables for cross-distro package name resolution (native manager + static table)
 - [Phase 12]: AutoReqProv disabled for pre-built binary RPM packaging with explicit Fedora Requires
 - [Phase 12]: Non-t64 package names for Ubuntu 22.04 compat (libglib2.0-0 not libglib2.0-0t64)
+- [Phase 12.1]: Only cmux and cmux-browser skills packaged; excluded cmux-debug-windows, cmux-markdown, release per D-13
+- [Phase 12.1]: Skills installed to FHS-compliant /usr/share/cmux/skills/ for agent discoverability
 
 ### Roadmap Evolution
 
@@ -64,6 +66,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-30T03:51:03.120Z
-Stopped at: Phase 12.1 context gathered
-Resume file: .planning/phases/12.1-cli-browser-parity-skill-packaging/12.1-CONTEXT.md
+Last session: 2026-03-30T04:13:08.361Z
+Stopped at: Completed 12.1-03-PLAN.md
+Resume file: None
