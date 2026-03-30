@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Linux Packaging & Distribution
 status: Ready to plan
-stopped_at: Completed 12-01-PLAN.md
-last_updated: "2026-03-29T17:53:51.193Z"
+stopped_at: Phase 12.1 context gathered
+last_updated: "2026-03-30T03:51:03.122Z"
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 2
   total_plans: 5
   completed_plans: 5
@@ -52,6 +52,7 @@ All v1.0 decisions archived in milestones/v1.0-phases/ and PROJECT.md Key Decisi
 
 - v1.0 milestone archived to .planning/milestones/
 - v1.1 roadmap: 4 phases (coarse granularity), 25 requirements mapped
+- Phase 12.1 inserted after Phase 12: CLI Browser Parity & Skill Packaging (URGENT)
 
 ### Pending Todos
 
@@ -63,6 +64,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-29T17:50:18.871Z
-Stopped at: Completed 12-01-PLAN.md
-Resume file: None
+Last session: 2026-03-30T03:51:03.120Z
+Stopped at: Phase 12.1 context gathered
+Resume file: .planning/phases/12.1-cli-browser-parity-skill-packaging/12.1-CONTEXT.md
