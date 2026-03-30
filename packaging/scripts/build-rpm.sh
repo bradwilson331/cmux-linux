@@ -14,12 +14,13 @@ command -v rpmbuild &>/dev/null || {
 CMUX_APP="${1:-${REPO_ROOT}/target/release/cmux-app}"
 CMUX_CLI="${2:-${REPO_ROOT}/target/release/cmux}"
 CMUXD_REMOTE="${3:-${REPO_ROOT}/daemon/remote/cmuxd-remote}"
+AGENT_BROWSER="${4:-${REPO_ROOT}/target/release/agent-browser}"
 
 # Extract version from Cargo.toml
 VERSION=$(grep '^version' "$REPO_ROOT/Cargo.toml" | head -1 | sed 's/.*"\(.*\)"/\1/')
 
 # Verify binaries exist
-for bin in "$CMUX_APP" "$CMUX_CLI" "$CMUXD_REMOTE"; do
+for bin in "$CMUX_APP" "$CMUX_CLI" "$CMUXD_REMOTE" "$AGENT_BROWSER"; do
     if [[ ! -f "$bin" ]]; then
         echo "ERROR: Binary not found: $bin" >&2
         exit 1
@@ -41,6 +42,7 @@ mkdir -p "$BUILD_DIR/rpmbuild"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 cp "$CMUX_APP" "$STAGING/cmux-app"
 cp "$CMUX_CLI" "$STAGING/cmux"
 cp "$CMUXD_REMOTE" "$STAGING/cmuxd-remote"
+cp "$AGENT_BROWSER" "$STAGING/agent-browser"
 
 # Desktop metadata
 cp "$REPO_ROOT/packaging/desktop/com.cmux_lx.terminal.desktop" "$STAGING/"
@@ -58,6 +60,14 @@ cp "$REPO_ROOT/packaging/completions/cmux.fish" "$STAGING/"
 
 # Man page (gzipped)
 gzip -9n < "$REPO_ROOT/packaging/man/cmux.1" > "$STAGING/cmux.1.gz"
+
+# Skills (D-13: only cmux and cmux-browser)
+for skill in cmux cmux-browser; do
+    cp -r "$REPO_ROOT/skills/$skill" "$STAGING/skills-$skill"
+done
+
+# Package CLAUDE.md (D-14)
+cp "$REPO_ROOT/packaging/CLAUDE.md" "$STAGING/CLAUDE.md"
 
 # Build the RPM
 rpmbuild -bb \

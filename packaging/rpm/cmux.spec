@@ -32,6 +32,7 @@ and socket CLI control -- powered by Ghostty.
 install -Dm0755 %{_sourcedir}/cmux-app %{buildroot}%{_bindir}/cmux-app
 install -Dm0755 %{_sourcedir}/cmux %{buildroot}%{_bindir}/cmux
 install -Dm0755 %{_sourcedir}/cmuxd-remote %{buildroot}%{_libdir}/cmux/cmuxd-remote
+install -Dm0755 %{_sourcedir}/agent-browser %{buildroot}%{_libdir}/cmux/agent-browser
 
 install -Dm0644 %{_sourcedir}/com.cmux_lx.terminal.desktop %{buildroot}%{_datadir}/applications/com.cmux_lx.terminal.desktop
 install -Dm0644 %{_sourcedir}/com.cmux_lx.terminal.metainfo.xml %{buildroot}%{_datadir}/metainfo/com.cmux_lx.terminal.metainfo.xml
@@ -46,10 +47,22 @@ install -Dm0644 %{_sourcedir}/cmux.fish %{buildroot}%{_datadir}/fish/vendor_comp
 
 install -Dm0644 %{_sourcedir}/cmux.1.gz %{buildroot}%{_mandir}/man1/cmux.1.gz
 
+# Skills
+for skill in cmux cmux-browser; do
+    find %{_sourcedir}/skills-${skill} -type f | while IFS= read -r f; do
+        rel="${f#%{_sourcedir}/skills-${skill}/}"
+        install -Dm0644 "$f" "%{buildroot}%{_datadir}/cmux/skills/${skill}/${rel}"
+    done
+done
+
+# CLAUDE.md
+install -Dm0644 %{_sourcedir}/CLAUDE.md %{buildroot}%{_datadir}/cmux/CLAUDE.md
+
 %files
 %{_bindir}/cmux-app
 %{_bindir}/cmux
 %{_libdir}/cmux/cmuxd-remote
+%{_libdir}/cmux/agent-browser
 %{_datadir}/applications/com.cmux_lx.terminal.desktop
 %{_datadir}/metainfo/com.cmux_lx.terminal.metainfo.xml
 %{_datadir}/icons/hicolor/48x48/apps/com.cmux_lx.terminal.png
@@ -59,3 +72,5 @@ install -Dm0644 %{_sourcedir}/cmux.1.gz %{buildroot}%{_mandir}/man1/cmux.1.gz
 %{_datadir}/zsh/vendor-completions/_cmux
 %{_datadir}/fish/vendor_completions.d/cmux.fish
 %{_mandir}/man1/cmux.1.gz
+%{_datadir}/cmux/CLAUDE.md
+%{_datadir}/cmux/skills/
