@@ -14,6 +14,27 @@ fn err(req_id: Value, code: &str, message: &str) -> Value {
     json!({"id": req_id, "ok": false, "error": {"code": code, "message": message}})
 }
 
+/// Resolve a surface_ref string ("surface:N" or UUID) to a UUID string.
+/// Returns Ok(uuid_string) or Err((error_message, available_refs)).
+fn resolve_surface_ref(
+    surface_ref: &str,
+    refs: &std::collections::HashMap<u32, String>,
+) -> Result<String, (String, Vec<String>)> {
+    if let Some(n_str) = surface_ref.strip_prefix("surface:") {
+        if let Ok(n) = n_str.parse::<u32>() {
+            if let Some(uuid) = refs.get(&n) {
+                return Ok(uuid.clone());
+            }
+            let available: Vec<String> = refs.keys()
+                .map(|k| format!("surface:{}", k))
+                .collect();
+            return Err((format!("surface:{} not found", n), available));
+        }
+    }
+    // Treat as UUID directly
+    Ok(surface_ref.to_string())
+}
+
 /// Dispatch a SocketCommand on the GTK main thread.
 /// SOCK-05: Only focus-intent commands (workspace.select, workspace.next/previous/last,
 /// pane.focus, pane.last, surface.focus) may call grab_active_focus() or focus_active_surface().
@@ -50,7 +71,7 @@ pub fn handle_socket_command(
                 "window.list", "window.current",
                 "notification.list", "notification.clear",
                 // Browser lifecycle + streaming
-                "browser.open", "browser.close",
+                "browser.open", "browser.close", "browser.list",
                 "browser.stream.enable", "browser.stream.disable",
                 "browser.snapshot", "browser.screenshot",
                 // P0: navigation
@@ -612,7 +633,7 @@ pub fn handle_socket_command(
 
         // -- browser.* (Phase 8: D-04 lifecycle + streaming) --
         // SOCK-05: None of these commands steal focus.
-        SocketCommand::BrowserOpen { req_id, url, resp_tx } => {
+        SocketCommand::BrowserOpen { req_id, url, workspace, resp_tx } => {
             let mut s = state.borrow_mut();
             // Lazy-init BrowserManager per D-05
             if s.browser_manager.is_none() {
@@ -624,38 +645,37 @@ pub fn handle_socket_command(
                 let _ = resp_tx.send(err(req_id, "daemon_error", &e));
                 return;
             }
-            // Send navigate command to daemon
-            let params = serde_json::json!({"url": url});
-            match bm.send_command("navigate", params) {
+            // Build params for agent-browser, including workspace if provided
+            let mut open_params = serde_json::json!({"url": url});
+            if let Some(ref ws) = workspace {
+                open_params["workspace"] = serde_json::json!(ws);
+            }
+            match bm.send_command("open", open_params) {
                 Ok(result) => {
-                    // Create preview pane in the active workspace split tree
-                    // so the user sees something in the UI (Gap 1 + Gap 2 fix)
-                    if let Some(engine) = s.active_split_engine_mut() {
-                        match engine.split_active_with_preview() {
-                            Some(_widgets) => {
-                                // Streaming is started separately via browser.stream.enable
-                            }
-                            None => {
-                                // split failed — no preview pane created
-                            }
-                        }
+                    // Allocate surface ref (D-06)
+                    s.browser_surface_counter += 1;
+                    let ref_id = s.browser_surface_counter;
+                    let uuid = result.get("id")
+                        .or_else(|| result.get("surface_id"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown")
+                        .to_string();
+                    s.browser_surface_refs.insert(ref_id, uuid.clone());
+                    // Augment response with surface_ref
+                    let mut response = result.clone();
+                    if let Some(obj) = response.as_object_mut() {
+                        obj.insert("surface_ref".to_string(), serde_json::json!(format!("surface:{}", ref_id)));
+                        obj.insert("uuid".to_string(), serde_json::json!(uuid));
                     }
-                    let _ = resp_tx.send(ok(req_id, result));
+                    // Create preview pane in the active workspace split tree
+                    if let Some(engine) = s.active_split_engine_mut() {
+                        let _ = engine.split_active_with_preview();
+                    }
+                    let _ = resp_tx.send(ok(req_id, response));
                 }
                 Err(e) => {
                     let _ = resp_tx.send(err(req_id, "browser_error", &e));
                 }
-            }
-        }
-
-        SocketCommand::BrowserClose { req_id, resp_tx } => {
-            let mut s = state.borrow_mut();
-            if let Some(ref mut bm) = s.browser_manager {
-                bm.shutdown();
-                s.browser_manager = None;
-                let _ = resp_tx.send(ok(req_id, json!({"closed": true})));
-            } else {
-                let _ = resp_tx.send(err(req_id, "not_running", "No browser session active"));
             }
         }
 
@@ -731,42 +751,44 @@ pub fn handle_socket_command(
             }
         }
 
-        SocketCommand::BrowserSnapshot { req_id, resp_tx } => {
+        SocketCommand::BrowserList { req_id, resp_tx } => {
             let s = state.borrow();
-            if let Some(ref bm) = s.browser_manager {
-                match bm.send_command("snapshot", serde_json::json!({})) {
-                    Ok(result) => {
-                        let _ = resp_tx.send(ok(req_id, result));
-                    }
-                    Err(e) => {
-                        let _ = resp_tx.send(err(req_id, "browser_error", &e));
-                    }
-                }
-            } else {
-                let _ = resp_tx.send(err(req_id, "not_running", "No browser session active"));
-            }
-        }
-
-        SocketCommand::BrowserScreenshot { req_id, resp_tx } => {
-            let s = state.borrow();
-            if let Some(ref bm) = s.browser_manager {
-                match bm.send_command("screenshot", serde_json::json!({})) {
-                    Ok(result) => {
-                        let _ = resp_tx.send(ok(req_id, result));
-                    }
-                    Err(e) => {
-                        let _ = resp_tx.send(err(req_id, "browser_error", &e));
-                    }
-                }
-            } else {
-                let _ = resp_tx.send(err(req_id, "not_running", "No browser session active"));
-            }
+            let surfaces: Vec<serde_json::Value> = s.browser_surface_refs.iter()
+                .map(|(ref_id, uuid)| {
+                    serde_json::json!({
+                        "ref": format!("surface:{}", ref_id),
+                        "uuid": uuid,
+                        "status": "registered",
+                    })
+                })
+                .collect();
+            let _ = resp_tx.send(ok(req_id, serde_json::json!({"surfaces": surfaces})));
         }
 
         // -- browser.* generic proxy (P0/P1 parity) --
-        SocketCommand::BrowserAction { req_id, action, params, resp_tx } => {
+        SocketCommand::BrowserAction { req_id, action, mut params, surface_ref, resp_tx } => {
             let s = state.borrow();
             if let Some(ref bm) = s.browser_manager {
+                // Resolve surface ref if provided
+                if let Some(ref sref) = surface_ref {
+                    match resolve_surface_ref(sref, &s.browser_surface_refs) {
+                        Ok(uuid) => {
+                            if let Some(obj) = params.as_object_mut() {
+                                obj.remove("surface_ref");
+                                obj.insert("surface_id".to_string(), serde_json::json!(uuid));
+                            }
+                        }
+                        Err((msg, available)) => {
+                            let _ = resp_tx.send(json!({
+                                "id": req_id,
+                                "ok": false,
+                                "error": {"code": "surface_not_found", "message": msg},
+                                "available": available,
+                            }));
+                            return;
+                        }
+                    }
+                }
                 match bm.send_command(&action, params) {
                     Ok(result) => {
                         let _ = resp_tx.send(ok(req_id, result));

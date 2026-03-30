@@ -258,10 +258,7 @@ async fn dispatch_line(
         "browser.open" => commands::SocketCommand::BrowserOpen {
             req_id: req_id.clone(),
             url: params.get("url").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-            resp_tx,
-        },
-        "browser.close" => commands::SocketCommand::BrowserClose {
-            req_id: req_id.clone(),
+            workspace: params.get("workspace").and_then(|v| v.as_str()).map(String::from),
             resp_tx,
         },
         "browser.stream.enable" => commands::SocketCommand::BrowserStreamEnable {
@@ -272,14 +269,23 @@ async fn dispatch_line(
             req_id: req_id.clone(),
             resp_tx,
         },
-        "browser.snapshot" => commands::SocketCommand::BrowserSnapshot {
+        "browser.list" => commands::SocketCommand::BrowserList {
             req_id: req_id.clone(),
             resp_tx,
         },
-        "browser.screenshot" => commands::SocketCommand::BrowserScreenshot {
-            req_id: req_id.clone(),
-            resp_tx,
-        },
+
+        // Route all other browser.* methods to the generic proxy (P0/P1 parity)
+        _ if method.starts_with("browser.") => {
+            let action = method.strip_prefix("browser.").unwrap().to_string();
+            let surface_ref = params.get("surface_ref").and_then(|v| v.as_str()).map(String::from);
+            commands::SocketCommand::BrowserAction {
+                req_id: req_id.clone(),
+                action,
+                params,
+                surface_ref,
+                resp_tx,
+            }
+        }
 
         _ => commands::SocketCommand::NotImplemented {
             req_id: req_id.clone(),
