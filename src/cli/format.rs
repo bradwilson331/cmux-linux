@@ -322,9 +322,33 @@ pub fn format_response(method: &str, result: &Value, json_mode: bool, color: boo
             }
         }
 
+        // Browser list: human-readable table
+        "browser.list" => format_browser_list(result, color),
+
         // Default: pretty-print JSON for uncommon commands
         _ => format_fallback(result),
     }
+}
+
+/// Format a browser surface list response.
+pub fn format_browser_list(result: &Value, _color: bool) -> String {
+    let surfaces = match result.get("surfaces").and_then(|v| v.as_array()) {
+        Some(arr) => arr,
+        None => return format_fallback(result),
+    };
+    if surfaces.is_empty() {
+        return "No browser surfaces".to_string();
+    }
+    let mut lines = Vec::new();
+    lines.push(format!("{:<12} {:<38} {:<50} {}", "REF", "UUID", "URL", "STATUS"));
+    for s in surfaces {
+        let ref_str = s.get("ref").and_then(|v| v.as_str()).unwrap_or("-");
+        let uuid = s.get("uuid").and_then(|v| v.as_str()).unwrap_or("-");
+        let url = s.get("url").and_then(|v| v.as_str()).unwrap_or("-");
+        let status = s.get("status").and_then(|v| v.as_str()).unwrap_or("unknown");
+        lines.push(format!("{:<12} {:<38} {:<50} {}", ref_str, uuid, url, status));
+    }
+    lines.join("\n")
 }
 
 /// Fallback: pretty-print JSON.
