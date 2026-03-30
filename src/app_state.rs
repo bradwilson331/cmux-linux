@@ -41,6 +41,10 @@ pub struct AppState {
     pub workspace_bridges: std::collections::HashMap<u64, std::sync::Arc<crate::ssh::bridge::SshBridge>>,
     /// Browser preview daemon manager (Phase 8).
     pub browser_manager: Option<crate::browser::BrowserManager>,
+    /// Next browser surface short-ref counter (monotonically increasing, per D-06).
+    pub browser_surface_counter: u32,
+    /// Maps short-ref ID -> surface UUID (lost on restart, per D-06).
+    pub browser_surface_refs: std::collections::HashMap<u32, String>,
 }
 
 impl AppState {
@@ -70,6 +74,8 @@ impl AppState {
             remote_pane_contexts: std::collections::HashMap::new(),
             workspace_bridges: std::collections::HashMap::new(),
             browser_manager: None,
+            browser_surface_counter: 0,
+            browser_surface_refs: std::collections::HashMap::new(),
         };
         Rc::new(RefCell::new(state))
     }
