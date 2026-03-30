@@ -650,7 +650,7 @@ pub fn handle_socket_command(
             if let Some(ref ws) = workspace {
                 open_params["workspace"] = serde_json::json!(ws);
             }
-            match bm.send_command("open", open_params) {
+            match bm.send_command("navigate", open_params) {
                 Ok(result) => {
                     // Allocate surface ref (D-06)
                     s.browser_surface_counter += 1;
@@ -789,7 +789,17 @@ pub fn handle_socket_command(
                         }
                     }
                 }
-                match bm.send_command(&action, params) {
+                // Translate cmux CLI action names to agent-browser action names
+                let daemon_action = match action.as_str() {
+                    "open" => "launch",
+                    "goto" => "navigate",
+                    "eval" => "evaluate",
+                    "gethtml" => "innerhtml",
+                    "stream.enable" => "stream_enable",
+                    "stream.disable" => "stream_disable",
+                    _ => &action,
+                };
+                match bm.send_command(daemon_action, params) {
                     Ok(result) => {
                         let _ = resp_tx.send(ok(req_id, result));
                     }
