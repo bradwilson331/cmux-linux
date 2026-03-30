@@ -63,6 +63,7 @@ echo "File listing:"
 check "/usr/bin/cmux-app" grep -q '/usr/bin/cmux-app' "$FILE_LIST_FILE"
 check "/usr/bin/cmux (exact)" grep -qx '/usr/bin/cmux' "$FILE_LIST_FILE"
 check "/usr/lib64/cmux/cmuxd-remote" grep -q '/usr/lib64/cmux/cmuxd-remote' "$FILE_LIST_FILE"
+check "/usr/lib64/cmux/agent-browser" grep -q '/usr/lib64/cmux/agent-browser' "$FILE_LIST_FILE"
 check ".desktop file" grep -q '/usr/share/applications/com.cmux_lx.terminal.desktop' "$FILE_LIST_FILE"
 check "metainfo xml" grep -q '/usr/share/metainfo/com.cmux_lx.terminal.metainfo.xml' "$FILE_LIST_FILE"
 check "icon 48x48" grep -q '/usr/share/icons/hicolor/48x48/apps/com.cmux_lx.terminal.png' "$FILE_LIST_FILE"
@@ -72,6 +73,16 @@ check "bash completion" grep -q '/usr/share/bash-completion/completions/cmux' "$
 check "zsh completion" grep -q '/usr/share/zsh/vendor-completions/_cmux' "$FILE_LIST_FILE"
 check "fish completion" grep -q '/usr/share/fish/vendor_completions.d/cmux.fish' "$FILE_LIST_FILE"
 check "man page" grep -q '/usr/share/man/man1/cmux.1.gz' "$FILE_LIST_FILE"
+
+# --- Skills & CLAUDE.md checks (Phase 12.1) ---
+echo ""
+echo "Skills:"
+check "cmux skill SKILL.md" grep -q '/usr/share/cmux/skills/cmux/SKILL.md' "$FILE_LIST_FILE"
+check "cmux-browser skill SKILL.md" grep -q '/usr/share/cmux/skills/cmux-browser/SKILL.md' "$FILE_LIST_FILE"
+check "cmux-browser commands.md" grep -q '/usr/share/cmux/skills/cmux-browser/references/commands.md' "$FILE_LIST_FILE"
+check "CLAUDE.md" grep -q '/usr/share/cmux/CLAUDE.md' "$FILE_LIST_FILE"
+check "no cmux-debug-windows (D-13)" bash -c '! grep -q "cmux-debug-windows" "'"$FILE_LIST_FILE"'"'
+check "no release skill (D-13)" bash -c '! grep -q "skills/release" "'"$FILE_LIST_FILE"'"'
 
 # --- Metadata checks (RPM-01, RPM-02) ---
 echo ""

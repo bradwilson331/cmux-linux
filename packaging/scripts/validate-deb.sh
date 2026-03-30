@@ -58,6 +58,9 @@ check "usr/bin/cmux exists" \
 check "usr/lib/cmux/cmuxd-remote exists" \
     'echo "$FILE_LIST" | grep -q "\./usr/lib/cmux/cmuxd-remote"'
 
+check "usr/lib/cmux/agent-browser exists" \
+    'echo "$FILE_LIST" | grep -q "\./usr/lib/cmux/agent-browser"'
+
 check "desktop entry exists" \
     'echo "$FILE_LIST" | grep -q "\./usr/share/applications/com.cmux_lx.terminal.desktop"'
 
@@ -84,6 +87,28 @@ check "fish completion exists" \
 
 check "man page exists" \
     'echo "$FILE_LIST" | grep -q "\./usr/share/man/man1/cmux.1.gz"'
+
+# --- Skills & CLAUDE.md checks (Phase 12.1) ---
+echo ""
+echo "Skills:"
+
+check "cmux skill SKILL.md exists" \
+    'echo "$FILE_LIST" | grep -q "\./usr/share/cmux/skills/cmux/SKILL.md"'
+
+check "cmux-browser skill SKILL.md exists" \
+    'echo "$FILE_LIST" | grep -q "\./usr/share/cmux/skills/cmux-browser/SKILL.md"'
+
+check "cmux-browser commands.md exists" \
+    'echo "$FILE_LIST" | grep -q "\./usr/share/cmux/skills/cmux-browser/references/commands.md"'
+
+check "CLAUDE.md exists" \
+    'echo "$FILE_LIST" | grep -q "\./usr/share/cmux/CLAUDE.md"'
+
+check "no cmux-debug-windows skill packaged (D-13)" \
+    '! echo "$FILE_LIST" | grep -q "cmux-debug-windows"'
+
+check "no release skill packaged (D-13)" \
+    '! echo "$FILE_LIST" | grep -q "skills/release"'
 
 # --- Metadata checks ---
 echo ""
