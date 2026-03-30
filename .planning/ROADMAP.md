@@ -30,6 +30,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 - [x] **Phase 11: Desktop Integration & Dependency Detection** - Shared metadata files and runtime dep-detection that all packaging formats consume (completed 2026-03-29)
 - [x] **Phase 12: Native Packages (.deb + .rpm)** - Installable packages for Debian/Ubuntu and Fedora/RHEL (completed 2026-03-29)
+- [ ] **Phase 12.1: CLI Browser Parity & Skill Packaging** - Nested browser CLI, surface handles, and skill packaging for agent discovery
 - [ ] **Phase 13: Portable Formats (AppImage + Flatpak)** - Self-contained distribution without package manager dependency
 - [ ] **Phase 14: Build Automation & CI Pipeline** - Unified build script, GPG signing, and Gitea Actions for tag-triggered releases
 
@@ -59,12 +60,30 @@ Plans:
   1. `dpkg -i cmux.deb` installs successfully on Ubuntu 22.04+ and cmux launches from terminal
   2. `apt install -f` after dpkg resolves all runtime dependencies (GTK4, GL, fontconfig, freetype, oniguruma)
   3. `dnf install cmux.rpm` installs successfully on Fedora 38+ and cmux launches from terminal
-  4. Both packages install cmux-app and cmux CLI to `/usr/bin/` and cmuxd-remote to `/usr/lib/cmux/`
+  4. Both packages install cmux-app and cmux CLI to `/usr/bin/`, and cmuxd-remote + agent-browser to `/usr/lib/cmux/`
 **Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 12-01-PLAN.md -- .deb packaging script and validation (build-deb.sh, validate-deb.sh)
 - [x] 12-02-PLAN.md -- .rpm spec file, packaging script, and validation (cmux.spec, build-rpm.sh, validate-rpm.sh)
+
+### Phase 12.1: CLI Browser Parity & Skill Packaging (INSERTED)
+
+**Goal:** AI agents running inside cmux can discover and use the browser automation skills, with a CLI syntax that matches the skill documentation (`cmux browser <surface> <action>`) and skills installed to a well-known path in .deb/.rpm packages
+**Depends on:** Phase 12
+**Requirements**: SC-01, SC-02, SC-03, SC-04, SC-05, CLI-01, CLI-02, CLI-03
+**Success Criteria** (what must be TRUE):
+  1. `cmux browser open <url>` returns a `surface:N` handle and creates a browser pane in the caller's workspace
+  2. `cmux browser surface:N snapshot --interactive` returns an accessibility tree with element refs (e1, e2, etc.)
+  3. `cmux browser surface:N click e1` successfully interacts with the referenced element
+  4. Skills are installed to `/usr/share/cmux/skills/` in both .deb and .rpm packages
+  5. A generated CLAUDE.md or discoverable config references the installed skills so Claude Code finds them automatically
+**Plans:** 3 plans
+
+Plans:
+- [ ] 12.1-01-PLAN.md -- CLI restructure: nested browser subcommand, surface ref parsing, JSON-default output
+- [ ] 12.1-02-PLAN.md -- Socket-side surface registry, ref resolution, browser.list handler
+- [ ] 12.1-03-PLAN.md -- Skill packaging: CLAUDE.md, build script updates, validation
 
 ### Phase 13: Portable Formats (AppImage + Flatpak)
 **Goal**: Users can run cmux without a package manager -- either as a download-and-run AppImage or via Flatpak with sandboxed GPU access
@@ -109,5 +128,6 @@ Phases 11 first, then 12 and 13 can run in parallel, then 14 last.
 | 10. CLI Socket Commands | v1.0 | 2/2 | Complete | 2026-03-28 |
 | 11. Desktop Integration & Dep Detection | v1.1 | 2/3 | Complete    | 2026-03-29 |
 | 12. Native Packages (.deb + .rpm) | v1.1 | 1/2 | Complete    | 2026-03-29 |
+| 12.1. CLI Browser Parity & Skill Packaging | v1.1 | 0/3 | In progress | - |
 | 13. Portable Formats (AppImage + Flatpak) | v1.1 | 0/0 | Not started | - |
 | 14. Build Automation & CI Pipeline | v1.1 | 0/0 | Not started | - |
