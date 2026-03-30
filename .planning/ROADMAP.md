@@ -128,6 +128,6 @@ Phases 11 first, then 12 and 13 can run in parallel, then 14 last.
 | 10. CLI Socket Commands | v1.0 | 2/2 | Complete | 2026-03-28 |
 | 11. Desktop Integration & Dep Detection | v1.1 | 2/3 | Complete    | 2026-03-29 |
 | 12. Native Packages (.deb + .rpm) | v1.1 | 1/2 | Complete    | 2026-03-29 |
-| 12.1. CLI Browser Parity & Skill Packaging | v1.1 | 3/3 | Complete   | 2026-03-30 |
+| 12.1. CLI Browser Parity & Skill Packaging | v1.1 | 3/3 | Complete    | 2026-03-30 |
 | 13. Portable Formats (AppImage + Flatpak) | v1.1 | 0/0 | Not started | - |
 | 14. Build Automation & CI Pipeline | v1.1 | 0/0 | Not started | - |
