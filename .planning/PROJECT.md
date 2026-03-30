@@ -24,6 +24,8 @@ A Linux user should get the same cmux experience as a Mac user: tabs, splits, wo
 - ✓ Agent-browser integration — CDP screencast preview, navigation toolbar — v1.0
 - ✓ GTK4 HeaderBar, hamburger menu, context menus, shortcuts window — v1.0
 - ✓ Native Rust CLI (`cmux`) with 34+ subcommands and socket auto-discovery — v1.0
+- ✓ CLI browser parity — nested `cmux browser <surface> <action>` syntax with surface handle registry — Validated in Phase 12.1
+- ✓ Skill packaging — cmux and cmux-browser skills installed to `/usr/share/cmux/skills/` in .deb/.rpm — Validated in Phase 12.1
 - ✓ GitHub Actions CI + AppImage distribution — v1.0
 
 ### Active
@@ -64,6 +66,7 @@ Shipped v1.0 with 9,478 LOC Rust across 2,044 commits in 65 days.
 Tech stack: Rust, GTK4 (gtk4-rs), Ghostty (libghostty C FFI), tokio, serde, clap.
 Ghostty fork: manaflow-ai/ghostty with GHOSTTY_PLATFORM_GTK4 platform variant.
 Go remote daemon (cmuxd-remote) reused from macOS codebase for SSH workspaces.
+Agent-browser daemon (agent-browser) provides CDP-based browser automation; bundled at `/usr/lib/cmux/agent-browser` in packages. Workspace member — build with `cargo build --release -p agent-browser` (binary at `target/release/agent-browser`, not subcrate target dir).
 
 **Known tech debt (14 items):**
 - SurfaceReadText returns empty (needs Ghostty screen buffer API)
@@ -112,4 +115,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-29 after Phase 12 completion*
+*Last updated: 2026-03-30 after Phase 12.1 completion*
