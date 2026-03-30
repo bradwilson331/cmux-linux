@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Linux Packaging & Distribution
-status: Ready to execute
-stopped_at: Completed 12.1-03-PLAN.md
-last_updated: "2026-03-30T04:13:21.839Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 12.1-02-PLAN.md
+last_updated: "2026-03-30T04:13:46.891Z"
 progress:
   total_phases: 5
   completed_phases: 3
@@ -49,6 +49,9 @@ All v1.0 decisions archived in milestones/v1.0-phases/ and PROJECT.md Key Decisi
 - [Phase 12]: Non-t64 package names for Ubuntu 22.04 compat (libglib2.0-0 not libglib2.0-0t64)
 - [Phase 12.1]: Only cmux and cmux-browser skills packaged; excluded cmux-debug-windows, cmux-markdown, release per D-13
 - [Phase 12.1]: Skills installed to FHS-compliant /usr/share/cmux/skills/ for agent discoverability
+- [Phase 12.1]: Kept BrowserStreamEnable/Disable explicit; consolidated BrowserClose/Snapshot/Screenshot into generic proxy
+- [Phase 12.1]: Surface ref pattern: monotonic counter, surface:N short refs, resolve_surface_ref helper
+- [Phase 12.1]: Browser commands default to JSON output (--no-json to disable) per agent workflow
 
 ### Roadmap Evolution
 
@@ -66,6 +69,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-30T04:13:08.361Z
-Stopped at: Completed 12.1-03-PLAN.md
+Last session: 2026-03-30T04:13:46.889Z
+Stopped at: Completed 12.1-02-PLAN.md
 Resume file: None

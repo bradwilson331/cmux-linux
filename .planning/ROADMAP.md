@@ -30,7 +30,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 
 - [x] **Phase 11: Desktop Integration & Dependency Detection** - Shared metadata files and runtime dep-detection that all packaging formats consume (completed 2026-03-29)
 - [x] **Phase 12: Native Packages (.deb + .rpm)** - Installable packages for Debian/Ubuntu and Fedora/RHEL (completed 2026-03-29)
-- [ ] **Phase 12.1: CLI Browser Parity & Skill Packaging** - Nested browser CLI, surface handles, and skill packaging for agent discovery
+- [x] **Phase 12.1: CLI Browser Parity & Skill Packaging** - Nested browser CLI, surface handles, and skill packaging for agent discovery (completed 2026-03-30)
 - [ ] **Phase 13: Portable Formats (AppImage + Flatpak)** - Self-contained distribution without package manager dependency
 - [ ] **Phase 14: Build Automation & CI Pipeline** - Unified build script, GPG signing, and Gitea Actions for tag-triggered releases
 
@@ -78,10 +78,10 @@ Plans:
   3. `cmux browser surface:N click e1` successfully interacts with the referenced element
   4. Skills are installed to `/usr/share/cmux/skills/` in both .deb and .rpm packages
   5. A generated CLAUDE.md or discoverable config references the installed skills so Claude Code finds them automatically
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 12.1-01-PLAN.md -- CLI restructure: nested browser subcommand, surface ref parsing, JSON-default output
+- [x] 12.1-01-PLAN.md -- CLI restructure: nested browser subcommand, surface ref parsing, JSON-default output
 - [x] 12.1-02-PLAN.md -- Socket-side surface registry, ref resolution, browser.list handler
 - [x] 12.1-03-PLAN.md -- Skill packaging: CLAUDE.md, build script updates, validation
 
@@ -128,6 +128,6 @@ Phases 11 first, then 12 and 13 can run in parallel, then 14 last.
 | 10. CLI Socket Commands | v1.0 | 2/2 | Complete | 2026-03-28 |
 | 11. Desktop Integration & Dep Detection | v1.1 | 2/3 | Complete    | 2026-03-29 |
 | 12. Native Packages (.deb + .rpm) | v1.1 | 1/2 | Complete    | 2026-03-29 |
-| 12.1. CLI Browser Parity & Skill Packaging | v1.1 | 2/3 | In Progress|  |
+| 12.1. CLI Browser Parity & Skill Packaging | v1.1 | 3/3 | Complete   | 2026-03-30 |
 | 13. Portable Formats (AppImage + Flatpak) | v1.1 | 0/0 | Not started | - |
 | 14. Build Automation & CI Pipeline | v1.1 | 0/0 | Not started | - |
