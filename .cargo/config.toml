@@ -1,0 +1,5 @@
+[build]
+# Target baseline x86-64 (SSE2 only) for broad VM/hardware compatibility.
+# Without this, cargo uses the build machine's native CPU features (e.g. AVX-512),
+# producing binaries that SIGILL on VMs or older hardware.
+rustflags = ["-C", "target-cpu=x86-64"]

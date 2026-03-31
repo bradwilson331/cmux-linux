@@ -17,6 +17,31 @@ fn main() {
         manifest_dir
     );
 
+    // Link Highway SIMD library that libghostty depends on (for runtime CPU dispatch)
+    // Find the most recent libhighway.a in zig-cache
+    let zig_cache = format!("{}/ghostty/.zig-cache/o", manifest_dir);
+    if let Ok(entries) = std::fs::read_dir(&zig_cache) {
+        let mut highway_path = None;
+        let mut newest_mtime = std::time::SystemTime::UNIX_EPOCH;
+        for entry in entries.flatten() {
+            let candidate = entry.path().join("libhighway.a");
+            if candidate.exists() {
+                if let Ok(meta) = candidate.metadata() {
+                    if let Ok(mtime) = meta.modified() {
+                        if mtime > newest_mtime {
+                            newest_mtime = mtime;
+                            highway_path = Some(candidate);
+                        }
+                    }
+                }
+            }
+        }
+        if let Some(path) = highway_path {
+            println!("cargo:rustc-link-search=native={}", path.parent().unwrap().display());
+            println!("cargo:rustc-link-lib=static=highway");
+        }
+    }
+
     // Link stub object file to satisfy undefined symbols from missing libraries (use absolute path)
     println!("cargo:rustc-link-arg={}/stubs.o", manifest_dir);
 
