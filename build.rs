@@ -11,11 +11,29 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", ghostty_lib_path);
     println!("cargo:rustc-link-lib=static=ghostty");
 
-    // Link simdutf object file that ghostty depends on (use absolute path)
-    println!(
-        "cargo:rustc-link-arg={}/ghostty/.zig-cache/o/d36eec1e644b07f1d97ac6098a9555ba/simdutf.o",
-        manifest_dir
-    );
+    // Link simdutf object file that ghostty depends on.
+    // Find the most recent simdutf.o in zig-cache (hash changes on rebuild).
+    let zig_cache = format!("{}/ghostty/.zig-cache/o", manifest_dir);
+    if let Ok(entries) = std::fs::read_dir(&zig_cache) {
+        let mut simdutf_path = None;
+        let mut newest_mtime = std::time::SystemTime::UNIX_EPOCH;
+        for entry in entries.flatten() {
+            let candidate = entry.path().join("simdutf.o");
+            if candidate.exists() {
+                if let Ok(meta) = candidate.metadata() {
+                    if let Ok(mtime) = meta.modified() {
+                        if mtime > newest_mtime {
+                            newest_mtime = mtime;
+                            simdutf_path = Some(candidate);
+                        }
+                    }
+                }
+            }
+        }
+        if let Some(path) = simdutf_path {
+            println!("cargo:rustc-link-arg={}", path.display());
+        }
+    }
 
     // Link Highway SIMD library that libghostty depends on (for runtime CPU dispatch)
     // Find the most recent libhighway.a in zig-cache
