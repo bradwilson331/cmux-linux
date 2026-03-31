@@ -505,7 +505,7 @@ fn browser_command_to_rpc(cmd: &BrowserCommand) -> (&'static str, serde_json::Va
             }))
         }
         BrowserCommand::Eval { surface, expression } => {
-            ("browser.eval", json!({"surface_ref": surface, "expression": expression}))
+            ("browser.eval", json!({"surface_ref": surface, "script": expression}))
         }
         BrowserCommand::Wait { surface, selector, text, url_contains, load_state, function, timeout_ms } => {
             ("browser.wait", json!({
