@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-03-31T14:43:27.977Z",
+  "phase": "12.1",
+  "phase_name": "cli-browser-parity-skill-packaging",
+  "phase_dir": ".planning/phases/12.1-cli-browser-parity-skill-packaging",
+  "plan": null,
+  "task": null,
+  "total_tasks": 6,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "12.1-01: CLI restructure (nested BrowserCommand)", "status": "done", "commit": "8e829d52"},
+    {"id": 2, "name": "12.1-01: browser list formatter", "status": "done", "commit": "828fd43e"},
+    {"id": 3, "name": "12.1-02: surface registry + socket commands", "status": "done", "commit": "fa612f3d"},
+    {"id": 4, "name": "12.1-02: socket dispatch + handlers", "status": "done", "commit": "f4d1ae11"},
+    {"id": 5, "name": "12.1-03: skills + CLAUDE.md to deb/rpm", "status": "done", "commit": "2f916247"},
+    {"id": 6, "name": "12.1-03: validation script extensions", "status": "done", "commit": "a5429ea0"}
+  ],
+  "remaining_tasks": [],
+  "blockers": [],
+  "human_actions_pending": [
+    {"action": "Test deb on AMD/Ubuntu 24 system (ghost)", "context": "Rebuilt with zero AVX-512, X11 wrapper, all browser CLI fixes", "blocking": false},
+    {"action": "Test deb on Ubuntu 25.10 VM", "context": "Original crash system — verify startup works", "blocking": false},
+    {"action": "Delete vm-build branch if no longer needed", "context": "Baseline CPU is now default on develop", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "Remove legacy flat Browser* CLI variants entirely", "rationale": "No backward compat needed on Linux — never shipped. Bloated enum caused clap startup crash.", "phase": "12.1"},
+    {"decision": "Translate CLI action names to agent-browser names in socket handler", "rationale": "cmux uses open/goto/eval, agent-browser uses navigate/evaluate — mismatch caused 'Not implemented' errors", "phase": "12.1"},
+    {"decision": "Auto-enable CDP streaming on browser.open", "rationale": "Preview pane was created blank — users expect to see the page immediately", "phase": "12.1"},
+    {"decision": "Target baseline x86-64 CPU for all builds (Rust + Zig)", "rationale": "AVX-512 from build machine caused SIGILL on VMs, AMD Zen 2, and older Intel. Most x86-64 CPUs lack AVX-512.", "phase": "12.1"},
+    {"decision": "Dynamically find simdutf.o and libhighway.a in zig-cache", "rationale": "Cache hashes change on rebuild — hardcoded paths linked stale objects with AVX-512", "phase": "12.1"},
+    {"decision": "Add cmux-app wrapper script for GDK_BACKEND detection", "rationale": "GTK4 picks Wayland/EGL even on X11 sessions when Wayland libs present — NVIDIA GL context creation fails. Wrapper forces X11 backend.", "phase": "12.1"},
+    {"decision": "Auto-prepend https:// to browser open URLs", "rationale": "Users type 'cmux browser open slashdot.org' without scheme", "phase": "12.1"}
+  ],
+  "uncommitted_files": [
+    ".planning/REQUIREMENTS.md",
+    ".planning/phases/12-native-packages-deb-rpm/12-CONTEXT.md",
+    "Cargo.lock",
+    "src/bin/generate.rs",
+    "src/browser.rs",
+    "src/lib.rs (deleted)"
+  ],
+  "next_action": "Test rebuilt deb (dist/cmux_0.1.0_amd64.deb) on AMD/Ubuntu 24 and VM systems. If working, proceed to Phase 13: Portable Formats (AppImage + Flatpak) via /gsd:discuss-phase 13",
+  "context_notes": "Phase 12.1 planning+execution completed. Post-execution session focused on real-world testing bugs: startup crash (bloated enum), browser command wiring (action name mismatches, missing streaming, eval param name), AVX-512 compatibility (baseline CPU, simdutf.o, libhighway.a), and NVIDIA GL context (X11 wrapper). All fixes committed. README rewritten for Linux. vm-build branch exists but is now redundant since baseline is default on develop."
+}
