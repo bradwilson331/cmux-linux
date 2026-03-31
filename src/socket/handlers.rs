@@ -667,9 +667,24 @@ pub fn handle_socket_command(
                         obj.insert("surface_ref".to_string(), serde_json::json!(format!("surface:{}", ref_id)));
                         obj.insert("uuid".to_string(), serde_json::json!(uuid));
                     }
-                    // Create preview pane in the active workspace split tree
-                    if let Some(engine) = s.active_split_engine_mut() {
-                        let _ = engine.split_active_with_preview();
+                    // Create preview pane and auto-enable streaming
+                    let picture = {
+                        let engine = s.active_split_engine_mut();
+                        if let Some(eng) = engine {
+                            find_preview_picture(&eng.root)
+                                .or_else(|| eng.split_active_with_preview().map(|w| w.picture))
+                        } else {
+                            None
+                        }
+                    };
+                    // Enable streaming so the preview pane shows the page
+                    let runtime = s.runtime_handle.clone();
+                    let bm = s.browser_manager.as_mut().unwrap();
+                    let _ = bm.send_command("stream_enable", serde_json::json!({}));
+                    if let Some(pic) = picture {
+                        if let Some(ref rt) = runtime {
+                            let _ = bm.start_stream(rt, pic);
+                        }
                     }
                     let _ = resp_tx.send(ok(req_id, response));
                 }
