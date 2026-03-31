@@ -448,6 +448,11 @@ fn browser_command_to_rpc(cmd: &BrowserCommand) -> (&'static str, serde_json::Va
     use serde_json::json;
     match cmd {
         BrowserCommand::Open { url, workspace } => {
+            let url = if !url.contains("://") {
+                format!("https://{}", url)
+            } else {
+                url.clone()
+            };
             ("browser.open", json!({"url": url, "workspace": workspace}))
         }
         BrowserCommand::List => ("browser.list", json!({})),
