@@ -472,6 +472,11 @@ fn which_agent_browser() -> Option<PathBuf> {
             }
         }
     }
+    // Check /usr/lib/cmux/ (FHS install path for .deb/.rpm packages)
+    let candidate = PathBuf::from("/usr/lib/cmux/agent-browser");
+    if candidate.is_file() {
+        return Some(candidate);
+    }
     None
 }
 

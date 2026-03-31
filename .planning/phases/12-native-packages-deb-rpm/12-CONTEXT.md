@@ -18,14 +18,15 @@ Create .deb and .rpm packages that install cmux (terminal app + CLI + remote dae
 - **D-02:** Use `rpmbuild` for .rpm package creation -- standard Fedora/RHEL tooling. A `.spec` file defines the package; packaging script invokes `rpmbuild`.
 
 ### Binary Build Strategy
-- **D-03:** Package pre-built binaries. Packaging scripts assume `cmux-app`, `cmux`, and `cmuxd-remote` are already built before packaging runs. Build steps (cargo, zig, go) are NOT embedded in package build scripts.
-- **D-04:** Build scripts take binary paths as arguments or use well-known locations (`target/release/cmux-app`, `target/release/cmux`, `daemon/remote/cmuxd-remote`).
+- **D-03:** Package pre-built binaries. Packaging scripts assume `cmux-app`, `cmux`, `cmuxd-remote`, and `agent-browser` are already built before packaging runs. Build steps (cargo, zig, go) are NOT embedded in package build scripts.
+- **D-04:** Build scripts take binary paths as arguments or use well-known locations (`target/release/cmux-app`, `target/release/cmux`, `daemon/remote/cmuxd-remote`, `target/release/agent-browser`). Note: agent-browser is a workspace member — build with `cargo build --release -p agent-browser` (output goes to workspace root `target/release/`, not the subcrate's target dir).
 
 ### Install Path Layout (FHS-standard)
 - **D-05:** Binary install paths:
   - `/usr/bin/cmux-app` -- terminal application
   - `/usr/bin/cmux` -- CLI tool
   - `/usr/lib/cmux/cmuxd-remote` -- remote daemon helper (not user-facing)
+  - `/usr/lib/cmux/agent-browser` -- browser automation daemon (not user-facing)
 - **D-06:** Desktop integration paths:
   - `/usr/share/applications/com.cmux_lx.terminal.desktop`
   - `/usr/share/metainfo/com.cmux_lx.terminal.metainfo.xml`

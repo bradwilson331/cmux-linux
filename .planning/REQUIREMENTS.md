@@ -17,16 +17,16 @@ Requirements for packaging and distribution milestone. Each maps to roadmap phas
 
 ### Debian Package
 
-- [ ] **DEB-01**: User can install cmux via `dpkg -i cmux.deb` on Ubuntu 22.04+/Debian 12+
-- [ ] **DEB-02**: Runtime dependencies (GTK4, fontconfig, freetype, oniguruma, GL) auto-installed via apt
-- [ ] **DEB-03**: Both cmux-app and cmux CLI binaries installed to `/usr/bin/`
-- [ ] **DEB-04**: cmuxd-remote bundled at `/usr/lib/cmux/cmuxd-remote`
+- [x] **DEB-01**: User can install cmux via `dpkg -i cmux.deb` on Ubuntu 22.04+/Debian 12+
+- [x] **DEB-02**: Runtime dependencies (GTK4, fontconfig, freetype, oniguruma, GL) auto-installed via apt
+- [x] **DEB-03**: Both cmux-app and cmux CLI binaries installed to `/usr/bin/`
+- [x] **DEB-04**: cmuxd-remote and agent-browser bundled at `/usr/lib/cmux/`
 
 ### RPM Package
 
 - [x] **RPM-01**: User can install cmux via `dnf install cmux.rpm` on Fedora 38+/RHEL 9+
 - [x] **RPM-02**: Runtime dependencies mapped to Fedora/RHEL package names and declared
-- [x] **RPM-03**: Both binaries and cmuxd-remote installed to correct paths
+- [x] **RPM-03**: All binaries (cmux-app, cmux, cmuxd-remote, agent-browser) installed to correct paths
 
 ### AppImage
 
@@ -87,10 +87,10 @@ Requirements for packaging and distribution milestone. Each maps to roadmap phas
 | META-04 | Phase 11 | Complete |
 | META-05 | Phase 11 | Complete |
 | BUILD-02 | Phase 11 | Complete |
-| DEB-01 | Phase 12 | Pending |
-| DEB-02 | Phase 12 | Pending |
-| DEB-03 | Phase 12 | Pending |
-| DEB-04 | Phase 12 | Pending |
+| DEB-01 | Phase 12 | Complete |
+| DEB-02 | Phase 12 | Complete |
+| DEB-03 | Phase 12 | Complete |
+| DEB-04 | Phase 12 | Complete |
 | RPM-01 | Phase 12 | Complete |
 | RPM-02 | Phase 12 | Complete |
 | RPM-03 | Phase 12 | Complete |

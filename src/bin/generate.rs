@@ -1,6 +1,13 @@
 //! Standalone generator for shell completions and man page.
 //! Usage: cargo run --bin cmux-generate
 //! Outputs to packaging/completions/ and packaging/man/
+//!
+//! NOTE: Uses #[path] to include the CLI module directly instead of
+//! going through lib.rs. A lib.rs target breaks ghostty FFI linking
+//! for cmux-app (see commit fd436c5b).
+
+#[path = "../cli/mod.rs"]
+mod cli;
 
 use clap::CommandFactory;
 use clap_complete::{generate_to, Shell};
@@ -8,7 +15,7 @@ use clap_mangen::Man;
 use std::fs;
 use std::path::Path;
 
-use cmux_linux::cli::Cli;
+use cli::Cli;
 
 fn main() -> std::io::Result<()> {
     let mut cmd = Cli::command();

@@ -39,7 +39,6 @@ zig-x86_64-linux-0.15.2/
 
 # Rust
 target/
-Cargo.lock
 agent-browser/
 
 # Node
@@ -53,3 +52,8 @@ tests/visual_report.html
 # Local scratch (screenshots, etc.)
 tmp/
 tmp-*/
+
+# Build artifacts
+dist/
+daemon/remote/cmuxd-remote
+found
