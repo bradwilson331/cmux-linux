@@ -33,7 +33,6 @@ fi
 zig build \
     -Dapp-runtime=none \
     -Doptimize=ReleaseFast \
-    -Dcpu=baseline \
     -Dgtk-x11=true \
     -Dgtk-wayland=true
 
