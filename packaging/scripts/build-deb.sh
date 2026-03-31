@@ -31,8 +31,9 @@ mkdir -p "$OUTPUT_DIR"
 PKG_ROOT=$(mktemp -d)
 trap 'rm -rf "$PKG_ROOT"' EXIT
 
-# Install binaries
-install -Dm0755 "$CMUX_APP" "$PKG_ROOT/usr/bin/cmux-app"
+# Install binaries (cmux-app.bin = real binary, cmux-app = wrapper script)
+install -Dm0755 "$CMUX_APP" "$PKG_ROOT/usr/bin/cmux-app.bin"
+install -Dm0755 "$REPO_ROOT/packaging/scripts/cmux-app-wrapper.sh" "$PKG_ROOT/usr/bin/cmux-app"
 install -Dm0755 "$CMUX_CLI" "$PKG_ROOT/usr/bin/cmux"
 install -Dm0755 "$CMUXD_REMOTE" "$PKG_ROOT/usr/lib/cmux/cmuxd-remote"
 install -Dm0755 "$AGENT_BROWSER" "$PKG_ROOT/usr/lib/cmux/agent-browser"
