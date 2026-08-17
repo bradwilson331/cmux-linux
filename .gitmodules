@@ -1,7 +1,10 @@
 [submodule "ghostty"]
 	path = ghostty
-	url = https://github.com/manaflow-ai/ghostty.git
-	branch = main
+	url = https://github.com/peteonrails/ghostty.git
+	branch = cmux-fork-gtk4-platform
+[submodule "agent-browser"]
+	path = agent-browser
+	url = https://github.com/vercel-labs/agent-browser.git
 [submodule "homebrew-cmux"]
 	path = homebrew-cmux
 	url = https://github.com/manaflow-ai/homebrew-cmux.git

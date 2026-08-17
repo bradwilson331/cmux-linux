@@ -1,14 +1,30 @@
-# Ghostty Fork Changes (manaflow-ai/ghostty)
+# Ghostty Fork Changes
 
 This repo uses a fork of Ghostty for local patches that aren't upstream yet.
 When we change the fork, update this document and the parent submodule SHA.
 
+## Fork source
+
+The submodule previously pointed at `manaflow-ai/ghostty` pinned to
+`4845e82d0713c29071fb78170491682c8b4c8495`. That commit was never published —
+the fork was rewritten and the SHA became unfetchable, which broke
+`git clone --recurse-submodules` for everyone (issues #1 and #3).
+
+It now points at `tcsenpai/ghostty`, branch `cmux-fork-gtk4-platform`, which
+reconstructs the GTK4 embedded-platform patches described in section 8 below.
+
+**Never pin a SHA that is not reachable from a published branch.** A local
+commit that builds on this machine is worth nothing to anyone cloning the repo;
+that is the exact failure this project already shipped once.
+
 ## Fork update checklist
 
 1) Make changes in `ghostty/`.
-2) Commit and push to `manaflow-ai/ghostty`.
-3) Update this file with the new change summary + conflict notes.
-4) In the parent repo: `git add ghostty` and commit the submodule SHA.
+2) Commit and **push to a public branch** of the fork.
+3) Verify the SHA is fetchable: `git -C ghostty fetch origin && git -C ghostty
+   merge-base --is-ancestor HEAD origin/<branch>`.
+4) Update this file with the new change summary + conflict notes.
+5) In the parent repo: `git add ghostty` and commit the submodule SHA.
 
 ## Current fork changes
 
@@ -121,6 +137,53 @@ The fork branch HEAD is now the section 7 cmux theme picker helper commit.
   - `GdkGLContext` is NOT passed; GTK4 manages it internally via `GtkGLArea`. Rust side calls `gl_area.make_current()` in the realize signal handler.
   - `wakeup_cb` and `userdata` are registered globally via `ghostty_runtime_config_s`, not per-surface.
   - `GTK4` type is `void` on non-Linux targets so the type compiles cross-platform.
+
+### 9) Embedded display realize/unrealize C API
+
+- Files:
+  - `src/apprt/embedded.zig`
+  - `src/renderer/OpenGL.zig`
+- Summary:
+  - Adds `ghostty_surface_display_realized` / `ghostty_surface_display_unrealized`
+    exports plus the `Surface.displayRealized` / `Surface.displayUnrealized`
+    methods they wrap. These forward to the core renderer's existing
+    `displayRealized` / `displayUnrealized`.
+  - Adds `apprt.embedded` to the `displayRealized` switch in `OpenGL.zig`, which
+    previously `@compileError`'d for any runtime other than `apprt.gtk`. The
+    embedded runtime needs the same `prepareContext(null)` GLAD reload because it
+    renders into a caller-owned `GtkGLArea` exactly like the gtk apprt.
+- Why this is required:
+  - `src/ghostty/surface.rs` calls both functions when a `GtkGLArea` is
+    re-realized after a reparent (split/move), which recreates the GL context.
+    Without them cmux does not link at all, and the declarations were already
+    present in the repo-root `ghostty.h`.
+- Contract:
+  - The caller must have made its GL context current before calling either, and
+    each `display_unrealized` must be paired with a later `display_realized`.
+    `displayRealized` asserts the swap chain was left defunct by a preceding
+    `displayUnrealized`.
+
+## Non-ghostty consequences of the fork bump
+
+Bumping off the lost `4845e82d` pin changed what libghostty provides, which
+required matching changes in the parent repo. If you bump the fork again,
+re-check these:
+
+- Ghostty now vendors real glslang, SPIRV-Cross and Dear ImGui. The old
+  `stubs.c` (deleted) fake-implemented all three and now collides with them
+  (~87 duplicate symbols).
+- The embedded static library installs as `ghostty-internal.a`, not
+  `libghostty.a`. `scripts/setup-linux.sh` symlinks the conventional name so
+  `-lghostty` resolves.
+- `simdutf.o` and `libhighway_zcu.o` are members of the archive now, so the old
+  `.zig-cache` hash-scanning link args in `build.rs` were removed.
+- The archive does not carry libc++/libc++abi (the vendored C++ is compiled
+  against Zig's libc++, not the system libstdc++) or libxml2 (needed by the
+  vendored fontconfig). `setup-linux.sh` copies all three out of the Zig caches
+  into `ghostty/zig-out/lib` and `build.rs` links them statically.
+- Ghostty pins an exact Zig version (`minimum_zig_version` in `build.zig.zon`)
+  and `@compileError`s on anything else, so `setup-linux.sh` provisions that
+  exact Zig rather than trusting the distro's.
 
 ## Upstreamed fork changes
 

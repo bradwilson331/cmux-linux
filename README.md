@@ -41,11 +41,18 @@ sudo rpm -i cmux-0.1.0-1.x86_64.rpm
 ### Build from source
 
 ```bash
-# Prerequisites: Rust toolchain, GTK4 dev libraries, Zig 0.15.2 (for libghostty)
-./scripts/setup.sh          # init submodules, build GhosttyKit
-cargo build --release --bin cmux --bin cmux-app
-cargo build --release -p agent-browser
+# Prerequisites: Rust toolchain, GTK4 dev libraries.
+# Zig 0.15.2 is required to build libghostty; setup-linux.sh downloads it
+# automatically if the system Zig is a different version.
+git submodule update --init --recursive
+./scripts/setup-linux.sh    # install GTK4 headers if missing, build libghostty.a
+cargo build --release --workspace
 ```
+
+This produces `target/release/cmux`, `target/release/cmux-app`, and
+`target/release/agent-browser`. Without `--workspace`, cargo builds only the
+`cmux` / `cmux-app` binaries and skips `agent-browser`, which the browser
+preview pane and the `.deb` / `.rpm` packages both expect.
 
 ## Browser Automation
 

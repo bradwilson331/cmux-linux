@@ -228,13 +228,46 @@ fn build_ui(
     };
 
     // 2. Load CSS
+    let display = gtk4::gdk::Display::default().expect("no display");
     let provider = CssProvider::new();
     provider.load_from_data(APP_CSS);
     gtk4::style_context_add_provider_for_display(
-        &gtk4::gdk::Display::default().expect("no display"),
+        &display,
         &provider,
         gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
     );
+
+    // 2b. Header-bar icons. cmux uses freedesktop symbolic names
+    // (tab-new-symbolic, web-browser-symbolic, sidebar-show-symbolic, …) that
+    // ship with Adwaita but not with every other GTK icon theme — KDE Breeze in
+    // particular defines only a small subset, leaving most cmux buttons drawn as
+    // a "missing icon" placeholder on Hyprland / KDE.
+    //
+    // Override BOTH `GtkSettings::gtk-icon-theme-name` and the per-display
+    // `IconTheme::theme_name`. Settings drives what IconTheme reads on
+    // theme-changed signals, so setting it first stops the desktop's
+    // gsettings/xsettings value from clobbering the override later in the app
+    // lifecycle (theme reload, settings refresh, and so on).
+    if std::path::Path::new("/usr/share/icons/Adwaita/index.theme").exists() {
+        let settings = gtk4::Settings::for_display(&display);
+        settings.set_gtk_icon_theme_name(Some("Adwaita"));
+
+        let icon_theme = gtk4::IconTheme::for_display(&display);
+        let mut search_path = icon_theme.search_path();
+        for extra in [
+            "/usr/share/icons/Adwaita",
+            "/usr/share/icons/AdwaitaLegacy",
+            "/usr/share/icons/hicolor",
+        ] {
+            let p = std::path::PathBuf::from(extra);
+            if p.exists() && !search_path.iter().any(|q| q == &p) {
+                search_path.push(p);
+            }
+        }
+        icon_theme
+            .set_search_path(&search_path.iter().map(|p| p.as_path()).collect::<Vec<_>>());
+        icon_theme.set_theme_name(Some("Adwaita"));
+    }
 
     // 3. Build the window layout
     let window = ApplicationWindow::builder()

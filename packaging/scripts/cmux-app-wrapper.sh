@@ -19,4 +19,7 @@ if [ -z "$GDK_BACKEND" ]; then
     esac
 fi
 
-exec /usr/bin/cmux-app.bin "$@"
+# Resolve the real binary next to this wrapper rather than hardcoding /usr/bin,
+# so the same wrapper works for a system package and for a --prefix install.
+SELF_DIR=$(dirname "$(readlink -f "$0")")
+exec "$SELF_DIR/cmux-app.bin" "$@"
