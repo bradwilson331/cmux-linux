@@ -1,7 +1,51 @@
 use crate::ghostty::ffi;
 use gtk4::glib;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+
+/// Whether we are inside a key-pressed/released handler, and if so whether the
+/// input method was composing when the key event started. Mirrors Ghostty's GTK
+/// apprt (`IMKeyEvent`): ibus calls commit THEN preedit-end, the simple context
+/// calls preedit-end THEN commit, so we need the composing state captured at
+/// key-event start to classify a commit correctly.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ImKeyEvent {
+    False,
+    NotComposing,
+    Composing,
+}
+
+/// Per-surface input method (IME) state. Lets ibus/fcitx compose CJK text
+/// (Korean, Japanese, Chinese) and dead keys before it reaches the terminal.
+struct ImState {
+    context: gtk4::IMMulticontext,
+    composing: Cell<bool>,
+    in_keyevent: Cell<ImKeyEvent>,
+    /// Text committed by the IM during the current key event, sent with that
+    /// key event so Ghostty still sees the keycode. NUL-terminated.
+    buf: RefCell<[u8; 128]>,
+    len: Cell<usize>,
+}
+
+/// Send IM-committed text that is not tied to a key event (e.g. a finished
+/// Hangul syllable). Matches Ghostty GTK: clear the preedit, then send the text
+/// as a key press with no physical key so it produces no extra PTY encoding.
+fn send_committed_text(surface: ffi::ghostty_surface_t, text: &str) {
+    unsafe {
+        ffi::ghostty_surface_preedit(surface, std::ptr::null(), 0);
+    }
+    let Ok(c_text) = std::ffi::CString::new(text) else {
+        return;
+    };
+    let mut input = unsafe { std::mem::zeroed::<ffi::ghostty_input_key_s>() };
+    input.action = ffi::ghostty_input_action_e_GHOSTTY_ACTION_PRESS;
+    input.keycode = 0;
+    input.text = c_text.as_ptr();
+    input.composing = false;
+    unsafe {
+        ffi::ghostty_surface_key(surface, input);
+    }
+}
 
 /// I/O mode for a Ghostty surface.
 /// - `Exec`: normal mode — Ghostty spawns a local shell process.
@@ -409,25 +453,146 @@ pub fn create_surface(
         }
     });
 
+    // ── Input method (IME) ───────────────────────────────────────────────────────
+    // Follows Ghostty's GTK apprt (src/apprt/gtk/class/surface.zig): key events
+    // are filtered through a GtkIMMulticontext first; preedit text is shown via
+    // ghostty_surface_preedit and committed text is sent as key input.
+    let im = Rc::new(ImState {
+        context: gtk4::IMMulticontext::new(),
+        composing: Cell::new(false),
+        in_keyevent: Cell::new(ImKeyEvent::False),
+        buf: RefCell::new([0u8; 128]),
+        len: Cell::new(0),
+    });
+    {
+        use gtk4::prelude::*;
+        im.context.set_client_widget(Some(&gl_area));
+
+        im.context.connect_preedit_start({
+            let im = im.clone();
+            move |_ctx| {
+                im.composing.set(true);
+                im.len.set(0);
+            }
+        });
+        im.context.connect_preedit_changed({
+            let im = im.clone();
+            let cell = surface_cell.clone();
+            move |ctx| {
+                // fcitx5-hangul can commit and then immediately start a new
+                // preedit without preedit-start, so always mark composing here.
+                im.composing.set(true);
+                let Some(surface) = *cell.borrow() else {
+                    return;
+                };
+                let (preedit, _, _) = ctx.preedit_string();
+                unsafe {
+                    ffi::ghostty_surface_preedit(
+                        surface,
+                        preedit.as_ptr() as *const std::os::raw::c_char,
+                        preedit.len(),
+                    );
+                }
+            }
+        });
+        im.context.connect_preedit_end({
+            let im = im.clone();
+            let cell = surface_cell.clone();
+            move |_ctx| {
+                im.composing.set(false);
+                if let Some(surface) = *cell.borrow() {
+                    unsafe {
+                        ffi::ghostty_surface_preedit(surface, std::ptr::null(), 0);
+                    }
+                }
+            }
+        });
+        im.context.connect_commit({
+            let im = im.clone();
+            let cell = surface_cell.clone();
+            move |_ctx, text| {
+                // A plain (non-composed) key like "a" also arrives as a commit
+                // during the key event. Buffer it so it is sent together with
+                // the key event and Ghostty keeps the keycode.
+                if im.in_keyevent.get() == ImKeyEvent::NotComposing {
+                    let bytes = text.as_bytes();
+                    let mut buf = im.buf.borrow_mut();
+                    if bytes.len() >= buf.len() {
+                        eprintln!("cmux: IM commit too long for buffer ({} bytes)", bytes.len());
+                        return;
+                    }
+                    buf[..bytes.len()].copy_from_slice(bytes);
+                    buf[bytes.len()] = 0;
+                    im.len.set(bytes.len());
+                    return;
+                }
+
+                // Composed text (or a commit from outside a key event): send it now.
+                im.composing.set(false);
+                if let Some(surface) = *cell.borrow() {
+                    send_committed_text(surface, text);
+                }
+            }
+        });
+    }
+
     // ── Key input (GHOST-03) ─────────────────────────────────────────────────────
     // EventControllerKey fires key-pressed and key-released events.
     // CRITICAL: no allocations in this path — per CLAUDE.md typing-latency-sensitive paths.
     let key_controller = gtk4::EventControllerKey::new();
     key_controller.connect_key_pressed({
         let cell = surface_cell.clone();
-        move |_ctrl, keyval, keycode, state| {
+        let im = im.clone();
+        move |ctrl, keyval, keycode, state| {
             use crate::ghostty::input::map_mods;
+            use gtk4::prelude::*;
 
             let surface = match *cell.borrow() {
                 Some(s) => s,
                 None => return gtk4::glib::Propagation::Proceed,
             };
 
+            // Tell the IM where the cursor is so its candidate window shows up there.
+            let (mut x, mut y, mut w, mut h) = (0.0f64, 0.0f64, 0.0f64, 0.0f64);
+            unsafe {
+                ffi::ghostty_surface_ime_point(surface, &mut x, &mut y, &mut w, &mut h);
+            }
+            im.context
+                .set_cursor_location(&gtk4::gdk::Rectangle::new(x as i32, y as i32, 1, 1));
+
+            // Let the IM filter the key first. Commit/preedit signals may fire
+            // synchronously inside filter_keypress, so no RefCell borrows here.
+            im.in_keyevent.set(if im.composing.get() {
+                ImKeyEvent::Composing
+            } else {
+                ImKeyEvent::NotComposing
+            });
+            let im_handled = ctrl
+                .current_event()
+                .map(|event| im.context.filter_keypress(&event))
+                .unwrap_or(false);
+            let was_composing = im.in_keyevent.get() == ImKeyEvent::Composing;
+            im.in_keyevent.set(ImKeyEvent::False);
+
+            if crate::ghostty::input::im_swallows_key(
+                im_handled,
+                im.composing.get(),
+                was_composing,
+                im.len.get(),
+            ) {
+                im.len.set(0);
+                return gtk4::glib::Propagation::Stop;
+            }
+
             // text field: UTF-8 from the keyval (what the key produces with modifiers applied).
             // Must be a C string. Use a stack-allocated buffer to avoid heap allocation.
+            // Prefer text the IM committed for this key event, if any.
+            let im_buf = im.buf.borrow();
             let unicode = keyval.to_unicode();
             let mut text_buf = [0u8; 8]; // UTF-8: max 4 bytes + null
-            let text_ptr = if let Some(ch) = unicode {
+            let text_ptr = if im.len.get() > 0 {
+                im_buf.as_ptr() as *const i8
+            } else if let Some(ch) = unicode {
                 let mut s = [0u8; 5];
                 let encoded = ch.encode_utf8(&mut s[..4]);
                 let len = encoded.len();
@@ -447,22 +612,49 @@ pub fn create_surface(
             input.action = ffi::ghostty_input_action_e_GHOSTTY_ACTION_PRESS;
             input.text = text_ptr;
             input.consumed_mods = 0; // Not used in Phase 1
+            input.composing = im.composing.get();
 
-            unsafe {
-                ffi::ghostty_surface_key(surface, input);
+            let consumed = unsafe { ffi::ghostty_surface_key(surface, input) };
+            drop(im_buf);
+            im.len.set(0);
+
+            // A keybinding consumed the key mid-composition: drop the preedit.
+            if consumed && im.composing.get() {
+                im.context.reset();
+                unsafe {
+                    ffi::ghostty_surface_preedit(surface, std::ptr::null(), 0);
+                }
             }
             gtk4::glib::Propagation::Stop // Inhibit: prevent GTK from handling the key
         }
     });
     key_controller.connect_key_released({
         let cell = surface_cell.clone();
-        move |_ctrl, _keyval, keycode, state| {
+        let im = im.clone();
+        move |ctrl, _keyval, keycode, state| {
             use crate::ghostty::input::map_mods;
+            use gtk4::prelude::*;
 
             let surface = match *cell.borrow() {
                 Some(s) => s,
                 None => return,
             };
+
+            // Releases go through the IM too; don't encode them while composing.
+            im.in_keyevent.set(if im.composing.get() {
+                ImKeyEvent::Composing
+            } else {
+                ImKeyEvent::NotComposing
+            });
+            let im_handled = ctrl
+                .current_event()
+                .map(|event| im.context.filter_keypress(&event))
+                .unwrap_or(false);
+            im.in_keyevent.set(ImKeyEvent::False);
+            im.len.set(0);
+            if im_handled && im.composing.get() {
+                return;
+            }
 
             let mut input = unsafe { std::mem::zeroed::<ffi::ghostty_input_key_s>() };
             input.keycode = keycode;
@@ -557,7 +749,10 @@ pub fn create_surface(
     focus_controller.connect_enter({
         let cell = surface_cell.clone();
         let gl_area_for_focus = gl_area.clone();
+        let im = im.clone();
         move |_ctrl| {
+            use gtk4::prelude::*;
+            im.context.focus_in();
             if let Some(surface) = *cell.borrow() {
                 unsafe {
                     ffi::ghostty_surface_set_focus(surface, true);
@@ -574,7 +769,10 @@ pub fn create_surface(
     });
     focus_controller.connect_leave({
         let cell = surface_cell.clone();
+        let im = im.clone();
         move |_ctrl| {
+            use gtk4::prelude::*;
+            im.context.focus_out();
             if let Some(surface) = *cell.borrow() {
                 unsafe {
                     ffi::ghostty_surface_set_focus(surface, false);

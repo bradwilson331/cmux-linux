@@ -118,6 +118,21 @@ A `CLAUDE.md` at `/usr/share/cmux/CLAUDE.md` references skill paths so Claude Co
 - **Remote sessions:** Go daemon (cmuxd-remote) reused from macOS codebase
 - **Socket protocol:** v2 JSON-RPC, wire-compatible with macOS cmux
 
+## Input Methods (IME)
+
+Terminal panes support GTK input methods, so you can type Korean, Japanese, Chinese, and dead-key text through ibus or fcitx. In-progress (preedit) text is drawn at the cursor, and the candidate window opens next to it.
+
+Most desktop sessions set this up already. If composition doesn't start, make sure the GTK input module is selected before launching cmux:
+
+```bash
+# ibus (e.g. ibus-hangul, ibus-mozc)
+export GTK_IM_MODULE=ibus XMODIFIERS=@im=ibus
+# fcitx5
+export GTK_IM_MODULE=fcitx XMODIFIERS=@im=fcitx
+```
+
+The input method daemon must be running and have an engine selected (for ibus, `ibus engine` prints the active engine).
+
 ## Keyboard Shortcuts
 
 | Shortcut | Action |
