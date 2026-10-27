@@ -261,7 +261,6 @@ pub fn register_accels(app: &gtk4::Application) {
     app.set_accels_for_action("win.new-ssh-workspace", &["<Ctrl><Shift>s"]);
     app.set_accels_for_action("win.browser-open", &["<Ctrl><Shift>b"]);
     app.set_accels_for_action("win.close-pane", &["<Ctrl><Shift>x"]);
-    app.set_accels_for_action("win.toggle-sidebar", &["<Ctrl>b"]);
     app.set_accels_for_action("win.split-right", &["<Ctrl>d"]);
     app.set_accels_for_action("win.split-down", &["<Ctrl><Shift>d"]);
     app.set_accels_for_action("win.copy", &["<Ctrl><Shift>c"]);

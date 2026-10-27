@@ -126,7 +126,8 @@ const KNOWN_SHORTCUTS: &[&str] = &[
 const MOD_MASK: ModifierType = ModifierType::from_bits_truncate(
     ModifierType::CONTROL_MASK.bits()
         | ModifierType::SHIFT_MASK.bits()
-        | ModifierType::ALT_MASK.bits(),
+        | ModifierType::ALT_MASK.bits()
+        | ModifierType::SUPER_MASK.bits(),
 );
 
 /// Returns the config file path.

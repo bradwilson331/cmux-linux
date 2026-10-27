@@ -1,6 +1,7 @@
 use crate::ghostty::ffi;
 use gtk4::glib;
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
+use std::collections::HashSet;
 use std::rc::Rc;
 
 /// I/O mode for a Ghostty surface.
@@ -28,6 +29,20 @@ extern "C" {
 }
 const GL_VIEWPORT: u32 = 0x0BA2;
 const GL_DRAW_FRAMEBUFFER_BINDING: u32 = 0x8CA6;
+
+/// The IM candidate popup uses widget-local logical pixels, as does GtkGLArea.
+fn update_ime_cursor(im_context: &gtk4::IMMulticontext, surface: ffi::ghostty_surface_t) {
+    use gtk4::prelude::*;
+
+    let (mut x, mut y, mut width, mut height) = (0.0, 0.0, 0.0, 0.0);
+    unsafe { ffi::ghostty_surface_ime_point(surface, &mut x, &mut y, &mut width, &mut height) };
+    im_context.set_cursor_location(&gtk4::gdk::Rectangle::new(
+        x.round() as i32,
+        y.round() as i32,
+        (width.round() as i32).max(1),
+        (height.round() as i32).max(1),
+    ));
+}
 
 /// Creates and returns a GtkGLArea with a Ghostty terminal surface wired up.
 /// Initializes ghostty_app_t, then defers ghostty_surface_t creation to the
@@ -74,6 +89,73 @@ pub fn create_surface(
     // then used in render, resize, input, and scale-factor callbacks.
     // Rc<RefCell<...>> is safe here: all callbacks run on the GLib main thread.
     let surface_cell: Rc<RefCell<Option<ffi::ghostty_surface_t>>> = Rc::new(RefCell::new(None));
+
+    let im_context = gtk4::IMMulticontext::new();
+    im_context.set_client_widget(Some(&gl_area));
+    im_context.set_use_preedit(true);
+    let composing = Rc::new(Cell::new(false));
+    let in_keyevent = Rc::new(Cell::new(false));
+    let im_commit_buf = Rc::new(RefCell::new(String::new()));
+    // Remember presses consumed by the IM so their releases never reach Ghostty.
+    let im_keycodes = Rc::new(RefCell::new(HashSet::<u32>::new()));
+
+    im_context.connect_preedit_start({
+        let composing = composing.clone();
+        move |_| composing.set(true)
+    });
+    im_context.connect_preedit_changed({
+        let cell = surface_cell.clone();
+        let composing = composing.clone();
+        let area = gl_area.clone();
+        move |im| {
+            let (preedit, _, _) = im.preedit_string();
+            composing.set(!preedit.is_empty());
+            if let Some(surface) = *cell.borrow() {
+                update_ime_cursor(im, surface);
+                unsafe {
+                    ffi::ghostty_surface_preedit(surface, preedit.as_ptr().cast(), preedit.len());
+                }
+                area.queue_render();
+            }
+        }
+    });
+    im_context.connect_preedit_end({
+        let cell = surface_cell.clone();
+        let composing = composing.clone();
+        let area = gl_area.clone();
+        move |_| {
+            composing.set(false);
+            if let Some(surface) = *cell.borrow() {
+                unsafe { ffi::ghostty_surface_preedit(surface, std::ptr::null(), 0) };
+                area.queue_render();
+            }
+        }
+    });
+    im_context.connect_commit({
+        let cell = surface_cell.clone();
+        let composing = composing.clone();
+        let in_keyevent = in_keyevent.clone();
+        let im_commit_buf = im_commit_buf.clone();
+        let area = gl_area.clone();
+        move |im, text| {
+            if text.is_empty() {
+                return;
+            }
+            if in_keyevent.get() {
+                im_commit_buf.borrow_mut().push_str(text);
+                return;
+            }
+            composing.set(false);
+            if let Some(surface) = *cell.borrow() {
+                unsafe {
+                    ffi::ghostty_surface_preedit(surface, std::ptr::null(), 0);
+                    ffi::ghostty_surface_text(surface, text.as_ptr().cast(), text.len());
+                }
+                update_ime_cursor(im, surface);
+                area.queue_render();
+            }
+        }
+    });
 
     // ── GtkGLArea::realize ───────────────────────────────────────────────────
     // GL context is now valid. Create the surface HERE so ghostty can access
@@ -282,6 +364,7 @@ pub fn create_surface(
     // Called by GTK frame clock when queue_render() was requested.
     gl_area.connect_render({
         let cell = surface_cell.clone();
+        let im_context = im_context.clone();
         let render_count = std::rc::Rc::new(std::cell::Cell::new(0u64));
         let pane_id_render = pane_id;
         move |area, _ctx| {
@@ -321,6 +404,7 @@ pub fn create_surface(
                 unsafe {
                     ffi::ghostty_surface_draw(surface);
                 }
+                update_ime_cursor(&im_context, surface);
             } else {
                 eprintln!("cmux: render callback — surface not yet initialized, skipping draw");
             }
@@ -415,13 +499,53 @@ pub fn create_surface(
     let key_controller = gtk4::EventControllerKey::new();
     key_controller.connect_key_pressed({
         let cell = surface_cell.clone();
-        move |_ctrl, keyval, keycode, state| {
+        let im_context = im_context.clone();
+        let composing = composing.clone();
+        let in_keyevent = in_keyevent.clone();
+        let im_commit_buf = im_commit_buf.clone();
+        let im_keycodes = im_keycodes.clone();
+        let area = gl_area.clone();
+        move |ctrl, keyval, keycode, state| {
             use crate::ghostty::input::map_mods;
 
             let surface = match *cell.borrow() {
                 Some(s) => s,
                 None => return gtk4::glib::Propagation::Proceed,
             };
+
+            let was_composing = composing.get();
+            im_commit_buf.borrow_mut().clear();
+            in_keyevent.set(true);
+            let im_filtered = ctrl.current_event().is_some_and(|event| {
+                update_ime_cursor(&im_context, surface);
+                im_context.filter_keypress(&event)
+            });
+            in_keyevent.set(false);
+            let committed = im_commit_buf.borrow_mut().split_off(0);
+
+            if !committed.is_empty() {
+                if was_composing || composing.get() || committed.len() > 1 || !committed.is_ascii()
+                {
+                    composing.set(false);
+                    unsafe {
+                        ffi::ghostty_surface_preedit(surface, std::ptr::null(), 0);
+                        ffi::ghostty_surface_text(
+                            surface,
+                            committed.as_ptr().cast(),
+                            committed.len(),
+                        );
+                    }
+                    update_ime_cursor(&im_context, surface);
+                    area.queue_render();
+                    im_keycodes.borrow_mut().insert(keycode);
+                    return gtk4::glib::Propagation::Stop;
+                }
+            } else if im_filtered || was_composing || composing.get() {
+                update_ime_cursor(&im_context, surface);
+                area.queue_render();
+                im_keycodes.borrow_mut().insert(keycode);
+                return gtk4::glib::Propagation::Stop;
+            }
 
             // text field: UTF-8 from the keyval (what the key produces with modifiers applied).
             // Must be a C string. Use a stack-allocated buffer to avoid heap allocation.
@@ -447,16 +571,25 @@ pub fn create_surface(
             input.action = ffi::ghostty_input_action_e_GHOSTTY_ACTION_PRESS;
             input.text = text_ptr;
             input.consumed_mods = 0; // Not used in Phase 1
+            input.composing = composing.get();
 
-            unsafe {
-                ffi::ghostty_surface_key(surface, input);
+            let consumed = unsafe { ffi::ghostty_surface_key(surface, input) };
+            if consumed && composing.get() {
+                im_context.reset();
+                composing.set(false);
+                unsafe {
+                    ffi::ghostty_surface_preedit(surface, std::ptr::null(), 0);
+                }
             }
             gtk4::glib::Propagation::Stop // Inhibit: prevent GTK from handling the key
         }
     });
     key_controller.connect_key_released({
         let cell = surface_cell.clone();
-        move |_ctrl, _keyval, keycode, state| {
+        let im_context = im_context.clone();
+        let composing = composing.clone();
+        let im_keycodes = im_keycodes.clone();
+        move |ctrl, _keyval, keycode, state| {
             use crate::ghostty::input::map_mods;
 
             let surface = match *cell.borrow() {
@@ -464,12 +597,21 @@ pub fn create_surface(
                 None => return,
             };
 
+            let was_filtered = im_keycodes.borrow_mut().remove(&keycode);
+            let release_filtered = ctrl
+                .current_event()
+                .is_some_and(|event| im_context.filter_keypress(&event));
+            if was_filtered || release_filtered {
+                return;
+            }
+
             let mut input = unsafe { std::mem::zeroed::<ffi::ghostty_input_key_s>() };
             input.keycode = keycode;
             input.mods = map_mods(state);
             input.action = ffi::ghostty_input_action_e_GHOSTTY_ACTION_RELEASE;
             input.text = std::ptr::null();
             input.consumed_mods = 0; // Not used in Phase 1
+            input.composing = composing.get();
             unsafe {
                 ffi::ghostty_surface_key(surface, input);
             }
@@ -557,8 +699,11 @@ pub fn create_surface(
     focus_controller.connect_enter({
         let cell = surface_cell.clone();
         let gl_area_for_focus = gl_area.clone();
+        let im_context = im_context.clone();
         move |_ctrl| {
+            im_context.focus_in();
             if let Some(surface) = *cell.borrow() {
+                update_ime_cursor(&im_context, surface);
                 unsafe {
                     ffi::ghostty_surface_set_focus(surface, true);
                     // Kick the render loop so the cursor becomes visible immediately
@@ -574,7 +719,11 @@ pub fn create_surface(
     });
     focus_controller.connect_leave({
         let cell = surface_cell.clone();
+        let im_context = im_context.clone();
+        let im_keycodes = im_keycodes.clone();
         move |_ctrl| {
+            im_context.focus_out();
+            im_keycodes.borrow_mut().clear();
             if let Some(surface) = *cell.borrow() {
                 unsafe {
                     ffi::ghostty_surface_set_focus(surface, false);
